@@ -82,7 +82,7 @@
  
 
 #ifndef BLE_ADVERTISING_ENABLED
-#define BLE_ADVERTISING_ENABLED 0
+#define BLE_ADVERTISING_ENABLED 1
 #endif
 
 // <q> BLE_DB_DISCOVERY_ENABLED  - ble_db_discovery - Database discovery module
@@ -660,7 +660,7 @@
 // <e> BLE_NUS_ENABLED - ble_nus - Nordic UART Service
 //==========================================================
 #ifndef BLE_NUS_ENABLED
-#define BLE_NUS_ENABLED 0
+#define BLE_NUS_ENABLED 1
 #endif
 // <e> BLE_NUS_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
@@ -11562,7 +11562,7 @@
 
 // <o> NRF_SDH_BLE_PERIPHERAL_LINK_COUNT - Maximum number of peripheral links. 
 #ifndef NRF_SDH_BLE_PERIPHERAL_LINK_COUNT
-#define NRF_SDH_BLE_PERIPHERAL_LINK_COUNT 0
+#define NRF_SDH_BLE_PERIPHERAL_LINK_COUNT 1
 #endif
 
 // <o> NRF_SDH_BLE_CENTRAL_LINK_COUNT - Maximum number of central links. 
@@ -11620,6 +11620,17 @@
 #define NRF_SDH_BLE_OBSERVER_PRIO_LEVELS 4
 #endif
 
+
+// -------- BEGIN: Added Manually for Repeater --------
+// <e> BLE_LINK_CTX_MANAGER_ENABLED - ble_link_ctx_manager - Link Context Manager
+// <i> Habilita la librería para gestionar contextos por conexión. Necesaria para algunos servicios BLE con múltiples enlaces.
+//==========================================================
+#ifndef BLE_LINK_CTX_MANAGER_ENABLED
+#define BLE_LINK_CTX_MANAGER_ENABLED 1 // <-- Asegúrate que esté en 1 para habilitarlo
+#endif
+// -------- END: Added Manually for Repeater --------
+
+
 // <h> BLE Observers priorities - Invididual priorities
 
 //==========================================================
@@ -11664,6 +11675,36 @@
 #ifndef BLE_BPS_BLE_OBSERVER_PRIO
 #define BLE_BPS_BLE_OBSERVER_PRIO 2
 #endif
+
+
+
+// my code
+#define NRF_BLE_CONN_PARAMS_MAX_SLAVE_LATENCY_DEVIATION 499
+#define NRF_BLE_CONN_PARAMS_MAX_SUPERVISION_TIMEOUT_DEVIATION 65535
+#define BLE_CONN_STATE_ENABLED 1
+
+#ifndef BLE_CONN_PARAMS_ENABLE
+#define BLE_CONN_PARAMS_ENABLE 1
+#endif
+
+#ifndef NRF_BLE_CONN_PARAMS_ENABLED
+#define NRF_BLE_CONN_PARAMS_ENABLED 1
+#endif
+
+/*
+// <o> RAM_START_ADDRESS - Address of the start of RAM for the application.
+#define RAM_START_ADDRESS  0x20003170
+
+// <o> SOFTDEVICE_RAM_START_ADDRESS - Address of the start of RAM for the SoftDevice.
+#define SOFTDEVICE_RAM_START_ADDRESS  0x20003000
+
+// <o> SOFTDEVICE_RAM_SIZE - Size of RAM allocated to the SoftDevice.
+#define SOFTDEVICE_RAM_SIZE 0x10000  // Ejemplo de tamaño adecuado (64 KB)
+*/
+
+// end of my code
+
+
 
 // <o> BLE_CONN_PARAMS_BLE_OBSERVER_PRIO  
 // <i> Priority with which BLE events are dispatched to the Connection parameters module.

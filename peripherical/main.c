@@ -104,6 +104,18 @@
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
+// TWI (I2C) definitions
+#define TWI_SCL_PIN                     27
+#define TWI_SDA_PIN                     26
+#define TWI_INSTANCE_ID                 0
+
+// ADC sampling definitions
+#define ADC_SAMPLE_INTERVAL             APP_TIMER_TICKS(100)                        // Sample every 100ms
+APP_TIMER_DEF(m_adc_timer_id);
+
+static nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+static uint16_t m_adc_value;
+
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -692,16 +704,83 @@ static void advertising_start(void)
 }
 
 
+/**@brief Function for handling ADC timer timeout */
+static void adc_timer_handler(void * p_context)
+{
+    ret_code_t err_code;
+    uint16_t adc_value;
+    uint8_t data_array[3];  // 1 byte para canal, 2 bytes para valor
+    uint16_t length;
+
+    // Leer ADC canal 0
+    err_code = ad5593r_read_adc(0, &adc_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_ERROR("Error reading ADC: %d", err_code);
+        return;
+    }
+
+    // Preparar datos para enviar por BLE
+    data_array[0] = 0;  // Canal
+    data_array[1] = (adc_value >> 8) & 0xFF;  // MSB
+    data_array[2] = adc_value & 0xFF;         // LSB
+    length = sizeof(data_array);
+
+    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
+        if ((err_code != NRF_ERROR_INVALID_STATE) && (err_code != NRF_ERROR_RESOURCES))
+        {
+            APP_ERROR_CHECK(err_code);
+        }
+    }
+}
+
+/**@brief Function for initializing TWI (I2C) */
+static void twi_init(void)
+{
+    ret_code_t err_code;
+
+    const nrf_drv_twi_config_t twi_config = {
+        .scl                = TWI_SCL_PIN,
+        .sda                = TWI_SDA_PIN,
+        .frequency          = NRF_DRV_TWI_FREQ_100K,
+        .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+        .clear_bus_init     = false
+    };
+
+    err_code = nrf_drv_twi_init(&m_twi, &twi_config, NULL, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_twi_enable(&m_twi);
+}
+
 /**@brief Application main function.
  */
 int main(void)
 {
     bool erase_bonds;
+    ret_code_t err_code;
 
     // Initialize.
     uart_init();
     log_init();
     timers_init();
+    
+    // Initialize TWI and ADC
+    twi_init();
+    err_code = ad5593r_init(&m_twi);
+    APP_ERROR_CHECK(err_code);
+    
+    // Configure ADC channel 0
+    err_code = ad5593r_config_adc(0);
+    APP_ERROR_CHECK(err_code);
+    
+    // Create timer for ADC sampling
+    err_code = app_timer_create(&m_adc_timer_id,
+                              APP_TIMER_MODE_REPEATED,
+                              adc_timer_handler);
+    APP_ERROR_CHECK(err_code);
     buttons_leds_init(&erase_bonds);
     power_management_init();
     ble_stack_init();
@@ -715,6 +794,10 @@ int main(void)
     printf("\r\nUART started.\r\n");
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
+    
+    // Start ADC sampling timer
+    err_code = app_timer_start(m_adc_timer_id, ADC_SAMPLE_INTERVAL, NULL);
+    APP_ERROR_CHECK(err_code);
 
     // Enter main loop.
     for (;;)
@@ -727,3 +810,4 @@ int main(void)
 /**
  * @}
  */
+
