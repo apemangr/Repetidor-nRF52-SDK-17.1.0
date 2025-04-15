@@ -1,0 +1,35 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${default}",
+                "C:\\Users\\guill\\OneDrive\\Desktop\\nRF5_SDK_17.1.0_ddde560\\**",
+                "${workspaceFolder}\\pca10056\\**",
+                "C:\\Users\\guill\\OneDrive\\Desktop\\nRF5_SDK_17.1.0_ddde560\\examples\\ble_central_and_peripheral\\nRF5_SDK_17.1.0_central_and_peripheral\\pca10056\\s140\\config"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "NRF52840_XXAA",
+                "APP_TIMER_V2",
+                "APP_TIMER_V2_RTC1_ENABLED",
+                "BOARD_PCA10056",
+                "CONFIG_GPIO_AS_PINRESET",
+                "FLOAT_ABI_HARD",
+                "INITIALIZE_USER_SECTIONS",
+                "NO_VTOR_CONFIG",
+                "NRF52840_XXAA",
+                "NRF_SD_BLE_API_VERSION=7",
+                "S140",
+                "SOFTDEVICE_PRESENT"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-arm",
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\arm-none-eabi-gcc.exe"
+        }
+    ],
+    "version": 4
+}
