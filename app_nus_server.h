@@ -13,4 +13,5 @@ void app_nus_server_ble_evt_handler(ble_evt_t const * p_ble_evt);
 
 void app_nus_server_init(app_nus_server_on_data_received_t on_data_received);
 
+uint16_t get_conn_handle(void);
 #endif
