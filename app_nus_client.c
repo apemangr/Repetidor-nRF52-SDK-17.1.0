@@ -1,4 +1,5 @@
 #include "app_nus_client.h"
+#include "app_nus_common.h"
 #include "nordic_common.h"
 #include "app_error.h"
 #include "bsp_btn_ble.h"
@@ -24,6 +25,11 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue, /**< BLE GATT Queue instance. */
 NRF_BLE_SCAN_DEF(m_scan); /**< Scanning Module instance. */
 static app_nus_client_on_data_received_t m_on_data_received = 0;
 
+//bool filtro_aplicado = false; /**< Flag to indicate if the filter is applied. */
+//uint8_t mac_address_conectado[6] = {0};
+static bool m_target_device_connected = false;
+static uint16_t m_target_conn_handle = BLE_CONN_HANDLE_INVALID;
+
 /**@brief NUS UUID. */
 static ble_uuid_t const m_nus_uuid =
     {
@@ -33,9 +39,6 @@ static ble_uuid_t const m_nus_uuid =
 static ble_gap_addr_t const m_target_periph_addr =
     {
         .addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC,
-        //.addr      = {0x8D, 0xFE, 0x23, 0x86, 0x77, 0xD9}
-        //.addr = {0x25, 0xEB, 0x18, 0x72, 0x6E, 0xFE} // 25EB18726EFE
-        //.addr = { 0xF8, 0x0C, 0xA8, 0x61, 0x3E, 0xA6 } // convert to hex f80ca8613ea6}
         .addr = { 0xA6, 0x3E, 0x61, 0xA8, 0x0C, 0xF8 } // reverse order 0xF8, 0x0C, 0xA8, 0x61, 0x3E, 0xA6 } // convert to hex f80ca8613ea6}
 };
 
@@ -104,8 +107,7 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
 
     case NRF_BLE_SCAN_EVT_CONNECTED:
     {
-        ble_gap_evt_connected_t const *p_connected =
-            p_scan_evt->params.connected.p_connected;
+        ble_gap_evt_connected_t const *p_connected = p_scan_evt->params.connected.p_connected;
         bool mac_coincide = (p_connected->peer_addr.addr_type == m_target_periph_addr.addr_type) &&
                             (memcmp(p_connected->peer_addr.addr,
                                     m_target_periph_addr.addr,
@@ -139,6 +141,11 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
                         p_connected->peer_addr.addr[3],
                         p_connected->peer_addr.addr[4],
                         p_connected->peer_addr.addr[5]);
+
+            NRF_LOG_INFO("Filtro desactivado.");
+            err_code = nrf_ble_scan_filters_disable(&m_scan);
+            APP_ERROR_CHECK(err_code);
+
         }
     }
     break;
@@ -179,7 +186,7 @@ static void scan_init(void)
     err_code = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_ADDR_FILTER, m_target_periph_addr.addr);
+    err_code = nrf_ble_scan_filter_set(&m_scan, NRF_BLE_SCAN_ADDR_FILTER, m_target_periph_addr.addr);
     APP_ERROR_CHECK(err_code);
 
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
@@ -249,23 +256,62 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 {
     ret_code_t err_code;
     ble_gap_evt_t const *p_gap_evt = &p_ble_evt->evt.gap_evt;
+    uint16_t conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+    uint8_t mac_address[6];
 
     switch (p_ble_evt->header.evt_id)
     {
     case BLE_GAP_EVT_CONNECTED:
         if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
-            err_code = ble_nus_c_handles_assign(&m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
-            APP_ERROR_CHECK(err_code);
+            memcpy(mac_address, p_ble_evt->evt.gap_evt.params.connected.peer_addr.addr, 6);
 
-            err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-            APP_ERROR_CHECK(err_code);
+            m_target_device_connected = true;
 
-            // start discovery of services. The NUS Client waits for a discovery result
-            err_code = ble_db_discovery_start(&m_db_disc, p_ble_evt->evt.gap_evt.conn_handle);
-            APP_ERROR_CHECK(err_code);
+            if (memcmp(mac_address, m_target_periph_addr.addr, 6) == 0 && m_target_device_connected)
+            {
+                // Quita el filtro
+                err_code = nrf_ble_scan_filters_disable(&m_scan);
+                APP_ERROR_CHECK(err_code);
+
+
+                err_code = ble_nus_c_handles_assign(&m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
+                APP_ERROR_CHECK(err_code);
+
+                err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+                APP_ERROR_CHECK(err_code);
+
+                // start discovery of services. The NUS Client waits for a discovery result
+                err_code = ble_db_discovery_start(&m_db_disc, p_ble_evt->evt.gap_evt.conn_handle);
+                APP_ERROR_CHECK(err_code);
+            }
+            else
+            {
+                sd_ble_gap_disconnect(p_ble_evt->evt.gap_evt.conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            }
         }
         break;
+    case BLE_GAP_EVT_DISCONNECTED:
+        // Verificar si el dispositivo que se desconectó ERA nuestro objetivo
+        if (conn_handle == m_target_conn_handle)
+        {
+            NRF_LOG_INFO("Dispositivo objetivo desconectado.");
+            m_target_device_connected = false;
+            m_target_conn_handle = BLE_CONN_HANDLE_INVALID;
+
+            // **PASO CLAVE: Rehabilitar el filtro por dirección MAC**
+            NRF_LOG_INFO("Habilitando filtro por MAC.");
+            // Primero deshabilita todos por si acaso
+            // err_code = nrf_ble_scan_filters_disable(&m_scan);
+            // APP_ERROR_CHECK(err_code);
+            // Habilita solo el de dirección
+            err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ADDR_FILTER, false);
+            APP_ERROR_CHECK(err_code);
+
+            // Volver a escanear
+            scan_start();
+        }
+        // else: Se desconectó otro dispositivo (el celular?), manejado en on_ble_peripheral_evt
     }
 }
 
