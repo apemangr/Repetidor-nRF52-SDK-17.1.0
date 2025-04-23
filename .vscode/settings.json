@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "nrf_pwr_mgmt.h": "c"
+        "nrf_pwr_mgmt.h": "c",
+        "variables.h": "c"
     }
 }

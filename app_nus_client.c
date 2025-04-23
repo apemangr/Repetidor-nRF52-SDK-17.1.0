@@ -42,7 +42,8 @@ static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
 
 static ble_gap_addr_t const m_target_periph_addr = {
     .addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC,
-    .addr = {0x63, 0x98, 0x41, 0xD3, 0x03, 0xFB}};
+    .addr = {0x63, 0x98, 0x41, 0xD3, 0x03,
+             0xFB}};  // En reversa seria 0xFB, 0x03, 0xD3, 0x41, 0x98, 0x63
 
 /**@brief Function for handling the Nordic UART Service Client errors.
  *
@@ -62,7 +63,7 @@ static void nus_error_handler(uint32_t nrf_error)
  *
  * @param[in] p_event  Pointer to the database discovery event.
  */
-static void db_disc_handler(ble_db_discovery_evt_t *p_evt)
+static void db_disc_handler(ble_db_discovery_evt_t* p_evt)
 {
 	ble_nus_c_on_db_disc_evt(&m_ble_nus_c, p_evt);
 }
@@ -95,7 +96,7 @@ static void scan_start(void)
 
 /**@brief Function for handling Scanning Module events.
  */
-static void scan_evt_handler(scan_evt_t const *p_scan_evt)
+static void scan_evt_handler(scan_evt_t const* p_scan_evt)
 {
 	ret_code_t err_code;
 
@@ -110,7 +111,7 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
 
 		case NRF_BLE_SCAN_EVT_CONNECTED:
 		{
-			ble_gap_evt_connected_t const *p_connected =
+			ble_gap_evt_connected_t const* p_connected =
 			    p_scan_evt->params.connected.p_connected;
 
 			NRF_LOG_INFO(
@@ -171,8 +172,8 @@ static void scan_init(void)
  */
 
 /**@snippet [Handling events from the ble_nus_c module] */
-static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c,
-                                  ble_nus_c_evt_t const *p_ble_nus_evt)
+static void ble_nus_c_evt_handler(ble_nus_c_t* p_ble_nus_c,
+                                  ble_nus_c_evt_t const* p_ble_nus_evt)
 {
 	ret_code_t err_code;
 
@@ -220,15 +221,15 @@ static void nus_c_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
-uint32_t app_nus_client_send_data(const uint8_t *data_array, uint16_t length)
+uint32_t app_nus_client_send_data(const uint8_t* data_array, uint16_t length)
 {
-	return ble_nus_c_string_send(&m_ble_nus_c, (uint8_t *)data_array, length);
+	return ble_nus_c_string_send(&m_ble_nus_c, (uint8_t*)data_array, length);
 }
 
-void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
+void app_nus_client_ble_evt_handler(ble_evt_t const* p_ble_evt)
 {
 	ret_code_t err_code;
-	ble_gap_evt_t const *p_gap_evt = &p_ble_evt->evt.gap_evt;
+	ble_gap_evt_t const* p_gap_evt = &p_ble_evt->evt.gap_evt;
 	uint16_t conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 	uint8_t mac_address[6];
 

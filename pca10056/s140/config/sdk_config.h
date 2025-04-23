@@ -6338,6 +6338,12 @@
 #define APP_TIMER_CONFIG_RTC_FREQUENCY 1
 #endif
 
+// <o> APP TIME BACKENDING  - Timer backend
+#ifndef APP_TIMER_V2_ENABLED
+#define APP_TIMER_V2_ENABLED 1
+#endif
+
+
 // <o> APP_TIMER_CONFIG_IRQ_PRIORITY  - Interrupt priority
  
 
