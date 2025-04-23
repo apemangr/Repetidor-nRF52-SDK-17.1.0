@@ -276,10 +276,10 @@ void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
 {
     if (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED)
     {
-        NRF_LOG_INFO("ATT MTU exchange completed.");
+        //NRF_LOG_INFO("ATT MTU exchange completed.");
 
         m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
-        NRF_LOG_INFO("Ble NUS max data length set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
+        //NRF_LOG_INFO("Ble NUS max data length set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
     }
 }
 
@@ -445,8 +445,8 @@ int main(void)
     app_nus_client_init(app_nus_client_on_data_received);
 
     // Start execution.
-    printf("BLE UART central example started.\r\n");
-    NRF_LOG_INFO("BLE UART central example started.");
+    printf("Repetidor escuchando...\r\n");
+    NRF_LOG_INFO("Repetidor escuchando...");
    
     // Enter main loop.
     for (;;)

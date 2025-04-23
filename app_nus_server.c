@@ -18,7 +18,7 @@
 
 #define APP_BLE_CONN_CFG_TAG            1   
 
-#define DEVICE_NAME                     "UART_RELAY_Server"                         /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "Repetidor"                         /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -26,7 +26,6 @@
 #define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 
 #define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
-bool dispositivo_conectado            = false;                                      /**< Flag to indicate if the device is connected. */
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
 #define SLAVE_LATENCY                   0                                           /**< Slave latency. */
@@ -48,9 +47,6 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
-
-
-uint8_t mac_address_conectado[6] = {0};
 
 static app_nus_server_on_data_received_t m_on_data_received = 0;
 
@@ -261,7 +257,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const * p_ble_evt)
         case BLE_GAP_EVT_CONNECTED:
             if(p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
             {
-                NRF_LOG_INFO("Peripheral connected");
+                NRF_LOG_INFO("Celular conectado");
                 err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
                 APP_ERROR_CHECK(err_code);
                 m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -273,7 +269,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const * p_ble_evt)
         case BLE_GAP_EVT_DISCONNECTED:
             if(p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
             {
-                NRF_LOG_INFO("Peripheral disconnected");
+                NRF_LOG_INFO("Celular desconectado");
                 // LED indication will be changed when advertising starts.
                 m_conn_handle = BLE_CONN_HANDLE_INVALID;
             }
