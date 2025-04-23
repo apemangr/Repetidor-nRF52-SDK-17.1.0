@@ -22,9 +22,17 @@
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
+#include "timers.h"
 #include "variables.h"
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
+
+/**@brief Function for initializing the timer. */
+static void base_timer_init(void)
+{
+	ret_code_t err_code = app_timer_init();
+	APP_ERROR_CHECK(err_code);
+}
 
 static uint16_t m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH -
@@ -366,19 +374,11 @@ static void buttons_leds_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for initializing the timer. */
-static void timer_init(void)
-{
-	ret_code_t err_code = app_timer_init();
-	APP_ERROR_CHECK(err_code);
-}
-
 /**@brief Function for initializing the nrf log module. */
 static void log_init(void)
 {
 	ret_code_t err_code = NRF_LOG_INIT(NULL);
 	APP_ERROR_CHECK(err_code);
-
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
@@ -430,13 +430,20 @@ static void idle_state_handle(void)
 
 int main(void)
 {
+	ret_code_t err_code;
 	log_init();
-	timer_init();
+	base_timer_init();
 	uart_init();
 	buttons_leds_init();
 	power_management_init();
 	ble_stack_init();
 	gatt_init();
+
+	err_code = timers_app_init();
+	APP_ERROR_CHECK(err_code);
+
+	err_code = timers_start_cycle();
+	APP_ERROR_CHECK(err_code);
 
 	app_nus_server_init(app_nus_server_on_data_received);
 	app_nus_client_init(app_nus_client_on_data_received);

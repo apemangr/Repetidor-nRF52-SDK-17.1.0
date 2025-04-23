@@ -98,6 +98,8 @@
       <file file_name="../config/sdk_config.h" />
       <file file_name="../../../app_nus_client.c" />
       <file file_name="../../../app_nus_server.c" />
+      <file file_name="../../../timers.c" />
+      <file file_name="../../../timers.h" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../../../../external/segger_rtt/SEGGER_RTT.c" />

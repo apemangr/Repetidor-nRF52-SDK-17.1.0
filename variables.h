@@ -1,3 +1,5 @@
+#pragma once
+
 #define RESTART_TIMEOUT_REPETIDOR_MS \
 	10000 /**< Tiempo de encendido for the repeater. */
 #define APP_BLE_CONN_CFG_TAG                                            \
@@ -11,3 +13,14 @@
 #define ECHOBACK_BLE_UART_DATA                                              \
 	1 /**< Echo the UART data that is received over the Nordic UART Service \
 	     (NUS) back to the sender. */
+
+/** TIMERS   */
+// --- Configuración de Tiempos (Interna a este módulo) ---
+#define DEVICE_ON_TIME_MS \
+	10000  // Tiempo que el dispositivo estará activo (ej: 5 segundos)
+#define DEVICE_SLEEP_TIME_MS \
+	50000  // Tiempo que el dispositivo estará dormido (ej: 10 segundos)
+
+// Convierte milisegundos a ticks de app_timer
+#define ON_DURATION_TICKS APP_TIMER_TICKS(DEVICE_ON_TIME_MS)
+#define SLEEP_DURATION_TICKS APP_TIMER_TICKS(DEVICE_SLEEP_TIME_MS)
