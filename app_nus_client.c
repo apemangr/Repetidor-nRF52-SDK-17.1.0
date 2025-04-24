@@ -1,5 +1,5 @@
 #include "app_nus_client.h"
-
+#include "variables.h"
 #include "app_error.h"
 #include "app_nus_server.h"
 #include "ble_db_discovery.h"
@@ -11,6 +11,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "fds.h" // Para manejar la memoria flash
 
 #define NUS_SERVICE_UUID_TYPE                                             \
 	BLE_UUID_TYPE_VENDOR_BEGIN /**< UUID type for the Nordic UART Service \
@@ -31,19 +32,62 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue, /**< BLE GATT Queue instance. */
 NRF_BLE_SCAN_DEF(m_scan); /**< Scanning Module instance. */
 static app_nus_client_on_data_received_t m_on_data_received = 0;
 
-// bool filtro_aplicado = false; /**< Flag to indicate if the filter is applied.
-// */ uint8_t mac_address_conectado[6] = {0};
-static bool m_target_device_connected = false;
-static uint16_t m_target_conn_handle = BLE_CONN_HANDLE_INVALID;
+// Variable para almacenar la MAC leída desde la memoria flash
+static uint8_t mac_address_from_flash[6] = {0};
+
+// Función para leer la MAC desde la memoria flash
+static void load_mac_from_flash(void)
+{
+    fds_record_desc_t record_desc;
+    fds_find_token_t ftok = {0};
+    fds_flash_record_t flash_record;
+
+    // Busca el registro en la memoria flash
+    if (fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok) == NRF_SUCCESS)
+    {
+        if (fds_record_open(&record_desc, &flash_record) == NRF_SUCCESS)
+        {
+            memcpy(mac_address_from_flash, flash_record.p_data, sizeof(mac_address_from_flash));
+            fds_record_close(&record_desc);
+            NRF_LOG_INFO("MAC cargada desde memoria flash: %02X:%02X:%02X:%02X:%02X:%02X",
+                         mac_address_from_flash[0], mac_address_from_flash[1], mac_address_from_flash[2],
+                         mac_address_from_flash[3], mac_address_from_flash[4], mac_address_from_flash[5]);
+        }
+    }
+    else
+    {
+        NRF_LOG_WARNING("No se encontro una MAC en la memoria flash. Usando valor predeterminado.");
+        // Si no se encuentra una MAC, usa una dirección predeterminada
+        mac_address_from_flash[0] = 0x63;
+        mac_address_from_flash[1] = 0x98;
+        mac_address_from_flash[2] = 0x41;
+        mac_address_from_flash[3] = 0xD3;
+        mac_address_from_flash[4] = 0x03;
+        mac_address_from_flash[5] = 0xFB;
+    }
+}
+
+// Variable global para la dirección del dispositivo objetivo
+static ble_gap_addr_t m_target_periph_addr;
+
+// Función para inicializar `m_target_periph_addr` con la MAC leída
+static void target_periph_addr_init(void)
+{
+    // Carga la MAC desde la memoria flash
+    load_mac_from_flash();
+
+    // Configura la dirección del dispositivo objetivo
+    m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
+    memcpy(m_target_periph_addr.addr, mac_address_from_flash, sizeof(mac_address_from_flash));
+
+    NRF_LOG_INFO("Direccion objetivo inicializada: %02X:%02X:%02X:%02X:%02X:%02X",
+                 m_target_periph_addr.addr[0], m_target_periph_addr.addr[1], m_target_periph_addr.addr[2],
+                 m_target_periph_addr.addr[3], m_target_periph_addr.addr[4], m_target_periph_addr.addr[5]);
+}
 
 /**@brief NUS UUID. */
 static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
                                       .type = NUS_SERVICE_UUID_TYPE};
-
-static ble_gap_addr_t const m_target_periph_addr = {
-    .addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC,
-    .addr = {0x63, 0x98, 0x41, 0xD3, 0x03,
-             0xFB}};  // En reversa seria 0xFB, 0x03, 0xD3, 0x41, 0x98, 0x63
 
 /**@brief Function for handling the Nordic UART Service Client errors.
  *
@@ -231,7 +275,6 @@ void app_nus_client_ble_evt_handler(ble_evt_t const* p_ble_evt)
 	ret_code_t err_code;
 	ble_gap_evt_t const* p_gap_evt = &p_ble_evt->evt.gap_evt;
 	uint16_t conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-	uint8_t mac_address[6];
 
 	switch (p_ble_evt->header.evt_id)
 	{
@@ -262,6 +305,10 @@ void app_nus_client_ble_evt_handler(ble_evt_t const* p_ble_evt)
 void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
 {
 	m_on_data_received = on_data_received;
+
+	// Inicializa la dirección MAC objetivo
+	target_periph_addr_init();
+
 	db_discovery_init();
 	nus_c_init();
 	scan_init();

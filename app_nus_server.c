@@ -7,6 +7,8 @@
 #include "ble_conn_params.h"
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
+#include "fds.h"  // Para manejar la memoria flash
+#include "nrf.h"  // Para NVIC_SystemReset()
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "nrf_log.h"
@@ -15,6 +17,7 @@
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
+#include "variables.h"
 
 #define APP_BLE_CONN_CFG_TAG 1
 
@@ -82,6 +85,196 @@ static ble_uuid_t m_adv_uuids[] = /**< Universally unique service identifier. */
 
 static app_nus_server_on_data_received_t m_on_data_received = 0;
 
+// Variable global para almacenar la MAC en formato binario
+static uint8_t custom_mac_addr_[6] = {0};  // Arreglo de 6 bytes para la MAC
+static uint8_t mac_address_from_flash[6] = {
+    0};  // Arreglo de 6 bytes para la MAC
+
+static ble_gap_addr_t
+    m_target_periph_addr;  // No const, se inicializa en tiempo de ejecución
+
+static void load_mac_from_flash(void)
+{
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};
+	fds_flash_record_t flash_record;
+
+	// Busca el registro en la memoria flash
+	ret_code_t err_code =
+	    fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok);
+	if (err_code == NRF_SUCCESS)
+	{
+		err_code = fds_record_open(&record_desc, &flash_record);
+		if (err_code == NRF_SUCCESS)
+		{
+			memcpy(mac_address_from_flash, flash_record.p_data,
+			       sizeof(mac_address_from_flash));
+			fds_record_close(&record_desc);
+			NRF_LOG_INFO(
+			    "MAC cargada desde memoria flash: "
+			    "%02X:%02X:%02X:%02X:%02X:%02X",
+			    mac_address_from_flash[0], mac_address_from_flash[1],
+			    mac_address_from_flash[2], mac_address_from_flash[3],
+			    mac_address_from_flash[4], mac_address_from_flash[5]);
+		}
+	}
+	else
+	{
+		NRF_LOG_WARNING(
+		    "No se encontro una MAC en la memoria flash. Usando valor "
+		    "predeterminado.");
+		// Si no se encuentra una MAC, usa una dirección predeterminada
+		mac_address_from_flash[0] = 0x63;
+		mac_address_from_flash[1] = 0x98;
+		mac_address_from_flash[2] = 0x41;
+		mac_address_from_flash[3] = 0xD3;
+		mac_address_from_flash[4] = 0x03;
+		mac_address_from_flash[5] = 0xFB;
+	}
+}
+
+// Definición de la función
+static void delete_old_records(void)
+{
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};
+
+	// Busca y elimina todos los registros con el mismo File ID
+	while (fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok) ==
+	       NRF_SUCCESS)
+	{
+		ret_code_t err_code = fds_record_delete(&record_desc);
+		APP_ERROR_CHECK(err_code);
+		NRF_LOG_INFO("Registro antiguo eliminado.");
+	}
+
+	// Llama a fds_gc() para realizar la recolección de basura
+	ret_code_t err_code = fds_gc();
+	APP_ERROR_CHECK(err_code);
+}
+
+// Función para realizar la recolección de basura
+static void perform_garbage_collection(void)
+{
+	ret_code_t err_code = fds_gc();
+	if (err_code == NRF_SUCCESS)
+	{
+		NRF_LOG_INFO("Recoleccion de basura completada.");
+	}
+	else
+	{
+		NRF_LOG_ERROR("Error en la recoleccion de basura: %d", err_code);
+	}
+}
+
+// Función para guardar la MAC en la memoria flash
+static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
+{
+	fds_record_t record;
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};
+	//	uint32_t sample_data = 1234567855;
+	uint32_t aligned_data_buffer[2];  // 2 * 4 = 8 bytes
+	memcpy(aligned_data_buffer, mac_addr, 6);
+
+	// Configura el registro con la MAC
+	record.file_id = MAC_FILE_ID;
+	record.key = MAC_RECORD_KEY;
+	record.data.p_data = aligned_data_buffer;  // Apunta al buffer alineado
+
+	// record.data.p_data = mac_addr;
+	// record.data.length_words = sizeof(sample_data) / sizeof(uint32_t);
+	record.data.length_words =
+	    (6 + sizeof(uint32_t) - 1) / sizeof(uint32_t);  // (6 + 3) / 4 = 2
+
+	NRF_LOG_INFO("Length words: %d", record.data.length_words);
+	// Realiza la recolección de basura si es necesario
+	// perform_garbage_collection();
+
+	// Si ya existe un registro, actualízalo
+	if (fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok) ==
+	    NRF_SUCCESS)
+	{
+		if (fds_record_update(&record_desc, &record) == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO(
+			    "MAC actualizada en memoria flash. Reiniciando el "
+			    "dispositivo...");
+			// NVIC_SystemReset();  // Reinicia el dispositivo
+		}
+		else
+		{
+			NRF_LOG_ERROR(
+			    "Error al actualizar la MAC en memoria flash. Con registro "
+			    "existente.");
+		}
+	}
+	else
+	{
+		// Si no existe, crea un nuevo registro
+		ret_code_t ret = fds_record_write(&record_desc, &record);
+
+		if (ret == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO("Registro creado correctamente.");
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al crear el registro: %d", ret);
+		}
+	}
+}
+
+static void fds_evt_handler(fds_evt_t const* p_evt)
+{
+	if (p_evt->id == FDS_EVT_INIT)
+	{
+		if (p_evt->result == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO("FDS inicializado correctamente.");
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al inicializar FDS: %d", p_evt->result);
+		}
+	}
+	else if (p_evt->id == FDS_EVT_WRITE)
+	{
+		if (p_evt->result == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO("Registro escrito correctamente.");
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al escribir el registro: %d", p_evt->result);
+		}
+	}
+	else if (p_evt->id == FDS_EVT_UPDATE)
+	{
+		if (p_evt->result == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO("Registro actualizado correctamente.");
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al actualizar el registro: %d", p_evt->result);
+		}
+	}
+}
+
+static void fds_initialize(void)
+{
+	ret_code_t err_code;
+
+	// Registra el manejador de eventos
+	err_code = fds_register(fds_evt_handler);
+	APP_ERROR_CHECK(err_code);
+
+	// Inicializa el módulo FDS
+	err_code = fds_init();
+	APP_ERROR_CHECK(err_code);
+}
+
 /**@brief Function for handling Queued Write Module errors.
  *
  * @details A pointer to this function will be passed to each service which may
@@ -113,10 +306,98 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 		NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data,
 		                      p_evt->params.rx_data.length);
 
-		if (m_on_data_received)
+		// Asegúrate de que el mensaje sea tratado como una cadena de texto
+		char message[BLE_NUS_MAX_DATA_LEN + 1];  // +1 para el carácter nulo
+		if (p_evt->params.rx_data.length < sizeof(message))
 		{
-			m_on_data_received(p_evt->params.rx_data.p_data,
-			                   p_evt->params.rx_data.length);
+			memcpy(message, p_evt->params.rx_data.p_data,
+			       p_evt->params.rx_data.length);
+			message[p_evt->params.rx_data.length] =
+			    '\0';  // Agregar terminador nulo
+
+			// Verifica si el mensaje comienza con "111"
+			if (p_evt->params.rx_data.length >= 5 && message[0] == '1' &&
+			    message[1] == '1' && message[2] == '1')
+			{
+				// Extrae el comando (los dos caracteres después de "111")
+				char command[3] = {message[3], message[4],
+				                   '\0'};  // Comando de 2 caracteres
+
+				// Manejo de comandos con un switch-case
+				switch (atoi(command))  // Convierte el comando a entero
+				{
+					case 1:  // Comando 01: Guardar MAC
+					{
+						size_t mac_length = p_evt->params.rx_data.length - 5;
+						if (mac_length ==
+						    12)  // Verifica que la longitud sea válida
+						{
+							for (size_t i = 0; i < 6; i++)
+							{
+								char byte_str[3] = {message[5 + i * 2],
+								                    message[6 + i * 2], '\0'};
+								custom_mac_addr_[i] =
+								    (uint8_t)strtol(byte_str, NULL, 16);
+							}
+							NRF_LOG_INFO(
+							    "MAC recibida: %02X:%02X:%02X:%02X:%02X:%02X",
+							    custom_mac_addr_[0], custom_mac_addr_[1],
+							    custom_mac_addr_[2], custom_mac_addr_[3],
+							    custom_mac_addr_[4], custom_mac_addr_[5]);
+
+							// Guarda la MAC en la memoria flash y reinicia el
+							// dispositivo
+							save_mac_to_flash_and_reset(custom_mac_addr_);
+						}
+						else
+						{
+							NRF_LOG_WARNING("Longitud de MAC inválida: %d",
+							                mac_length);
+						}
+						break;
+					}
+					case 2:  // Comando 02: Muestra la MAC custom guardada en la
+					         // memoria flash
+					{
+						// Carga la MAC desde la memoria flash
+						load_mac_from_flash();
+						// muestra la MAC
+					}
+						NRF_LOG_INFO(
+						    "Comando 02 recibido. Mostrando MAC guardada en "
+						    "memoria flash.");
+						break;
+
+					case 3:  // Comando 03: Lógica futura
+						NRF_LOG_INFO(
+						    "Comando 03 recibido. Reiniciando dispositivo...");
+						NVIC_SystemReset();
+
+						break;
+
+					case 4:  // Comando 04: Lógica futura
+						NRF_LOG_INFO(
+						    "Comando 04 recibido. Logica no implementada.");
+						break;
+
+					default:  // Comando desconocido
+						NRF_LOG_WARNING("Comando desconocido: %s", command);
+						break;
+				}
+			}
+			else
+			{
+				// Reenvía el mensaje al emisor o lo maneja normalmente
+				if (m_on_data_received)
+				{
+					m_on_data_received((uint8_t*)message,
+					                   p_evt->params.rx_data.length);
+				}
+			}
+		}
+		else
+		{
+			NRF_LOG_WARNING("Mensaje demasiado largo para procesar.");
 		}
 	}
 }
@@ -386,5 +667,6 @@ void app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 	services_init();
 	advertising_init();
 	conn_params_init();
+	fds_initialize();
 	advertising_start();
 }

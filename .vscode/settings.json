@@ -2,6 +2,7 @@
     "files.associations": {
         "nrf_pwr_mgmt.h": "c",
         "variables.h": "c",
-        "*.inc": "c"
+        "*.inc": "c",
+        "fds.h": "c"
     }
 }

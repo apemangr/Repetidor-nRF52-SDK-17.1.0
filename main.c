@@ -439,11 +439,11 @@ int main(void)
 	ble_stack_init();
 	gatt_init();
 
-	err_code = timers_app_init();
-	APP_ERROR_CHECK(err_code);
+	// err_code = timers_app_init();
+	// APP_ERROR_CHECK(err_code);
 
-	err_code = timers_start_cycle();
-	APP_ERROR_CHECK(err_code);
+	// err_code = timers_start_cycle();
+	// APP_ERROR_CHECK(err_code);
 
 	app_nus_server_init(app_nus_server_on_data_received);
 	app_nus_client_init(app_nus_client_on_data_received);

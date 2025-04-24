@@ -24,3 +24,8 @@
 // Convierte milisegundos a ticks de app_timer
 #define ON_DURATION_TICKS APP_TIMER_TICKS(DEVICE_ON_TIME_MS)
 #define SLEEP_DURATION_TICKS APP_TIMER_TICKS(DEVICE_SLEEP_TIME_MS)
+
+/** STORAGE	 */
+// --- Configuración de Almacenamiento para guardar la MAC ---
+#define MAC_FILE_ID    0x1111  // Identificador único para el archivo
+#define MAC_RECORD_KEY 0x2222  // Identificador único para el registro

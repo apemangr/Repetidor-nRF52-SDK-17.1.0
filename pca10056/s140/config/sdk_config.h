@@ -6794,7 +6794,7 @@
 // <e> FDS_ENABLED - fds - Flash data storage module
 //==========================================================
 #ifndef FDS_ENABLED
-#define FDS_ENABLED 0
+#define FDS_ENABLED 1
 #endif
 // <h> Pages - Virtual page settings
 
@@ -6845,6 +6845,11 @@
 // <i> NRF_FSTORAGE_NVMC uses the nrf_fstorage_nvmc implementation. Use this setting if you don't use the SoftDevice.
 // <1=> NRF_FSTORAGE_NVMC 
 // <2=> NRF_FSTORAGE_SD 
+
+#ifndef NRF_FSTORAGE_SD
+#define NRF_FSTORAGE_SD 1
+#endif
+
 
 #ifndef FDS_BACKEND
 #define FDS_BACKEND 2
@@ -7318,7 +7323,7 @@
 // <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library
 //==========================================================
 #ifndef NRF_FSTORAGE_ENABLED
-#define NRF_FSTORAGE_ENABLED 0
+#define NRF_FSTORAGE_ENABLED 1
 #endif
 // <h> nrf_fstorage - Common settings
 
