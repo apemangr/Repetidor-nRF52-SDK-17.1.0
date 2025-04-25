@@ -158,8 +158,8 @@ static void scan_evt_handler(scan_evt_t const* p_scan_evt)
 			ble_gap_evt_connected_t const* p_connected =
 			    p_scan_evt->params.connected.p_connected;
 
-			NRF_LOG_INFO(
-			    "Conectado a dispositivo autorizado: "
+			NRF_LOG_RAW_INFO(
+			    "\n\nConectado a dispositivo autorizado: "
 			    "%02x:%02x:%02x:%02x:%02x:%02x",
 			    p_connected->peer_addr.addr[0], p_connected->peer_addr.addr[1],
 			    p_connected->peer_addr.addr[2], p_connected->peer_addr.addr[3],
@@ -232,7 +232,7 @@ static void ble_nus_c_evt_handler(ble_nus_c_t* p_ble_nus_c,
 
 			err_code = ble_nus_c_tx_notif_enable(p_ble_nus_c);
 			APP_ERROR_CHECK(err_code);
-			NRF_LOG_INFO("Emisor conectado mediante BLE NUS");
+			//NRF_LOG_INFO("Emisor conectado mediante BLE NUS");
 			break;
 
 		case BLE_NUS_C_EVT_NUS_TX_EVT:
@@ -244,7 +244,7 @@ static void ble_nus_c_evt_handler(ble_nus_c_t* p_ble_nus_c,
 			break;
 
 		case BLE_NUS_C_EVT_DISCONNECTED:
-			NRF_LOG_INFO("Emisor desconectado.");
+			//NRF_LOG_INFO("Emisor desconectado.");
 			scan_start();
 			break;
 	}
@@ -296,7 +296,7 @@ void app_nus_client_ble_evt_handler(ble_evt_t const* p_ble_evt)
 			}
 			break;
 		case BLE_GAP_EVT_DISCONNECTED:
-			NRF_LOG_INFO("Buscando emisor...");
+			//NRF_LOG_RAW_INFO("\nBuscando emisor...");
 			scan_start();
 			break;
 	}

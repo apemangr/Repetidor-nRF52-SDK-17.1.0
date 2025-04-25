@@ -74,8 +74,8 @@ BLE_NUS_DEF(m_nus,
 NRF_BLE_QWR_DEF(m_qwr);             /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
 
-static uint16_t m_conn_handle =
-    BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;       // Handle del celular
+static uint16_t m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Handle del emisor
 static uint16_t m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT -
     3; /**< Maximum length of data (in bytes) that can be transmitted to the
@@ -363,14 +363,14 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 						load_mac_from_flash();
 						// muestra la MAC
 					}
-						NRF_LOG_INFO(
-						    "Comando 02 recibido. Mostrando MAC guardada en "
+						NRF_LOG_RAW_INFO(
+						    "\n\nComando 02 recibido. Mostrando MAC guardada en "
 						    "memoria flash.");
 						break;
 
 					case 3:  // Comando 03: Lógica futura
-						NRF_LOG_INFO(
-						    "Comando 03 recibido. Reiniciando dispositivo...");
+						NRF_LOG_RAW_INFO(
+						    "\n\nComando 03 recibido. Reiniciando dispositivo...");
 						NVIC_SystemReset();
 
 						break;
@@ -550,22 +550,28 @@ void app_nus_server_ble_evt_handler(ble_evt_t const* p_ble_evt)
 		case BLE_GAP_EVT_CONNECTED:
 			if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
 			{
-				NRF_LOG_INFO("Celular conectado");
-				err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-				APP_ERROR_CHECK(err_code);
-				m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-				err_code =
-				    nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
-				APP_ERROR_CHECK(err_code);
+				NRF_LOG_RAW_INFO("\nCelular conectado");
+				m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del celular
+			}
+			else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
+			{
+				NRF_LOG_RAW_INFO("\nEmisor conectado");
+				m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del emisor
 			}
 			break;
 
 		case BLE_GAP_EVT_DISCONNECTED:
-			if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
+			if (p_gap_evt->conn_handle == m_conn_handle)
 			{
-				NRF_LOG_INFO("Celular desconectado");
-				// LED indication will be changed when advertising starts.
-				m_conn_handle = BLE_CONN_HANDLE_INVALID;
+				NRF_LOG_RAW_INFO("\nCelular desconectado");
+				m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
+			}
+			else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
+			{
+				NRF_LOG_RAW_INFO("\nEmisor desconectado");
+				NRF_LOG_RAW_INFO("\n\nBuscando emisor...");
+
+				m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
 			}
 			break;
 
