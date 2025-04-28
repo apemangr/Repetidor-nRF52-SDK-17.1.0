@@ -262,7 +262,7 @@
 
 // <o> NRF_BLE_SCAN_ADDRESS_CNT - Number of address filters. 
 #ifndef NRF_BLE_SCAN_ADDRESS_CNT
-#define NRF_BLE_SCAN_ADDRESS_CNT 0
+#define NRF_BLE_SCAN_ADDRESS_CNT 1
 #endif
 
 // <o> NRF_BLE_SCAN_APPEARANCE_CNT - Number of appearance filters. 
@@ -4467,6 +4467,11 @@
 #define NRFX_UARTE0_ENABLED 0
 #endif
 
+// <o> NRFX_UARTE1_ENABLED - Enable UARTE1 instance 
+#ifndef NRFX_UARTE1_ENABLED
+#define NRFX_UARTE1_ENABLED 0
+#endif
+
 // <o> NRFX_UARTE_DEFAULT_CONFIG_HWFC  - Hardware Flow Control
  
 // <0=> Disabled 
@@ -6716,7 +6721,7 @@
 // <e> FDS_ENABLED - fds - Flash data storage module
 //==========================================================
 #ifndef FDS_ENABLED
-#define FDS_ENABLED 0
+#define FDS_ENABLED 1
 #endif
 // <h> Pages - Virtual page settings
 
@@ -7240,7 +7245,7 @@
 // <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library
 //==========================================================
 #ifndef NRF_FSTORAGE_ENABLED
-#define NRF_FSTORAGE_ENABLED 0
+#define NRF_FSTORAGE_ENABLED 1
 #endif
 // <h> nrf_fstorage - Common settings
 
