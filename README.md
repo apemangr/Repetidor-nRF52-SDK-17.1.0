@@ -1,3 +1,3 @@
 # nRF52840-central-and-peripheral
 
-Este repositorio puede ponerse en la carpeta `examples/ble_central_and_peripheral` del SDK v17.1.0 para que funcione out-of-the-box.
+This repository needs to be placed in the examples/ble_central_and_peripheral folder of the SDK v17.1.0.

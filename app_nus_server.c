@@ -7,8 +7,8 @@
 #include "ble_conn_params.h"
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
-#include "fds.h"  // Para manejar la memoria flash
-#include "nrf.h"  // Para NVIC_SystemReset()
+#include "fds.h"
+#include "nrf.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "nrf_log.h"
@@ -18,6 +18,7 @@
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
 #include "variables.h"
+#include "nrf_delay.h"
 
 #define APP_BLE_CONN_CFG_TAG 1
 
@@ -74,8 +75,14 @@ BLE_NUS_DEF(m_nus,
 NRF_BLE_QWR_DEF(m_qwr);             /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
 
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;       // Handle del celular
-static uint16_t m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Handle del emisor
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;  // Handle del celular
+static uint16_t m_emisor_conn_handle =
+    BLE_CONN_HANDLE_INVALID;               // Handle del emisor
+static uint8_t custom_mac_addr_[6] = {0};  // Arreglo de 6 bytes para la MAC
+static ble_gap_addr_t
+    m_target_periph_addr;  // No const, se inicializa en tiempo de ejecución
+static uint8_t mac_address_from_flash[6] = {
+    0};  // Arreglo de 6 bytes para la MAC
 static uint16_t m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT -
     3; /**< Maximum length of data (in bytes) that can be transmitted to the
@@ -84,14 +91,6 @@ static ble_uuid_t m_adv_uuids[] = /**< Universally unique service identifier. */
     {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
 static app_nus_server_on_data_received_t m_on_data_received = 0;
-
-// Variable global para almacenar la MAC en formato binario
-static uint8_t custom_mac_addr_[6] = {0};  // Arreglo de 6 bytes para la MAC
-static uint8_t mac_address_from_flash[6] = {
-    0};  // Arreglo de 6 bytes para la MAC
-
-static ble_gap_addr_t
-    m_target_periph_addr;  // No const, se inicializa en tiempo de ejecución
 
 static void load_mac_from_flash(void)
 {
@@ -110,8 +109,8 @@ static void load_mac_from_flash(void)
 			memcpy(mac_address_from_flash, flash_record.p_data,
 			       sizeof(mac_address_from_flash));
 			fds_record_close(&record_desc);
-			NRF_LOG_INFO(
-			    "MAC cargada desde memoria flash: "
+			NRF_LOG_RAW_INFO(
+			    "\nMAC cargada desde memoria flash: "
 			    "%02X:%02X:%02X:%02X:%02X:%02X",
 			    mac_address_from_flash[0], mac_address_from_flash[1],
 			    mac_address_from_flash[2], mac_address_from_flash[3],
@@ -173,8 +172,8 @@ static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
 	fds_record_t record;
 	fds_record_desc_t record_desc;
 	fds_find_token_t ftok = {0};
-	//	uint32_t sample_data = 1234567855;
 	uint32_t aligned_data_buffer[2];  // 2 * 4 = 8 bytes
+
 	memcpy(aligned_data_buffer, mac_addr, 6);
 
 	// Configura el registro con la MAC
@@ -182,12 +181,9 @@ static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
 	record.key = MAC_RECORD_KEY;
 	record.data.p_data = aligned_data_buffer;  // Apunta al buffer alineado
 
-	// record.data.p_data = mac_addr;
-	// record.data.length_words = sizeof(sample_data) / sizeof(uint32_t);
 	record.data.length_words =
 	    (6 + sizeof(uint32_t) - 1) / sizeof(uint32_t);  // (6 + 3) / 4 = 2
 
-	NRF_LOG_INFO("Length words: %d", record.data.length_words);
 	// Realiza la recolección de basura si es necesario
 	// perform_garbage_collection();
 
@@ -197,9 +193,8 @@ static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
 	{
 		if (fds_record_update(&record_desc, &record) == NRF_SUCCESS)
 		{
-			NRF_LOG_INFO(
-			    "MAC actualizada en memoria flash. Reiniciando el "
-			    "dispositivo...");
+			NRF_LOG_RAW_INFO(
+			    "\nActualizando la MAC en memoria flash.");
 			// NVIC_SystemReset();  // Reinicia el dispositivo
 		}
 		else
@@ -216,7 +211,7 @@ static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
 
 		if (ret == NRF_SUCCESS)
 		{
-			NRF_LOG_INFO("Registro creado correctamente.");
+			NRF_LOG_RAW_INFO("\nRegistro creado correctamente.");
 		}
 		else
 		{
@@ -231,7 +226,8 @@ static void fds_evt_handler(fds_evt_t const* p_evt)
 	{
 		if (p_evt->result == NRF_SUCCESS)
 		{
-			NRF_LOG_INFO("FDS inicializado correctamente.");
+			NRF_LOG_RAW_INFO(
+			    "\nModulo de almacenamiento inicializado correctamente.");
 		}
 		else
 		{
@@ -242,7 +238,7 @@ static void fds_evt_handler(fds_evt_t const* p_evt)
 	{
 		if (p_evt->result == NRF_SUCCESS)
 		{
-			NRF_LOG_INFO("Registro escrito correctamente.");
+			NRF_LOG_RAW_INFO("\nRegistro escrito correctamente.");
 		}
 		else
 		{
@@ -253,7 +249,7 @@ static void fds_evt_handler(fds_evt_t const* p_evt)
 	{
 		if (p_evt->result == NRF_SUCCESS)
 		{
-			NRF_LOG_INFO("Registro actualizado correctamente.");
+			NRF_LOG_RAW_INFO("\nRegistro actualizado correctamente.");
 		}
 		else
 		{
@@ -274,7 +270,6 @@ static void fds_initialize(void)
 	err_code = fds_init();
 	APP_ERROR_CHECK(err_code);
 }
-
 /**@brief Function for handling Queued Write Module errors.
  *
  * @details A pointer to this function will be passed to each service which may
@@ -339,8 +334,10 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 								custom_mac_addr_[i] =
 								    (uint8_t)strtol(byte_str, NULL, 16);
 							}
-							NRF_LOG_INFO(
-							    "MAC recibida: %02X:%02X:%02X:%02X:%02X:%02X",
+							NRF_LOG_RAW_INFO(
+							    "\n\n--- Comando 01 recibido: Mostrando MAC guardada ");
+							NRF_LOG_RAW_INFO(
+							    "\nMAC recibida: %02X:%02X:%02X:%02X:%02X:%02X",
 							    custom_mac_addr_[0], custom_mac_addr_[1],
 							    custom_mac_addr_[2], custom_mac_addr_[3],
 							    custom_mac_addr_[4], custom_mac_addr_[5]);
@@ -360,17 +357,21 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 					         // memoria flash
 					{
 						// Carga la MAC desde la memoria flash
+						NRF_LOG_RAW_INFO(
+						    "\n\n--- Comando 02 recibido: Mostrando MAC guardada "
+						    "en "
+						    "memoria flash.");
 						load_mac_from_flash();
 						// muestra la MAC
 					}
-						NRF_LOG_RAW_INFO(
-						    "\n\nComando 02 recibido. Mostrando MAC guardada en "
-						    "memoria flash.");
+
 						break;
 
 					case 3:  // Comando 03: Lógica futura
 						NRF_LOG_RAW_INFO(
-						    "\n\nComando 03 recibido. Reiniciando dispositivo...");
+						    "\n\n--- Comando 03 recibido: Reiniciando "
+						    "dispositivo...\n\n\n\n");
+                        nrf_delay_ms(1000);
 						NVIC_SystemReset();
 
 						break;
@@ -550,28 +551,33 @@ void app_nus_server_ble_evt_handler(ble_evt_t const* p_ble_evt)
 		case BLE_GAP_EVT_CONNECTED:
 			if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
 			{
-				NRF_LOG_RAW_INFO("\nCelular conectado");
-				m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del celular
+				NRF_LOG_RAW_INFO("\nCelular conectado\n");
+				m_conn_handle = p_ble_evt->evt.gap_evt
+				                    .conn_handle;  // Guardar handle del celular
 			}
 			else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
 			{
-				NRF_LOG_RAW_INFO("\nEmisor conectado");
-				m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del emisor
+				NRF_LOG_RAW_INFO("\nEmisor conectado\n");
+				m_emisor_conn_handle =
+				    p_ble_evt->evt.gap_evt
+				        .conn_handle;  // Guardar handle del emisor
 			}
 			break;
 
 		case BLE_GAP_EVT_DISCONNECTED:
 			if (p_gap_evt->conn_handle == m_conn_handle)
 			{
-				NRF_LOG_RAW_INFO("\nCelular desconectado");
-				m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
+				NRF_LOG_RAW_INFO("\nCelular desconectado\n");
+				m_conn_handle =
+				    BLE_CONN_HANDLE_INVALID;  // Invalida el handle del celular
 			}
 			else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
 			{
 				NRF_LOG_RAW_INFO("\nEmisor desconectado");
-				NRF_LOG_RAW_INFO("\n\nBuscando emisor...");
+				NRF_LOG_RAW_INFO("\n\nBuscando emisor...\n");
 
-				m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
+				m_emisor_conn_handle =
+				    BLE_CONN_HANDLE_INVALID;  // Invalida el handle del emisor
 			}
 			break;
 
