@@ -23,6 +23,7 @@
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
 #include "variables.h"
+#include "timers.h"
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
 
@@ -447,12 +448,14 @@ int main(void)
 	ble_stack_init();
 	gatt_init();
 
-	app_nus_server_init(app_nus_server_on_data_received);
+	// Timers de encendido y reposo
+    timers_app_init();
+    timers_start_cycle();
 
+	// Inicializa los servicios de servidor y cliente NUS
+	app_nus_server_init(app_nus_server_on_data_received);
 	app_nus_client_init(app_nus_client_on_data_received);
 
-	// Start execution.
-	printf("Repetidor escuchando...\r\n");
 	NRF_LOG_RAW_INFO("\n\nRepetidor escuchando...\n");
 
 	// Enter main loop.

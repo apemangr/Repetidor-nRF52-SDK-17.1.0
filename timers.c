@@ -1,11 +1,7 @@
 // timers.c
-#include "timers.h"  // Incluye su propia cabecera
+#include "timers.h"
 
-#include "app_error.h"  // Para APP_ERROR_CHECK
-#include "app_timer.h"  // Necesario para todas las funciones de app_timer
-#include "nrf_log.h"  // Para logging dentro de los handlers y la inicialización
-#include "nrf_log_ctrl.h"  // Necesario para NRF_LOG_INFO, etc.
-#include "variables.h"
+#include "app_timer.h"
 
 // --- Definiciones de Timers (Internas a este módulo) ---
 APP_TIMER_DEF(
@@ -13,6 +9,50 @@ APP_TIMER_DEF(
 APP_TIMER_DEF(
     m_sleep_time_timer_id);  // Declara el timer para el tiempo de reposo
 
+static void sleep_mode_enter(void)
+{
+	NRF_LOG_INFO("\n\nEntrando en modo de ahorro de energia (SYSTEM_ON).");
+
+    in_sleep_mode = true;  // Cambia el estado a modo de ahorro
+
+    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
+	// Asegurarse de que no haya eventos pendientes antes de entrar en modo de
+	// ahorro
+	while (NRF_LOG_PROCESS());
+	// bsp_indication_set(BSP_INDICATE_IDLE);
+
+    NRF_LOG_FLUSH();
+
+	// Entrar en modo SYSTEM_ON
+    while(true)
+    {
+        // Si el timer de reposo expira, se despierta el dispositivo
+        sd_app_evt_wait();  // Esperar evento (más eficiente que __WFE)
+        break;
+    }
+		//sd_app_evt_wait();  // Esperar evento (más eficiente que __WFE)
+
+    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
+    in_sleep_mode = false;  // Cambia el estado a modo de ahorro
+
+    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
+	NRF_LOG_INFO("Si ves este mensaje muy rapido no esta durmiendo");
+}
+
+/**
+ * @brief Handler llamado cuando el timer de reposo (SLEEP) expira.
+ */
+static void sleep_timer_handler(void* p_context)
+{
+    in_sleep_mode = false;
+	NRF_LOG_INFO("\n\nEncendiendo dispositivo del reposo por %d ms.",
+	             DEVICE_ON_TIME_MS);
+
+	// Iniciar el timer de actividad para reiniciar el ciclo
+	ret_code_t err_code =
+	    app_timer_start(m_on_time_timer_id, ON_DURATION_TICKS, NULL);
+	APP_ERROR_CHECK(err_code);
+}
 
 // --- Handlers de los Timers (Estáticos) ---
 /**
@@ -27,25 +67,10 @@ static void on_timer_handler(void* p_context)
 
 	// Iniciar el timer de reposo
 	ret_code_t err_code =
-	    app_timer_start(m_sleep_time_timer_id, SLEEP_DURATION_TICKS, NULL);
+	app_timer_start(m_sleep_time_timer_id, SLEEP_DURATION_TICKS, NULL);
 	APP_ERROR_CHECK(err_code);
 	// El sistema entrará en reposo vía nrf_pwr_mgmt_run() en main loop
-}
-
-/**
- * @brief Handler llamado cuando el timer de reposo (SLEEP) expira.
- */
-static void sleep_timer_handler(void* p_context)
-{
-	NRF_LOG_INFO("Encendiendo dispositivo del reposo por %d ms.",
-	             DEVICE_ON_TIME_MS);
-
-	// Podrías añadir lógica específica de reactivación aquí
-
-	// Iniciar el timer de actividad para reiniciar el ciclo
-	ret_code_t err_code =
-	    app_timer_start(m_on_time_timer_id, ON_DURATION_TICKS, NULL);
-	APP_ERROR_CHECK(err_code);
+	sleep_mode_enter();
 }
 
 // --- Implementación de Funciones Públicas ---
