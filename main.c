@@ -13,6 +13,7 @@
 #include "ble_hci.h"
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
+#include "leds.h"
 #include "nordic_common.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_log.h"
@@ -22,11 +23,11 @@
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
-#include "variables.h"
 #include "timers.h"
+#include "variables.h"
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
-
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
 static uint16_t m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH -
     HANDLE_LENGTH; /**< Maximum length of data (in bytes) that can be
@@ -438,8 +439,14 @@ static void idle_state_handle(void)
 
 int main(void)
 {
-    ret_code_t err_code;
-	// Initialize.
+	ret_code_t err_code;
+
+	NRF_LOG_RAW_INFO(
+	    "\n\n================= INICIO DEL SISTEMA ============="
+	    "====\n\n");
+	NRF_LOG_RAW_INFO(
+	    "           >>>>> Inicializando modulos <<<<<          \n");
+	NRF_LOG_RAW_INFO("------------------------------------------------------\n");
 	log_init();
 	base_timer_init();
 	uart_init();
@@ -448,13 +455,17 @@ int main(void)
 	ble_stack_init();
 	gatt_init();
 
-	// Timers de encendido y reposo
-    timers_app_init();
-    timers_start_cycle();
-
+	
 	// Inicializa los servicios de servidor y cliente NUS
 	app_nus_server_init(app_nus_server_on_data_received);
 	app_nus_client_init(app_nus_client_on_data_received);
+
+	nrf_delay_ms(1000);
+	// Timers de encendido y reposo
+	timers_app_init();
+	timers_start_cycle();
+
+
 
 	NRF_LOG_RAW_INFO("\n\nRepetidor escuchando...\n");
 

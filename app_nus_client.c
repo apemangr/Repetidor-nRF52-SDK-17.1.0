@@ -71,7 +71,7 @@ static void load_mac_from_flash(void)
 	else
 	{
 		NRF_LOG_RAW_INFO(
-		    "\nNo se encontro una MAC en la memoria flash. Usando valor "
+		    "\nNo se encontro una MAC en la memoria flash.\nUsando valor "
 		    "predeterminado.");
 		// Si no se encuentra una MAC, usa una dirección predeterminada
 		mac_address_from_flash[0] = 0x63;
@@ -87,8 +87,10 @@ static void load_mac_from_flash(void)
 static void target_periph_addr_init(void)
 {
 	// Carga la MAC desde la memoria flash
+	// 80 --
+	NRF_LOG_RAW_INFO("\n\n\n           >>>>> Configurando filtrado <<<<<          \n");
+	NRF_LOG_RAW_INFO("------------------------------------------------------");
 	load_mac_from_flash();
-
 	// Configura la dirección del dispositivo objetivo
 	m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
 	memcpy(m_target_periph_addr.addr, mac_address_from_flash,
@@ -99,6 +101,8 @@ static void target_periph_addr_init(void)
 	    m_target_periph_addr.addr[0], m_target_periph_addr.addr[1],
 	    m_target_periph_addr.addr[2], m_target_periph_addr.addr[3],
 	    m_target_periph_addr.addr[4], m_target_periph_addr.addr[5]);
+
+	NRF_LOG_RAW_INFO("\n------------------------------------------------------");
 }
 
 /**@brief Function for handling the Nordic UART Service Client errors.
@@ -318,7 +322,6 @@ void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
 {
 	m_on_data_received = on_data_received;
 	target_periph_addr_init();
-
 	db_discovery_init();
 	nus_c_init();
 	scan_init();

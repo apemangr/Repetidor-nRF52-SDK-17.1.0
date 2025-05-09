@@ -12,23 +12,22 @@
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
-                "NRF52840_XXAA",
+                "NRF52832_XXAA",
                 "APP_TIMER_V2",
                 "APP_TIMER_V2_RTC1_ENABLED",
-                "BOARD_PCA10056",
+                "HOLY_REPEATER",
                 "CONFIG_GPIO_AS_PINRESET",
                 "FLOAT_ABI_HARD",
                 "INITIALIZE_USER_SECTIONS",
                 "NO_VTOR_CONFIG",
-                "NRF52840_XXAA",
                 "NRF_SD_BLE_API_VERSION=7",
-                "S140",
+                "S132",
                 "SOFTDEVICE_PRESENT"
             ],
             "cStandard": "c17",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "windows-gcc-arm",
-            "compilerPath": "C:\\msys64\\mingw64\\bin\\arm-none-eabi-gcc.exe"
+            "compilerPath": "C:/msys64/mingw64/bin/arm-none-eabi-gcc.exe"
         }
     ],
     "version": 4

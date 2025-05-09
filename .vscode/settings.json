@@ -3,6 +3,10 @@
         "nrf_pwr_mgmt.h": "c",
         "variables.h": "c",
         "*.inc": "c",
-        "fds.h": "c"
-    }
+        "fds.h": "c",
+        "timers.h": "c",
+        "app_nus_server.h": "c",
+        "filesystem.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "C:/msys64/mingw64/bin/arm-none-eabi-gcc.exe"
 }

@@ -1,42 +1,44 @@
-// timers.c
 #include "timers.h"
-
-#include "app_timer.h"
+#include "app_nus_server.h"
 
 // --- Definiciones de Timers (Internas a este módulo) ---
-APP_TIMER_DEF(
-    m_on_time_timer_id);  // Declara el timer para el tiempo de actividad
-APP_TIMER_DEF(
-    m_sleep_time_timer_id);  // Declara el timer para el tiempo de reposo
+APP_TIMER_DEF(m_on_time_timer_id);    // Declara el timer para el tiempo de actividad
+APP_TIMER_DEF(m_sleep_time_timer_id); // Declara el timer para el tiempo de reposo
+
+uint32_t device_on_time_ms = DEFAULT_DEVICE_ON_TIME_MS;    // Valor predeterminado (10 segundos)
+uint32_t device_sleep_time_ms = DEFAULT_DEVICE_SLEEP_TIME_MS; // Valor predeterminado (20 segundos)
+
+/**
+ * @brief Carga los tiempos de encendido y apagado desde la memoria flash.
+ */
+void load_timers_from_flash(void)
+{
+    // Leer tiempo de encendido desde la memoria flash
+    device_on_time_ms = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+    NRF_LOG_RAW_INFO("\nTiempo de encendido cargado desde memoria flash: %d ms", device_on_time_ms);
+
+    // Leer tiempo de apagado desde la memoria flash
+    device_sleep_time_ms = read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+    NRF_LOG_RAW_INFO("\nTiempo de apagado cargado desde memoria flash: %d ms", device_sleep_time_ms);
+}
 
 static void sleep_mode_enter(void)
 {
-	NRF_LOG_INFO("\n\nEntrando en modo de ahorro de energia (SYSTEM_ON).");
+    NRF_LOG_RAW_INFO("\n\nEntrando en modo de ahorro de energia (SYSTEM_ON).");
 
-    in_sleep_mode = true;  // Cambia el estado a modo de ahorro
-
-    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
-	// Asegurarse de que no haya eventos pendientes antes de entrar en modo de
-	// ahorro
-	while (NRF_LOG_PROCESS());
-	// bsp_indication_set(BSP_INDICATE_IDLE);
-
+    // Asegurarse de que no haya eventos pendientes antes de entrar en modo de ahorro
+    while (NRF_LOG_PROCESS() == true);
     NRF_LOG_FLUSH();
-
-	// Entrar en modo SYSTEM_ON
-    while(true)
+	
+    // Entrar en modo SYSTEM_ON
+    while (true)
     {
         // Si el timer de reposo expira, se despierta el dispositivo
-        sd_app_evt_wait();  // Esperar evento (más eficiente que __WFE)
+        sd_app_evt_wait(); // Esperar evento (más eficiente que __WFE)
         break;
     }
-		//sd_app_evt_wait();  // Esperar evento (más eficiente que __WFE)
 
-    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
-    in_sleep_mode = false;  // Cambia el estado a modo de ahorro
-
-    NRF_LOG_INFO("La variable in_sleep_mode es %d", in_sleep_mode);
-	NRF_LOG_INFO("Si ves este mensaje muy rapido no esta durmiendo");
+    //NRF_LOG_RAW_INFO("\nSi ves este mensaje muy rapido no esta durmiendo");
 }
 
 /**
@@ -44,72 +46,80 @@ static void sleep_mode_enter(void)
  */
 static void sleep_timer_handler(void* p_context)
 {
-    in_sleep_mode = false;
-	NRF_LOG_INFO("\n\nEncendiendo dispositivo del reposo por %d ms.",
-	             DEVICE_ON_TIME_MS);
+    NRF_LOG_RAW_INFO("\n\nEncendiendo dispositivo del reposo por %d ms.", device_on_time_ms);
 
-	// Iniciar el timer de actividad para reiniciar el ciclo
-	ret_code_t err_code =
-	    app_timer_start(m_on_time_timer_id, ON_DURATION_TICKS, NULL);
-	APP_ERROR_CHECK(err_code);
+    // Calcular los ticks dinámicamente
+    uint32_t on_duration_ticks = APP_TIMER_TICKS(device_on_time_ms);
+
+    // Iniciar el timer de actividad para reiniciar el ciclo
+    ret_code_t err_code = app_timer_start(m_on_time_timer_id, on_duration_ticks, NULL);
+    APP_ERROR_CHECK(err_code);
 }
 
-// --- Handlers de los Timers (Estáticos) ---
 /**
  * @brief Handler llamado cuando el timer de actividad (ON) expira.
  */
 static void on_timer_handler(void* p_context)
 {
-	NRF_LOG_INFO("Tiempo de encendido terminado. Se apagara por %d ms.",
-	             DEVICE_SLEEP_TIME_MS);
+    NRF_LOG_RAW_INFO("\nTiempo de encendido terminado. Se apagara por %d ms.", device_sleep_time_ms);
 
-	// Podrías añadir lógica específica de desactivación aquí
+    // Calcular los ticks dinámicamente
+    uint32_t sleep_duration_ticks = APP_TIMER_TICKS(device_sleep_time_ms);
 
-	// Iniciar el timer de reposo
-	ret_code_t err_code =
-	app_timer_start(m_sleep_time_timer_id, SLEEP_DURATION_TICKS, NULL);
-	APP_ERROR_CHECK(err_code);
-	// El sistema entrará en reposo vía nrf_pwr_mgmt_run() en main loop
-	sleep_mode_enter();
+    // Iniciar el timer de reposo
+    ret_code_t err_code = app_timer_start(m_sleep_time_timer_id, sleep_duration_ticks, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    // El sistema entrará en reposo vía nrf_pwr_mgmt_run() en main loop
+    sleep_mode_enter();
 }
-
-// --- Implementación de Funciones Públicas ---
 
 /**
  * @brief Inicializa y crea los timers específicos de la aplicación (ON/SLEEP).
  */
 ret_code_t timers_app_init(void)
 {
-	ret_code_t err_code;
+    ret_code_t err_code;
 
-	// Crear el timer para el tiempo de actividad (modo single shot)
-	err_code = app_timer_create(&m_on_time_timer_id, APP_TIMER_MODE_SINGLE_SHOT,
-	                            on_timer_handler);
-	VERIFY_SUCCESS(
-	    err_code);  // Usa VERIFY_SUCCESS para retornar el error si falla
-	NRF_LOG_DEBUG("Timer de encendido creado.");
+    fds_stat_t stat = {0};
 
-	// Crear el timer para el tiempo de reposo (modo single shot)
-	err_code =
-	    app_timer_create(&m_sleep_time_timer_id, APP_TIMER_MODE_SINGLE_SHOT,
-	                     sleep_timer_handler);
-	VERIFY_SUCCESS(err_code);
-	NRF_LOG_DEBUG("Timer de reposo creado.");
+						fds_stat(&stat);
+						NRF_LOG_RAW_INFO("\n\nFound %d valid records.",
+						             stat.valid_records);
+						NRF_LOG_RAW_INFO(
+						    "\nFound %d dirty records (ready to be garbage "
+						    "collected).",
+						    stat.dirty_records);
 
-	NRF_LOG_INFO("Timers creados correctamente.");
-	return NRF_SUCCESS;
+    // Cargar tiempos desde la memoria flash
+    load_timers_from_flash();
+
+    // Crear el timer para el tiempo de actividad (modo single shot)
+    err_code = app_timer_create(&m_on_time_timer_id, APP_TIMER_MODE_SINGLE_SHOT, on_timer_handler);
+    VERIFY_SUCCESS(err_code); // Usa VERIFY_SUCCESS para retornar el error si falla
+    NRF_LOG_DEBUG("Timer de encendido creado.");
+
+    // Crear el timer para el tiempo de reposo (modo single shot)
+    err_code = app_timer_create(&m_sleep_time_timer_id, APP_TIMER_MODE_SINGLE_SHOT, sleep_timer_handler);
+    VERIFY_SUCCESS(err_code);
+    NRF_LOG_DEBUG("Timer de reposo creado.");
+
+    NRF_LOG_RAW_INFO("\nTimers creados correctamente.\n");
+    return NRF_SUCCESS;
 }
 
 /**
- * @brief Inicia el ciclo de timers, comenzando con el timer de actividad (ON
- * timer).
+ * @brief Inicia el ciclo de timers, comenzando con el timer de actividad (ON timer).
  */
 ret_code_t timers_start_cycle(void)
 {
-	NRF_LOG_INFO("Starting timer cycle (ON -> SLEEP).");
-	ret_code_t err_code =
-	    app_timer_start(m_on_time_timer_id, ON_DURATION_TICKS, NULL);
-	APP_ERROR_CHECK(err_code);  // O podrías retornar err_code si prefieres
-	                            // manejarlo en main
-	return err_code;            // Retorna el resultado de app_timer_start
+    NRF_LOG_RAW_INFO("\nIniciando ciclo de timers (ON -> SLEEP).");
+
+    // Calcular los ticks dinámicamente
+    uint32_t on_duration_ticks = APP_TIMER_TICKS(device_on_time_ms);
+
+    // Iniciar el timer de actividad
+    ret_code_t err_code = app_timer_start(m_on_time_timer_id, on_duration_ticks, NULL);
+    APP_ERROR_CHECK(err_code); // O podrías retornar err_code si prefieres manejarlo en main
+    return err_code;           // Retorna el resultado de app_timer_start
 }

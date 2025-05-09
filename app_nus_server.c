@@ -8,17 +8,195 @@
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
 #include "fds.h"
+#include "filesystem.h"
 #include "nrf.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
+#include "nrf_delay.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
+#include "timers.h"
 #include "variables.h"
-#include "nrf_delay.h"
+
+/* Replica del guardado y lectura en la memoria flash */
+
+static void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
+{
+	uint16_t record_key = (valor_type == TIEMPO_ENCENDIDO)
+	                          ? TIME_ON_RECORD_KEY
+	                          : TIME_SLEEP_RECORD_KEY;
+	fds_record_t record = {.file_id = TIME_FILE_ID,
+	                       .key = record_key,
+	                       .data.p_data = &valor,
+	                       .data.length_words = 1};
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};
+	ret_code_t err_code =
+	    fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
+
+	if (err_code == NRF_SUCCESS)
+	{
+		err_code = fds_record_update(&record_desc, &record);
+		NRF_LOG_RAW_INFO(
+		    "\nTiempo de %s %s: %d segundos.\n",
+		    (valor_type == TIEMPO_ENCENDIDO) ? "encendido" : "sleep",
+		    (err_code == NRF_SUCCESS) ? "actualizado" : "falló al actualizar",
+		    valor / 1000);
+	}
+	else if (err_code == FDS_ERR_NOT_FOUND)
+	{
+		err_code = fds_record_write(&record_desc, &record);
+		NRF_LOG_RAW_INFO(
+		    "\nTiempo de %s %s: %d segundos.\n",
+		    (valor_type == TIEMPO_ENCENDIDO) ? "encendido" : "sleep",
+		    (err_code == NRF_SUCCESS) ? "guardado" : "falló al guardar",
+		    valor / 1000);
+	}
+	else
+	{
+		NRF_LOG_ERROR("Error al buscar el registro en memoria flash: %d",
+		              err_code);
+	}
+}
+
+/**
+ * @brief Lee un valor desde la memoria flash.
+ *
+ * @param valor_type Tipo de valor (TIEMPO_ENCENDIDO o TIEMPO_SLEEP).
+ * @param default_valor Valor predeterminado si no se encuentra el registro.
+ * @return Valor leído desde la memoria flash.
+ */
+uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
+{
+	fds_flash_record_t flash_record;
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};  // Importante inicializar a cero
+	uint32_t resultado = default_valor;
+	uint32_t* data;
+	uint16_t record_key;
+	ret_code_t err_code;
+	// Determinar el Record Key según el tipo de valor
+	record_key = (valor_type == TIEMPO_ENCENDIDO) ? TIME_ON_RECORD_KEY
+	                                              : TIME_SLEEP_RECORD_KEY;
+
+	// Busca el registro en la memoria flash
+	err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
+
+	if (err_code == NRF_SUCCESS)
+	{
+		// Si el registro existe, abre y lee el valor
+		err_code = fds_record_open(&record_desc, &flash_record);
+		if (err_code == NRF_SUCCESS)
+		{
+			// Verifica que el tamaño del dato leído sea el esperado
+			if (flash_record.p_header->length_words == 1)
+			{
+				// Copiar directamente el valor desde flash
+				data = (uint32_t*)flash_record.p_data;
+				resultado = *data;
+				NRF_LOG_RAW_INFO("\n\nValor leido desde memoria flash: %u\n",
+				                 resultado);
+			}
+			else
+			{
+				NRF_LOG_WARNING(
+				    "Tamaño del dato en memoria flash no coincide con el "
+				    "esperado.\n");
+			}
+
+			// Cierra el registro después de leer
+			err_code = fds_record_close(&record_desc);
+			if (err_code != NRF_SUCCESS)
+			{
+				NRF_LOG_ERROR("Error al cerrar el registro: 0x%X", err_code);
+				return default_valor;
+			}
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al abrir el registro: 0x%X", err_code);
+		}
+	}
+	else
+	{
+		NRF_LOG_RAW_INFO(
+		    "\n\nRegistro no encontrado. Usando valor predeterminado: %u\n",
+		    default_valor);
+	}
+
+	return resultado;
+}
+
+/**
+ * @brief Lee el tiempo de encendido desde la memoria flash.
+ *
+ * @param default_on_time_ms Valor predeterminado si no se encuentra el
+ * registro.
+ * @return Tiempo de encendido leído desde la memoria flash.
+ */
+uint32_t read_on_time_from_flash(uint32_t default_on_time_ms)
+{
+	fds_flash_record_t flash_record;
+	fds_record_desc_t record_desc;
+	fds_find_token_t ftok = {0};  // Importante inicializar a cero
+	uint32_t resultado = default_on_time_ms;
+	uint32_t* data;
+
+	NRF_LOG_RAW_INFO("Buscando tiempo de encendido en memoria flash...\n");
+
+	// Busca el registro en la memoria flash
+	ret_code_t err_code =
+	    fds_record_find(TIME_FILE_ID, TIME_ON_RECORD_KEY, &record_desc, &ftok);
+	if (err_code == NRF_SUCCESS)
+	{
+		// Si el registro existe, abre y lee el valor
+		err_code = fds_record_open(&record_desc, &flash_record);
+		if (err_code == NRF_SUCCESS)
+		{
+			// Verifica que el tamaño del dato leído sea el esperado
+			if (flash_record.p_header->length_words == 1)
+			{
+				// Copiar directamente el valor desde flash
+				data = (uint32_t*)flash_record.p_data;
+				resultado = *data;
+				NRF_LOG_RAW_INFO(
+				    "Tiempo de encendido leído desde memoria flash: %u ms\n",
+				    resultado);
+			}
+			else
+			{
+				NRF_LOG_WARNING(
+				    "Tamaño del dato en memoria flash no coincide con el "
+				    "esperado.\n");
+			}
+
+			// Cierra el registro después de leer
+			err_code = fds_record_close(&record_desc);
+			if (err_code != NRF_SUCCESS)
+			{
+				NRF_LOG_ERROR("Error al cerrar el registro: %d", err_code);
+				return default_on_time_ms;
+			}
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al abrir el registro: %d", err_code);
+		}
+	}
+	else
+	{
+		NRF_LOG_WARNING(
+		    "Registro de tiempo de encendido no encontrado. Usando valor "
+		    "predeterminado: %u ms\n",
+		    default_on_time_ms);
+	}
+
+	return resultado;
+}
 
 #define APP_BLE_CONN_CFG_TAG 1
 
@@ -193,8 +371,7 @@ static void save_mac_to_flash_and_reset(uint8_t* mac_addr)
 	{
 		if (fds_record_update(&record_desc, &record) == NRF_SUCCESS)
 		{
-			NRF_LOG_RAW_INFO(
-			    "\nActualizando la MAC en memoria flash.");
+			NRF_LOG_RAW_INFO("\nActualizando la MAC en memoria flash.");
 			// NVIC_SystemReset();  // Reinicia el dispositivo
 		}
 		else
@@ -227,7 +404,7 @@ static void fds_evt_handler(fds_evt_t const* p_evt)
 		if (p_evt->result == NRF_SUCCESS)
 		{
 			NRF_LOG_RAW_INFO(
-			    "\nModulo de almacenamiento inicializado correctamente.");
+			    "- Modulo de almacenamiento inicializado correctamente.");
 		}
 		else
 		{
@@ -254,6 +431,17 @@ static void fds_evt_handler(fds_evt_t const* p_evt)
 		else
 		{
 			NRF_LOG_ERROR("Error al actualizar el registro: %d", p_evt->result);
+		}
+	}
+	else if (p_evt->id == FDS_EVT_DEL_RECORD)
+	{
+		if (p_evt->result == NRF_SUCCESS)
+		{
+			NRF_LOG_RAW_INFO("\nRegistro eliminado correctamente.");
+		}
+		else
+		{
+			NRF_LOG_ERROR("Error al eliminar el registro: %d", p_evt->result);
 		}
 	}
 }
@@ -335,7 +523,8 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 								    (uint8_t)strtol(byte_str, NULL, 16);
 							}
 							NRF_LOG_RAW_INFO(
-							    "\n\n--- Comando 01 recibido: Mostrando MAC guardada ");
+							    "\n\n--- Comando 01 recibido: Mostrando MAC "
+							    "guardada ");
 							NRF_LOG_RAW_INFO(
 							    "\nMAC recibida: %02X:%02X:%02X:%02X:%02X:%02X",
 							    custom_mac_addr_[0], custom_mac_addr_[1],
@@ -358,28 +547,118 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 					{
 						// Carga la MAC desde la memoria flash
 						NRF_LOG_RAW_INFO(
-						    "\n\n--- Comando 02 recibido: Mostrando MAC guardada "
+						    "\n\n--- Comando 02 recibido: Mostrando MAC "
+						    "guardada "
 						    "en "
 						    "memoria flash.");
 						load_mac_from_flash();
 						// muestra la MAC
 					}
 
-						break;
+					break;
 
-					case 3:  // Comando 03: Lógica futura
+					case 3:  // Comando 03: Reiniciar el dispositivo
 						NRF_LOG_RAW_INFO(
 						    "\n\n--- Comando 03 recibido: Reiniciando "
 						    "dispositivo...\n\n\n\n");
-                        nrf_delay_ms(1000);
+						nrf_delay_ms(1000);
 						NVIC_SystemReset();
 
 						break;
 
-					case 4:  // Comando 04: Lógica futura
-						NRF_LOG_INFO(
-						    "Comando 04 recibido. Logica no implementada.");
+					case 4:  // Guardar tiempo de encendido
+					{
+						if (p_evt->params.rx_data.length >=
+						    6)  // Verifica que haya datos suficientes
+						{
+							char time_str[4] = {message[5], message[6],
+							                    message[7], '\0'};
+							uint32_t time_in_seconds
+							    __attribute__((aligned(4))) =
+							        atoi(time_str) * 1000;
+							if (time_in_seconds <=
+							    666000)  // Verifica que no exceda el máximo
+							             // permitido
+							{
+								write_time_to_flash(TIEMPO_ENCENDIDO,
+								                    time_in_seconds);
+							}
+							else
+							{
+								NRF_LOG_WARNING(
+								    "El tiempo de encendido excede el máximo "
+								    "permitido (666 segundos).");
+							}
+						}
+						else
+						{
+							NRF_LOG_WARNING(
+							    "Comando 04 recibido con datos insuficientes.");
+						}
 						break;
+					}
+
+					case 5:  // Comando 05: Leer tiempo de encendido desde la
+					         // memoria flash
+					{
+						uint32_t on_time_ms =
+						    read_on_time_from_flash(DEFAULT_DEVICE_ON_TIME_MS);
+
+						// read_time_from_flash(
+						//     TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+						NRF_LOG_RAW_INFO(
+						    "\n\n--- Comando 05 recibido: Tiempo de encendido "
+						    "leido: %d ms.\n\n",
+						    on_time_ms);
+						break;
+					}
+
+					case 6:  // Comando 06: Guardar tiempo de apagado
+					{
+						if (p_evt->params.rx_data.length >=
+						    6)  // Verifica que haya datos suficientes
+						{
+							char time_str[4] = {message[5], message[6],
+							                    message[7], '\0'};
+							uint32_t time_in_seconds
+							    __attribute__((aligned(4))) =
+							        atoi(time_str) * 1000;
+							if (time_in_seconds <=
+							    666000)  // Verifica que no exceda el máximo
+							             // permitido
+							{
+								write_time_to_flash(TIEMPO_SLEEP,
+								                    time_in_seconds);
+							}
+							else
+							{
+								NRF_LOG_WARNING(
+								    "El tiempo de dormido excede el máximo "
+								    "permitido (666 segundos).");
+							}
+						}
+						else
+						{
+							NRF_LOG_WARNING(
+							    "Comando 06 recibido con datos insuficientes.");
+						}
+						break;
+					}
+
+					case 7:  // Comando 07: Leer tiempo de apagado desde la
+					         // memoria flash
+					{
+						uint32_t on_time_ms =
+						    read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+
+						// read_time_from_flash(
+						//     TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+						NRF_LOG_RAW_INFO(
+						    "\n\n--- Comando 07 recibido: Tiempo de dormido"
+						    "leido: %d ms.\n\n",
+						    on_time_ms);
+						break;
+					}
 
 					default:  // Comando desconocido
 						NRF_LOG_WARNING("Comando desconocido: %s", command);
@@ -648,6 +927,8 @@ static void advertising_init(void)
 	init.advdata.include_appearance = false;
 	init.advdata.flags = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
 
+	init.config.ble_adv_on_disconnect_disabled = true;
+
 	init.srdata.uuids_complete.uuid_cnt =
 	    sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
 	init.srdata.uuids_complete.p_uuids = m_adv_uuids;
@@ -680,5 +961,7 @@ void app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 	advertising_init();
 	conn_params_init();
 	fds_initialize();
+	NRF_LOG_RAW_INFO(
+	    "\n------------------------------------------------------");
 	advertising_start();
 }
