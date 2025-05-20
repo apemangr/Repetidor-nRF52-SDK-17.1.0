@@ -7,6 +7,7 @@
 #include "app_error.h"  // Para APP_ERROR_CHECK
 #include "app_timer.h"  // Necesario para todas las funciones de app_timer
 #include "bsp.h"
+#include "app_nus_server.h"
 #include "nrf_log.h"  // Para logging dentro de los handlers y la inicialización
 #include "nrf_log_ctrl.h"  // Necesario para NRF_LOG_INFO, etc.
 #include "sdk_errors.h"

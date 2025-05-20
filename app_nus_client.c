@@ -40,9 +40,9 @@ static ble_gap_addr_t m_target_periph_addr;
 static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
                                       .type = NUS_SERVICE_UUID_TYPE};
 
-//static ble_gap_addr_t const m_target_periph_addr = {
-//    .addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC,
-    //.addr = {0x63, 0x98, 0x41, 0xD3, 0x03, 0xFB}};
+// static ble_gap_addr_t const m_target_periph_addr = {
+//     .addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC,
+//.addr = {0x63, 0x98, 0x41, 0xD3, 0x03, 0xFB}};
 
 // Función para leer la MAC desde la memoria flash
 static void load_mac_from_flash(void)
@@ -60,18 +60,19 @@ static void load_mac_from_flash(void)
 			memcpy(mac_address_from_flash, flash_record.p_data,
 			       sizeof(mac_address_from_flash));
 			fds_record_close(&record_desc);
-			NRF_LOG_RAW_INFO(
-			    "\nMAC cargada desde memoria flash: "
-			    "%02X:%02X:%02X:%02X:%02X:%02X",
-			    mac_address_from_flash[0], mac_address_from_flash[1],
-			    mac_address_from_flash[2], mac_address_from_flash[3],
-			    mac_address_from_flash[4], mac_address_from_flash[5]);
+			// NRF_LOG_RAW_INFO(
+			//     "\t>> MAC cargada desde memoria flash: "
+			//     "%02X:%02X:%02X:%02X:%02X:%02X",
+			//     mac_address_from_flash[0], mac_address_from_flash[1],
+			//     mac_address_from_flash[2], mac_address_from_flash[3],
+			//     mac_address_from_flash[4], mac_address_from_flash[5]);
 		}
 	}
 	else
 	{
 		NRF_LOG_RAW_INFO(
-		    "\nNo se encontro una MAC en la memoria flash.\nUsando valor "
+		    "\t>> No se encontro una MAC en la memoria flash."
+		    "\n\t>> Usando valor "
 		    "predeterminado.");
 		// Si no se encuentra una MAC, usa una dirección predeterminada
 		mac_address_from_flash[0] = 0x63;
@@ -88,21 +89,20 @@ static void target_periph_addr_init(void)
 {
 	// Carga la MAC desde la memoria flash
 	// 80 --
-	NRF_LOG_RAW_INFO("\n\n\n           >>>>> Configurando filtrado <<<<<          \n");
-	NRF_LOG_RAW_INFO("------------------------------------------------------");
+	NRF_LOG_RAW_INFO("\n\n> Configurando filtrado...\n");
 	load_mac_from_flash();
 	// Configura la dirección del dispositivo objetivo
 	m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
 	memcpy(m_target_periph_addr.addr, mac_address_from_flash,
 	       sizeof(mac_address_from_flash));
 
-	NRF_LOG_RAW_INFO(
-	    "\nDireccion objetivo inicializada: %02X:%02X:%02X:%02X:%02X:%02X",
-	    m_target_periph_addr.addr[0], m_target_periph_addr.addr[1],
-	    m_target_periph_addr.addr[2], m_target_periph_addr.addr[3],
-	    m_target_periph_addr.addr[4], m_target_periph_addr.addr[5]);
+	NRF_LOG_RAW_INFO("\t>> MAC cargada desde memoria flash: %02X:%02X:%02X:%02X:%02X:%02X",
+	                 m_target_periph_addr.addr[0], m_target_periph_addr.addr[1],
+	                 m_target_periph_addr.addr[2], m_target_periph_addr.addr[3],
+	                 m_target_periph_addr.addr[4],
+	                 m_target_periph_addr.addr[5]);
 
-	NRF_LOG_RAW_INFO("\n------------------------------------------------------");
+	NRF_LOG_RAW_INFO("\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
 }
 
 /**@brief Function for handling the Nordic UART Service Client errors.
@@ -175,7 +175,7 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
 			    p_scan_evt->params.connected.p_connected;
 
 			NRF_LOG_RAW_INFO(
-			    "\nConectado a dispositivo autorizado: "
+			    "\n\nConectado a dispositivo autorizado: "
 			    "%02x:%02x:%02x:%02x:%02x:%02x",
 			    p_connected->peer_addr.addr[0], p_connected->peer_addr.addr[1],
 			    p_connected->peer_addr.addr[2], p_connected->peer_addr.addr[3],

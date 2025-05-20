@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VARIABLES_H
+#define VARIABLES_H
 
 #define RESTART_TIMEOUT_REPETIDOR_MS \
 	10000 /**< Tiempo de encendido for the repeater. */
@@ -21,10 +22,6 @@
 #define DEFAULT_DEVICE_SLEEP_TIME_MS \
 	20000  // Tiempo que el dispositivo estará dormido (ej: 10 segundos)
 
-// Convierte milisegundos a ticks de app_timer
-// #define ON_DURATION_TICKS APP_TIMER_TICKS(DEVICE_ON_TIME_MS)
-// #define SLEEP_DURATION_TICKS APP_TIMER_TICKS(DEVICE_SLEEP_TIME_MS)
-
 /** STORAGE	 */
 // --- Configuración de Almacenamiento para guardar la MAC ---
 #define MAC_FILE_ID 0x1111     // Identificador único para el archivo
@@ -33,3 +30,5 @@
 #define TIME_FILE_ID 0x3333  // ID del archivo para el tiempo de encendido
 #define TIME_ON_RECORD_KEY 0x4444
 #define TIME_SLEEP_RECORD_KEY 0x5555
+
+#endif // VARIABLES_H

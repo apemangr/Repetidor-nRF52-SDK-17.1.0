@@ -442,11 +442,13 @@ int main(void)
 	ret_code_t err_code;
 
 	NRF_LOG_RAW_INFO(
-	    "\n\n================= INICIO DEL SISTEMA ============="
-	    "====\n\n");
+	    "\n\033[1;36m====================\033[0m "
+	    "\033[1;33mINICIO DEL SISTEMA\033[0m"
+	    " \033[1;36m====================\033[0m\n");
 	NRF_LOG_RAW_INFO(
-	    "           >>>>> Inicializando modulos <<<<<          \n");
-	NRF_LOG_RAW_INFO("------------------------------------------------------\n");
+	    "\t\t Firmware 0.0.1 por\033[0m "
+	    "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
+
 	log_init();
 	base_timer_init();
 	uart_init();
@@ -455,19 +457,18 @@ int main(void)
 	ble_stack_init();
 	gatt_init();
 
-	
 	// Inicializa los servicios de servidor y cliente NUS
 	app_nus_server_init(app_nus_server_on_data_received);
 	app_nus_client_init(app_nus_client_on_data_received);
 
-	nrf_delay_ms(1000);
-	// Timers de encendido y reposo
+	// nrf_delay_ms(1000);
+	//  Timers de encendido y reposo
 	timers_app_init();
+
+	NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
+
 	timers_start_cycle();
 
-
-
-	NRF_LOG_RAW_INFO("\n\nRepetidor escuchando...\n");
 
 	// Enter main loop.
 	for (;;)
