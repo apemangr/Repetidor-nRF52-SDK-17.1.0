@@ -91,6 +91,7 @@
       <file file_name="../../../../../../modules/nrfx/drivers/src/prs/nrfx_prs.c" />
       <file file_name="../../../../../../modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="../../../../../../modules/nrfx/drivers/src/nrfx_uarte.c" />
+      <file file_name="../../../../../../modules/nrfx/drivers/src/nrfx_rtc.c" />
     </folder>
     <folder Name="Board Support">
       <file file_name="../../../../../../components/libraries/bsp/bsp.c" />
@@ -101,7 +102,6 @@
       <file file_name="../config/sdk_config.h" />
       <file file_name="../../../app_nus_client.c" />
       <file file_name="../../../app_nus_server.c" />
-      <file file_name="../../../variables.h" />
       <file file_name="../../../filesystem.c" />
       <file file_name="../../../timers.c" />
       <file file_name="../../../app_nus_client.h" />

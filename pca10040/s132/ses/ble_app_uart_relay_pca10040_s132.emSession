@@ -1,7 +1,9 @@
 <!DOCTYPE CrossStudio_Session_File>
 <session>
  <Bookmarks/>
- <Breakpoints groups="Breakpoints" active_group="Breakpoints"/>
+ <Breakpoints groups="Breakpoints" active_group="Breakpoints">
+  <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
+ </Breakpoints>
  <ExecutionProfileWindow/>
  <FrameBufferWindow>
   <FrameBufferWindow bufferHeight="-1" addressSpace="" addressText="" bufferWidth="-1"/>
@@ -76,10 +78,17 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="443" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="440" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="195" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="169" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="11" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="15" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="77" codecName=""/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="494" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="478" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="25" y="12" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/main.c" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="5414" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="5387" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="62" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="58" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/boards/boards.h" selected="0" top="38" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="93" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="ble_app_uart_relay_pca10040_s132.emProject" selected="0" top="81" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="37" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../timers.c" selected="0" top="31" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="10" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/main.c" useBinaryEdit="0" left="0" path="../../../variables.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1943" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/app_nus_server.c" useBinaryEdit="0" left="0" path="../../../../../../components/softdevice/s132/headers/ble_gap.h" selected="0" top="1922" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="567" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer2.c" selected="0" top="546" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="129" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/pwr_mgmt/nrf_pwr_mgmt.h" selected="0" top="92" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="ble_app_uart_relay_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/guill/OneDrive/Desktop/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="ble_app_uart_relay_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/guill/OneDrive/Desktop/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

@@ -17,6 +17,8 @@
 ret_code_t timers_app_init(void);
 ret_code_t timers_start_cycle(void);
 
+extern volatile bool device_on;
+
 void load_timers_from_flash(void);
 // static uint32_t on_duration_ticks;
 // static uint32_t sleep_duration_ticks;

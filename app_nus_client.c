@@ -75,12 +75,12 @@ static void load_mac_from_flash(void)
 		    "\n\t>> Usando valor "
 		    "predeterminado.");
 		// Si no se encuentra una MAC, usa una dirección predeterminada
-		mac_address_from_flash[0] = 0x63;
-		mac_address_from_flash[1] = 0x98;
-		mac_address_from_flash[2] = 0x41;
-		mac_address_from_flash[3] = 0xD3;
-		mac_address_from_flash[4] = 0x03;
-		mac_address_from_flash[5] = 0xFB;
+		mac_address_from_flash[0] = 0x10;
+		mac_address_from_flash[1] = 0x4A;
+		mac_address_from_flash[2] = 0x7C;
+		mac_address_from_flash[3] = 0xD9;
+		mac_address_from_flash[4] = 0x3E;
+		mac_address_from_flash[5] = 0xC7;
 	}
 }
 
@@ -143,7 +143,7 @@ static void db_discovery_init(void)
 }
 
 /**@brief Function to start scanning. */
-static void scan_start(void)
+void scan_start(void)
 {
 	ret_code_t ret;
 
@@ -261,7 +261,7 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c,
 
 		case BLE_NUS_C_EVT_DISCONNECTED:
 			// NRF_LOG_INFO("Emisor desconectado.");
-			scan_start();
+			//scan_start();
 			break;
 	}
 }
@@ -316,6 +316,11 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 			scan_start();
 			break;
 	}
+}
+
+void scan_stop(void)
+{
+	nrf_ble_scan_stop();
 }
 
 void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)

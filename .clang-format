@@ -1,6 +1,18 @@
-BasedOnStyle: Google
+# BasedOnStyle: Google
+# IndentWidth: 4
+# TabWidth: 4
+# UseTab: ForIndentation
+# IndentCaseLabels: true
+# BreakBeforeBraces: Allman
+BasedOnStyle: LLVM
+ColumnLimit: 120
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments  # Alinea macros incluso con líneas vacías/comentarios
+MacroBlockBegin: ""                                 # No requiere bloques especiales
+SpacesInLineCommentPrefix: 1                        # Espacio después de //
+AlignTrailingComments: true
+AlignConsecutiveDeclarations: true
+BreakBeforeBraces: Stroustrup
+AllowShortFunctionsOnASingleLine: Empty
 IndentWidth: 4
-TabWidth: 4
-UseTab: ForIndentation
-IndentCaseLabels: true
-BreakBeforeBraces: Allman
+UseTab: Never
+PointerAlignment: Left

@@ -1,5 +1,7 @@
 #include "timers.h"
 
+volatile bool device_on = true;  // Definición global, inicializada a false
+
 // --- Definiciones de Timers (Internas a este módulo) ---
 APP_TIMER_DEF(
     m_on_time_timer_id);  // Declara el timer para el tiempo de actividad
@@ -27,20 +29,15 @@ void load_timers_from_flash(void)
 
 static void sleep_mode_enter(void)
 {
-	//NRF_LOG_RAW_INFO("\n\nEntrando en modo de ahorro de energia (SYSTEM_ON).");
+	// NRF_LOG_RAW_INFO("\n\nEntrando en modo de ahorro de energia
+	// (SYSTEM_ON).");
 
 	// Asegurarse de que no haya eventos pendientes antes de entrar en modo de
 	// ahorro
 	while (NRF_LOG_PROCESS() == true);
 	NRF_LOG_FLUSH();
 
-	// Entrar en modo SYSTEM_ON
-	while (true)
-	{
-		// Si el timer de reposo expira, se despierta el dispositivo
-		sd_app_evt_wait();  // Esperar evento (más eficiente que __WFE)
-		break;
-	}
+	device_on = false;  // Indica que el dispositivo está en modo de reposo
 
 	// NRF_LOG_RAW_INFO("\nSi ves este mensaje muy rapido no esta durmiendo");
 }
@@ -54,6 +51,7 @@ static void sleep_timer_handler(void* p_context)
 	    "\r\n\n** \x1b[2;33mEl dispositivo se encendera por %d ms\x1b[0m",
 	    device_on_time_ms);
 
+	device_on = true;  // Indica que el dispositivo está activo
 	// Calcular los ticks dinámicamente
 	uint32_t on_duration_ticks = APP_TIMER_TICKS(device_on_time_ms);
 
@@ -134,5 +132,10 @@ ret_code_t timers_start_cycle(void)
 	    app_timer_start(m_on_time_timer_id, on_duration_ticks, NULL);
 	APP_ERROR_CHECK(err_code);  // O podrías retornar err_code si prefieres
 	                            // manejarlo en main
-	return err_code;            // Retorna el resultado de app_timer_start
+
+	if (err_code == NRF_SUCCESS)
+	{
+		device_on = true;  // ¡Importante! El dispositivo está ahora en fase ON
+	}
+	return err_code;  // Retorna el resultado de app_timer_start
 }

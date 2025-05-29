@@ -1877,7 +1877,7 @@
 // <196609=> External Full Swing 
 
 #ifndef NRFX_CLOCK_CONFIG_LF_SRC
-#define NRFX_CLOCK_CONFIG_LF_SRC 1
+#define NRFX_CLOCK_CONFIG_LF_SRC 0
 #endif
 
 // <o> NRFX_CLOCK_CONFIG_IRQ_PRIORITY  - Interrupt priority
@@ -3288,7 +3288,7 @@
 // <e> NRFX_RTC_ENABLED - nrfx_rtc - RTC peripheral driver
 //==========================================================
 #ifndef NRFX_RTC_ENABLED
-#define NRFX_RTC_ENABLED 0
+#define NRFX_RTC_ENABLED 1
 #endif
 // <q> NRFX_RTC0_ENABLED  - Enable RTC0 instance
  
@@ -3308,7 +3308,7 @@
  
 
 #ifndef NRFX_RTC2_ENABLED
-#define NRFX_RTC2_ENABLED 0
+#define NRFX_RTC2_ENABLED 1
 #endif
 
 // <o> NRFX_RTC_MAXIMUM_LATENCY_US - Maximum possible time[us] in highest priority interrupt 
@@ -5365,7 +5365,7 @@
 // <e> RTC_ENABLED - nrf_drv_rtc - RTC peripheral driver - legacy layer
 //==========================================================
 #ifndef RTC_ENABLED
-#define RTC_ENABLED 0
+#define RTC_ENABLED 1
 #endif
 // <o> RTC_DEFAULT_CONFIG_FREQUENCY - Frequency  <16-32768> 
 
@@ -5416,7 +5416,7 @@
  
 
 #ifndef RTC2_ENABLED
-#define RTC2_ENABLED 0
+#define RTC2_ENABLED 1
 #endif
 
 // <o> NRF_MAXIMUM_LATENCY_US - Maximum possible time[us] in highest priority interrupt 

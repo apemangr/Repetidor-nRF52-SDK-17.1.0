@@ -1,6 +1,8 @@
 #ifndef VARIABLES_H
 #define VARIABLES_H
 
+#include "stdbool.h"
+
 #define RESTART_TIMEOUT_REPETIDOR_MS \
 	10000 /**< Tiempo de encendido for the repeater. */
 #define APP_BLE_CONN_CFG_TAG                                            \
@@ -30,5 +32,7 @@
 #define TIME_FILE_ID 0x3333  // ID del archivo para el tiempo de encendido
 #define TIME_ON_RECORD_KEY 0x4444
 #define TIME_SLEEP_RECORD_KEY 0x5555
+
+
 
 #endif // VARIABLES_H

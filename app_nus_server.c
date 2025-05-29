@@ -22,8 +22,6 @@
 #include "timers.h"
 #include "variables.h"
 
-/* Replica del guardado y lectura en la memoria flash */
-
 static void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 {
 	uint16_t record_key = (valor_type == TIEMPO_ENCENDIDO)
@@ -63,13 +61,6 @@ static void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 	}
 }
 
-/**
- * @brief Lee un valor desde la memoria flash.
- *
- * @param valor_type Tipo de valor (TIEMPO_ENCENDIDO o TIEMPO_SLEEP).
- * @param default_valor Valor predeterminado si no se encuentra el registro.
- * @return Valor leído desde la memoria flash.
- */
 uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 {
 	fds_flash_record_t flash_record;
@@ -111,7 +102,6 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 				    "esperado.\n");
 			}
 
-			// Cierra el registro después de leer
 			err_code = fds_record_close(&record_desc);
 			if (err_code != NRF_SUCCESS)
 			{
@@ -612,7 +602,7 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 						uint32_t sleep_time_ms = read_time_from_flash(
 						    TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
 
-							break;
+						break;
 					}
 
 					default:  // Comando desconocido
@@ -636,14 +626,7 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 		}
 	}
 }
-/**@snippet [Handling the data received over BLE] */
 
-/**@brief Function for the GAP initialization.
- *
- * @details This function will set up all the necessary GAP (Generic Access
- * Profile) parameters of the device. It also sets the permissions and
- * appearance.
- */
 static void gap_params_init(void)
 {
 	uint32_t err_code;
@@ -691,17 +674,6 @@ static void services_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for handling an event from the Connection Parameters Module.
- *
- * @details This function will be called for all events in the Connection
- * Parameters Module which are passed to the application.
- *
- * @note All this function does is to disconnect. This could have been done by
- * simply setting the disconnect_on_fail config parameter, but instead we use
- * the event handler mechanism to demonstrate its use.
- *
- * @param[in] p_evt  Event received from the Connection Parameters Module.
- */
 static void on_conn_params_evt(ble_conn_params_evt_t* p_evt)
 {
 	uint32_t err_code;
@@ -714,18 +686,11 @@ static void on_conn_params_evt(ble_conn_params_evt_t* p_evt)
 	}
 }
 
-/**@brief Function for handling errors from the Connection Parameters module.
- *
- * @param[in] nrf_error  Error code containing information about what went
- * wrong.
- */
 static void conn_params_error_handler(uint32_t nrf_error)
 {
 	APP_ERROR_HANDLER(nrf_error);
 }
 
-/**@brief Function for initializing the Connection Parameters module.
- */
 static void conn_params_init(void)
 {
 	uint32_t err_code;
@@ -746,13 +711,6 @@ static void conn_params_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for handling advertising events.
- *
- * @details This function will be called for advertising events which are passed
- * to the application.
- *
- * @param[in] ble_adv_evt  Advertising event.
- */
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
 	uint32_t err_code;
@@ -771,10 +729,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 	}
 }
 
-/**@brief Function for handling BLE events.
- *
- * @param[in]   p_ble_evt   Bluetooth stack event.
- */
 void app_nus_server_ble_evt_handler(ble_evt_t const* p_ble_evt)
 {
 	uint32_t err_code;
@@ -865,8 +819,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const* p_ble_evt)
 
 uint32_t app_nus_server_send_data(const uint8_t* data_array, uint16_t length)
 {
-	return ble_nus_data_send(&m_nus, (uint8_t*)data_array, &length,
-	                         m_conn_handle);
+	return ble_nus_data_send(&m_nus, (uint8_t*)data_array, &length, m_conn_handle);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -901,12 +854,32 @@ static void advertising_init(void)
 
 /**@brief Function for starting advertising.
  */
-static void advertising_start(void)
+void advertising_start(void)
 {
 	uint32_t err_code =
 	    ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
 	APP_ERROR_CHECK(err_code);
 }
+
+void advertising_stop(void)
+{
+    sd_ble_gap_adv_stop(m_advertising.adv_handle);
+}
+
+void disconnect_all_connections(void)
+{
+    ret_code_t err_code;
+
+    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        err_code = sd_ble_gap_disconnect(m_conn_handle, 
+                     BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        APP_ERROR_CHECK(err_code);
+        m_conn_handle = BLE_CONN_HANDLE_INVALID;
+        NRF_LOG_RAW_INFO("\nCelular desconectado.");
+    }
+}
+
 
 void app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 {
