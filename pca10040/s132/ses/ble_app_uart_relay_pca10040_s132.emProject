@@ -108,6 +108,8 @@
       <file file_name="../../../app_nus_server.h" />
       <file file_name="../../../filesystem.h" />
       <file file_name="../../../leds.h" />
+      <file file_name="../../../calendar.c" />
+      <file file_name="../../../calendar.h" />
       <file file_name="../../../timers.h" />
     </folder>
     <folder Name="nRF_Segger_RTT">
