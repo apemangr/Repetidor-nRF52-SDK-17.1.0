@@ -503,7 +503,7 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 							char time_str[4] = {message[5], message[6], message[7], '\0'};
 							uint32_t time_in_seconds __attribute__((aligned(4))) = atoi(time_str) * 1000;
 							if (time_in_seconds <= 6666000)  // Verifica que no exceda el máximo
-							                                // permitido
+							                                 // permitido
 							{
 								NRF_LOG_RAW_INFO(
 								    "\n\n\x1b[1;36m--- Comando 06 recibido: "
@@ -535,6 +535,15 @@ static void nus_data_handler(ble_nus_evt_t* p_evt)
 						break;
 					}
 
+					case 8:  // Comando 08: Escribe en la memoria flash la fecha (AAAAMMDD) y hora (HHMMSS), formato ISO8601
+					{
+						NRF_LOG_RAW_INFO(
+						    "\n\n\x1b[1;36m--- Comando 08 recibido: "
+						    "Guardar fecha y hora\x1b[0m");
+						uint32_t sleep_time_ms = read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+
+						break;
+					}
 					default:  // Comando desconocido
 						NRF_LOG_WARNING("Comando desconocido: %s", command);
 						break;

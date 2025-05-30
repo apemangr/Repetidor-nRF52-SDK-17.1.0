@@ -33,6 +33,8 @@
 #define TIME_ON_RECORD_KEY 0x4444
 #define TIME_SLEEP_RECORD_KEY 0x5555
 
+#define DATE_AND_TIME_FILE_ID 0x6666  // ID del archivo para fecha y hora
+#define DATE_AND_TIME_RECORD_KEY 0x6667
 
 
 #endif // VARIABLES_H
