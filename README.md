@@ -14,7 +14,7 @@ Extraer en `examples/ble_central_and_peripheral`.
 Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`.
 
 
-### 01 - Guardar MAC
+#### 01 - Guardar MAC
 
 El formato del comando debe ser:
 `111` + `MAC a escribir`
@@ -24,20 +24,20 @@ El formato del comando debe ser:
 
 
 
-### 02 - Leer MAC guardada
+#### 02 - Leer MAC guardada
 
 El formato del comando debe ser:
 `111` + `02`
 
 
-### 03 - Reiniciar repetidor
+#### 03 - Reiniciar repetidor
 
 El formato del comando debe ser:
 `111` + `03`
 
 
 
-### 04 - Grabar tiempo de encendido
+#### 04 - Grabar tiempo de encendido
 
 El formato del comando debe ser:
 `111` + `04` + `Tiempo en segundos`
@@ -47,14 +47,14 @@ El formato del comando debe ser:
 
 
 
-### 05 - Leer tiempo de encendido
+#### 05 - Leer tiempo de encendido
 
 El formato del comando debe ser:
 `111` + `05`
 
 
 
-### 06 - Grabar tiempo de dormido
+#### 06 - Grabar tiempo de dormido
 
 El formato del comando debe ser:
 `111` + `06` + `Tiempo en segundos`
@@ -63,7 +63,7 @@ El formato del comando debe ser:
 
 
 
-### 07 - Leer tiempo de dormido
+#### 07 - Leer tiempo de dormido
 
 El formato del comando debe ser:
 `111` + `07`
@@ -74,15 +74,15 @@ El formato del comando debe ser:
 El formato del comando debe ser:
 `111` + `08` + `DDMMAAAA` + `HHMMSS`
 
-*Fecha*
-D -> Día
-M -> Mes
-A -> Año
+*Fecha*<br>
+D -> Día<br>
+M -> Mes<br>
+A -> Año<br>
 
-*Hora*
-H -> Hora
-M -> Minutos
-S -> Segundos
+*Hora*<br>
+H -> Hora<br>
+M -> Minutos<br>
+S -> Segundos<br>
 
 >Ej: 1110830052025130200
 
