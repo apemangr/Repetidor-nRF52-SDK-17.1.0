@@ -8,6 +8,7 @@ Extraer en `examples/ble_central_and_peripheral`.
 - NRF52840 (sin revisión)
 
 
+
 ## Comandos repetidor
 
 Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`.
@@ -22,6 +23,7 @@ Ej:
 >11101A566CE57FF66
 
 
+
 ### 02 - Leer MAC guardada
 
 El formato del comando debe ser:
@@ -34,6 +36,7 @@ El formato del comando debe ser:
 `111` + `03`
 
 
+
 ### 04 - Grabar tiempo de encendido
 
 El formato del comando debe ser:
@@ -43,10 +46,12 @@ El formato del comando debe ser:
 > El valor máximo es de 666 segundos
 
 
+
 ### 05 - Leer tiempo de encendido
 
 El formato del comando debe ser:
 `111` + `05`
+
 
 
 ### 06 - Grabar tiempo de dormido
@@ -55,6 +60,7 @@ El formato del comando debe ser:
 `111` + `06` + `Tiempo en segundos`
 > [!NOTE]
 > El valor máximo es de 6666 segundos
+
 
 
 ### 07 - Leer tiempo de dormido
