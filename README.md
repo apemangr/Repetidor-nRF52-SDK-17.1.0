@@ -19,8 +19,8 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 El formato del comando debe ser:
 `111` + `MAC a escribir`
 
-Ej:
->11101A566CE57FF66
+
+>Ej: 11101A566CE57FF66
 
 
 
@@ -67,3 +67,23 @@ El formato del comando debe ser:
 
 El formato del comando debe ser:
 `111` + `07`
+
+
+#### 08 - Escribir la fecha y hora del dispositivo [WIP]
+
+El formato del comando debe ser:
+`111` + `08` + `DDMMAAAA` + `HHMMSS`
+
+*Fecha*
+D -> Día
+M -> Mes
+A -> Año
+
+*Hora*
+H -> Hora
+M -> Minutos
+S -> Segundos
+
+>Ej: 1110830052025130200
+
+El ejemplo representa la fecha 30 de mayo del 2025 y la hora 13:02.
