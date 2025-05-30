@@ -17,8 +17,11 @@ void app_nus_server_init(app_nus_server_on_data_received_t on_data_received);
 uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
 
 void advertising_stop(void);
+
 void advertising_start(void);
+
 void disconnect_all_connections(void);
 
 uint16_t get_conn_handle(void);
+
 #endif

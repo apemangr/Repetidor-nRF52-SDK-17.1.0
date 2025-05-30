@@ -566,10 +566,6 @@ int main(void)
 	for (;;)
 	{
 		calendar_update();
-		// if (calendar_get_time(&now))
-		// {
-		// 	NRF_LOG_INFO("Hora actual: %02u:%02u:%02u", now.hour, now.minute, now.second);
-		// }
 		handle_rtc_events();
 		idle_state_handle();
 	}
