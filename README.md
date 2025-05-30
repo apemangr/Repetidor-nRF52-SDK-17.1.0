@@ -74,12 +74,12 @@ El formato del comando debe ser:
 El formato del comando debe ser:
 `111` + `08` + `DDMMAAAA` + `HHMMSS`
 
-*Fecha*<br>
+**Fecha**<br>
 D -> Día<br>
 M -> Mes<br>
 A -> Año<br>
 
-*Hora*<br>
+**Hora**<br>
 H -> Hora<br>
 M -> Minutos<br>
 S -> Segundos<br>
