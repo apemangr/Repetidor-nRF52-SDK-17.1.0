@@ -7,83 +7,19 @@ Extraer en `examples/ble_central_and_peripheral`.
 - NRF52832
 - NRF52840 (sin revisión)
 
-
-
-## Comandos repetidor
+## Comandos
 
 Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`.
 
-
-#### 01 - Guardar MAC
-
-El formato del comando debe ser:
-`111` + `MAC a escribir`
-
-
->Ej: 11101A566CE57FF66
-
-
-
-#### 02 - Leer MAC guardada
-
-El formato del comando debe ser:
-`111` + `02`
-
-
-#### 03 - Reiniciar repetidor
-
-El formato del comando debe ser:
-`111` + `03`
-
-
-
-#### 04 - Grabar tiempo de encendido
-
-El formato del comando debe ser:
-`111` + `04` + `Tiempo en segundos`
-
-> [!NOTE]
-> El valor máximo es de 666 segundos
-
-
-
-#### 05 - Leer tiempo de encendido
-
-El formato del comando debe ser:
-`111` + `05`
-
-
-
-#### 06 - Grabar tiempo de dormido
-
-El formato del comando debe ser:
-`111` + `06` + `Tiempo en segundos`
-> [!NOTE]
-> El valor máximo es de 6666 segundos
-
-
-
-#### 07 - Leer tiempo de dormido
-
-El formato del comando debe ser:
-`111` + `07`
-
-
-#### 08 - Escribir la fecha y hora del dispositivo [WIP]
-
-El formato del comando debe ser:
-`111` + `08` + `DDMMAAAA` + `HHMMSS`
-
-**Fecha**<br>
-D -> Día<br>
-M -> Mes<br>
-A -> Año<br>
-
-**Hora**<br>
-H -> Hora<br>
-M -> Minutos<br>
-S -> Segundos<br>
-
->Ej: 1110830052025130200
-
-El ejemplo representa la fecha 30 de mayo del 2025 y la hora 13:02.
+| Comando | Función                             | Descripción                                                                          | Ejemplo                                                  |
+| :------ | :---------------------------------- | :----------------------------------------------------------------------------------- | :------------------------------------------------------- |
+| 01      | Guardar MAC                         | Escribe en la memoria la MAC a conectarse                                            | 11101A566CE57FF66                                        |
+| 02      | Leer MAC                            | Lee la MAC guardada en la memoria flash                                              | 11102                                                    |
+| 03      | Reiniciar                           | Reinicia el repetidor                                                                | 11103                                                    |
+| 04      | Guardar tiempo encendido            | Escribe en la memoria flash el tiempo de encendido en segundos (máximo 666 segundos) | 11104666                                                 |
+| 05      | Leer tiempo encendido               | Lee el tiempo en que debe mantenerse despierto el dispositivo                        | 11105                                                    |
+| 06      | Grabar tiempo dormido               | Escribe en la memoria flash el tiempo de dormido en segundos (máximo 6666 segundos)  | 111066666                                                |
+| 07      | Leer tiempo dormido                 | Lee el tiempo en que debe mantenerse dormido el dispositivo                          | 11107                                                    |
+| 08      | Guardar fecha y hora (WIP)          | Escribe en la memoria flash la fecha (DDMMAAAA) y hora (HHMMSS)                      | 1110830052025130200 <br> (30 de mayo del 2025, 13:02 hrs) |
+| 09      | Leer fecha y hora (WIP)             | Lee en la memoria flash la fecha y hora                                              | 11109                                                    |
+| 10      | Solicitar el ultimo historial (WIP) | Lee del repetidor el último valor guardado en el historial                           | 11110                                                    |
