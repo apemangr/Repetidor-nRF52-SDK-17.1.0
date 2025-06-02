@@ -20,6 +20,6 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 | 05      | Leer tiempo encendido               | Lee el tiempo en que debe mantenerse despierto el dispositivo                        | 11105                                                    |
 | 06      | Grabar tiempo dormido               | Escribe en la memoria flash el tiempo de dormido en segundos (máximo 6666 segundos)  | 111066666                                                |
 | 07      | Leer tiempo dormido                 | Lee el tiempo en que debe mantenerse dormido el dispositivo                          | 11107                                                    |
-| 08      | Guardar fecha y hora (WIP)          | Escribe en la memoria flash la fecha (AAAAMMDD) y hora (HHMMSS), formato ISO8601     | 1110820250530130200 <br> (30 de mayo del 2025, 13:02:00) |
-| 09      | Leer fecha y hora (WIP)             | Lee en la memoria flash la fecha y hora                                              | 11109                                                    |
+| 08      | Guardar fecha y hora                | Escribe en la memoria flash la fecha (AAAAMMDD) y hora (HHMMSS), formato ISO8601     | 1110820250530130200 <br> (30 de mayo del 2025, 13:02:00) |
+| 09      | Leer fecha y hora                   | Lee en la memoria flash la fecha y hora                                              | 11109                                                    |
 | 10      | Solicitar el ultimo historial (WIP) | Lee del repetidor el último valor guardado en el historial                           | 11110                                                    |
