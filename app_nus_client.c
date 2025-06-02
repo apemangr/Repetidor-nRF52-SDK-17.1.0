@@ -25,40 +25,40 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue, NRF_SDH_BLE_CENTRAL_LINK_COUNT, NRF_BLE_GQ_QUEU
 NRF_BLE_SCAN_DEF(m_scan);
 
 static app_nus_client_on_data_received_t m_on_data_received = 0;
-static uint8_t mac_address_from_flash[6] = {0};
+//static uint8_t mac_address_from_flash[6] = {0};
 static ble_gap_addr_t m_target_periph_addr;
 
 static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE, .type = NUS_SERVICE_UUID_TYPE};
 
-static void load_mac_from_flash(void)
-{
-	fds_record_desc_t record_desc;
-	fds_find_token_t ftok = {0};
-	fds_flash_record_t flash_record;
+// static void load_mac_from_flash(void)
+// {
+// 	fds_record_desc_t record_desc;
+// 	fds_find_token_t ftok = {0};
+// 	fds_flash_record_t flash_record;
 
-	// Busca el registro en la memoria flash
-	if(fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok) == NRF_SUCCESS)
-	{
-		if(fds_record_open(&record_desc, &flash_record) == NRF_SUCCESS)
-		{
-			memcpy(mac_address_from_flash, flash_record.p_data, sizeof(mac_address_from_flash));
-			fds_record_close(&record_desc);
-		}
-	}
-	else
-	{
-		NRF_LOG_RAW_INFO("\t>> No se encontro una MAC en la memoria flash."
-						 "\n\t>> Usando valor "
-						 "predeterminado.");
-		// Si no se encuentra una MAC, usa una dirección predeterminada
-		mac_address_from_flash[0] = 0x10;
-		mac_address_from_flash[1] = 0x4A;
-		mac_address_from_flash[2] = 0x7C;
-		mac_address_from_flash[3] = 0xD9;
-		mac_address_from_flash[4] = 0x3E;
-		mac_address_from_flash[5] = 0xC7;
-	}
-}
+// 	// Busca el registro en la memoria flash
+// 	if(fds_record_find(MAC_FILE_ID, MAC_RECORD_KEY, &record_desc, &ftok) == NRF_SUCCESS)
+// 	{
+// 		if(fds_record_open(&record_desc, &flash_record) == NRF_SUCCESS)
+// 		{
+// 			memcpy(mac_address_from_flash, flash_record.p_data, sizeof(mac_address_from_flash));
+// 			fds_record_close(&record_desc);
+// 		}
+// 	}
+// 	else
+// 	{
+// 		NRF_LOG_RAW_INFO("\t>> No se encontro una MAC en la memoria flash."
+// 						 "\n\t>> Usando valor "
+// 						 "predeterminado.");
+// 		// Si no se encuentra una MAC, usa una dirección predeterminada
+// 		mac_address_from_flash[0] = 0x10;
+// 		mac_address_from_flash[1] = 0x4A;
+// 		mac_address_from_flash[2] = 0x7C;
+// 		mac_address_from_flash[3] = 0xD9;
+// 		mac_address_from_flash[4] = 0x3E;
+// 		mac_address_from_flash[5] = 0xC7;
+// 	}
+// }
 
 // Función para inicializar `m_target_periph_addr` con la MAC leída
 static void target_periph_addr_init(void)
@@ -71,13 +71,13 @@ static void target_periph_addr_init(void)
 	m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
 	memcpy(m_target_periph_addr.addr, mac_address_from_flash, sizeof(mac_address_from_flash));
 
-	NRF_LOG_RAW_INFO("\n\t>> MAC cargada: %02X:%02X:%02X:%02X:%02X:%02X",
-					 m_target_periph_addr.addr[0],
-					 m_target_periph_addr.addr[1],
-					 m_target_periph_addr.addr[2],
-					 m_target_periph_addr.addr[3],
-					 m_target_periph_addr.addr[4],
-					 m_target_periph_addr.addr[5]);
+	// NRF_LOG_RAW_INFO("\n\t>> MAC cargada: %02X:%02X:%02X:%02X:%02X:%02X",
+	// 				 mac_address_from_flash[0],
+	// 				 mac_address_from_flash[1],
+	// 				 mac_address_from_flash[2],
+	// 				 mac_address_from_flash[3],
+	// 				 mac_address_from_flash[4],
+	// 				 mac_address_from_flash[5]);
 
 	NRF_LOG_RAW_INFO("\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
 }
