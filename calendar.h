@@ -31,4 +31,4 @@ void calendar_update(void);
 
 void calendar_rtc_handler(void);
 
-#endif  // CALENDAR_H
+#endif // CALENDAR_H

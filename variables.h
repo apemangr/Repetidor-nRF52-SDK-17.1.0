@@ -27,9 +27,9 @@
 /** STORAGE	 */
 // --- Configuración de Almacenamiento para guardar la MAC ---
 #define MAC_FILE_ID 0x1111     // Identificador único para el archivo
-#define MAC_RECORD_KEY 0x2222  // Identificador único para el registro
+#define MAC_RECORD_KEY 0x1112  // Identificador único para el registro
 
-#define TIME_FILE_ID 0x3333  // ID del archivo para el tiempo de encendido
+#define TIME_FILE_ID 0x2222  // ID del archivo para el tiempo de encendido
 #define TIME_ON_RECORD_KEY 0x4444
 #define TIME_SLEEP_RECORD_KEY 0x5555
 
