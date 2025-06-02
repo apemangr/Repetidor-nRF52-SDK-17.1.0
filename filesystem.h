@@ -17,7 +17,7 @@ typedef enum
     TIEMPO_SLEEP       // Tiempo de apagado
 } valor_type_t;
 
-ret_code_t write_date_to_flash(const char *fecha_str);
-datetime_t read_date_from_flash();
+//ret_code_t write_date_to_flash(const char *fecha_str);
+//datetime_t read_date_from_flash();
 
 #endif  // FILESYSTEM_H
