@@ -215,7 +215,7 @@ void load_mac_from_flash(void)
             memcpy(mac_address_from_flash, flash_record.p_data,
                    sizeof(mac_address_from_flash));
             fds_record_close(&record_desc);
-            NRF_LOG_RAW_INFO("\t>> MAC cargada desde memoria flash: "
+            NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                              "%02X:%02X:%02X:%02X:%02X:%02X",
                              mac_address_from_flash[0], mac_address_from_flash[1],
                              mac_address_from_flash[2], mac_address_from_flash[3],
@@ -234,12 +234,12 @@ void load_mac_from_flash(void)
         mac_address_from_flash[4] = 0x03;
         mac_address_from_flash[5] = 0xFB;
 
-        NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria flash: "
+        NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                          "%02X:%02X:%02X:%02X:%02X:%02X",
                          mac_address_from_flash[0], mac_address_from_flash[1],
                          mac_address_from_flash[2], mac_address_from_flash[3],
                          mac_address_from_flash[4], mac_address_from_flash[5]);
-		nrf_delay_ms(20);
+		nrf_delay_ms(10);
     }
 }
 

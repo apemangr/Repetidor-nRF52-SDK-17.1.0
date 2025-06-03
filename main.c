@@ -32,15 +32,15 @@
 #define RTC_PRESCALER   4095
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
-static uint16_t m_conn_handle          = BLE_CONN_HANDLE_INVALID;
-static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
+static uint16_t      m_conn_handle          = BLE_CONN_HANDLE_INVALID;
+static uint16_t      m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
 
-nrfx_rtc_t           m_rtc             = NRFX_RTC_INSTANCE(2);
-static volatile bool m_device_active   = true;
-static volatile bool m_rtc_on_flag     = false;
-static volatile bool m_rtc_sleep_flag  = false;
+nrfx_rtc_t           m_rtc                  = NRFX_RTC_INSTANCE(2);
+static volatile bool m_device_active        = true;
+static volatile bool m_rtc_on_flag          = false;
+static volatile bool m_rtc_sleep_flag       = false;
 
-void uart_event_handler(app_uart_evt_t *p_event)
+void                 uart_event_handler(app_uart_evt_t *p_event)
 {
     static uint8_t  data_array[BLE_NUS_MAX_DATA_LEN];
     static uint16_t index = 0;
@@ -86,7 +86,7 @@ void uart_event_handler(app_uart_evt_t *p_event)
 /**@brief Function for initializing the UART. */
 static void uart_init(void)
 {
-    ret_code_t err_code;
+    ret_code_t                   err_code;
 
     app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
                                                 .tx_pin_no    = TX_PIN_NUMBER,
@@ -522,14 +522,13 @@ int main(void)
     ble_stack_init();
     gatt_init();
 
-    calendar_init();
-    datetime_t now = {.year = 2025, .month = 5, .day = 30, .hour = 0, .minute = 0, .second = 0};
-
-    calendar_set_time(&now);
-
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
+    
+    calendar_init();
+    calendar_set_datetime();
+
 
     nrf_delay_ms(50);
 

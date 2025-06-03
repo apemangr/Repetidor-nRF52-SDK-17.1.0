@@ -63,15 +63,13 @@ static void perform_garbage_collection(void)
     }
 }
 
-// Función para guardar la MAC en la memoria flash
-
 static void fds_evt_handler(fds_evt_t const *p_evt)
 {
     if (p_evt->id == FDS_EVT_INIT)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("> Iniciando el modulo de almacenamiento.\n");
+            NRF_LOG_RAW_INFO("\n> Iniciando el modulo de almacenamiento...\n");
 
             fds_stat_t stat = {0};
             fds_stat(&stat);
@@ -309,7 +307,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
 
                 case 7: // Comando 07: Leer tiempo de apagado desde la
-                    // memoria flash
+                    	// memoria flash
                     {
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: "
                                          "Leer tiempo de dormido\x1b[0m");

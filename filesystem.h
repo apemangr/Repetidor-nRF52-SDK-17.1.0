@@ -19,7 +19,6 @@ typedef enum
 } valor_type_t;
 
 static uint8_t mac_address_from_flash[6] = {0};
-
 ret_code_t     write_date_to_flash(const datetime_t *p_date);
 datetime_t     read_date_from_flash(void);
 void           write_time_to_flash(valor_type_t valor_type, uint32_t valor);
