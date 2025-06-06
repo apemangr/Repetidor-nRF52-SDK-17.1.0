@@ -150,7 +150,7 @@ void handle_rtc_events(void)
 
             // Reprogramar solo el evento de 20s (activación)
             uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
-            uint32_t next_event      = (current_counter + RTC_SLEEP_TICKS) & 0xFFFFFF;
+            uint32_t next_event      = (current_counter + (read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000) * 8) & 0xFFFFFF;
             nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
         }
     }
@@ -179,7 +179,7 @@ void handle_rtc_events(void)
 
             // Reprogramar solo el evento de 15s (sueño)
             uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
-            uint32_t next_event      = (current_counter + RTC_ON_TICKS) & 0xFFFFFF;
+            uint32_t next_event      = (current_counter + (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8) & 0xFFFFFF;
             nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
         }
     }
@@ -208,7 +208,7 @@ void rtc_init(void)
 
     // Configurar comparadores iniciales
     // Solo programar el primer evento de 15s
-    nrfx_rtc_cc_set(&m_rtc, 0, RTC_ON_TICKS, true);
+    nrfx_rtc_cc_set(&m_rtc, 0, (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8, true);
 
     // Deshabilitar el evento de 20s inicialmente
     nrfx_rtc_cc_disable(&m_rtc, 1);
