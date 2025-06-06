@@ -1,5 +1,7 @@
 #include "filesystem.h"
 
+// Sistema de guardado de registros
+
 void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 {
     uint16_t          record_key = (valor_type == TIEMPO_ENCENDIDO)
@@ -93,9 +95,9 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
     }
     else
     {
-        NRF_LOG_RAW_INFO(
-            "\n\t>> Registro no encontrado. Usando valor predeterminado: %u\n",
-            default_valor);
+        // NRF_LOG_RAW_INFO(
+        //     "\n\t>> Registro no encontrado. Usando valor predeterminado: %u",
+        //     default_valor);
     }
 
     return resultado;
@@ -224,7 +226,7 @@ void load_mac_from_flash(void)
     }
     else
     {
-        NRF_LOG_RAW_INFO("\t>> No se encontro MAC. Usando valor "
+        NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC. Usando valor "
                          "predeterminado.");
         // Si no se encuentra una MAC, usa una dirección predeterminada
         mac_address_from_flash[0] = 0x63;

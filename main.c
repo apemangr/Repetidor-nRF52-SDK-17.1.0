@@ -34,13 +34,13 @@
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
 static uint16_t      m_conn_handle          = BLE_CONN_HANDLE_INVALID;
 static uint16_t      m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
-
 nrfx_rtc_t           m_rtc                  = NRFX_RTC_INSTANCE(2);
 static volatile bool m_device_active        = true;
 static volatile bool m_rtc_on_flag          = false;
 static volatile bool m_rtc_sleep_flag       = false;
 
-void                 uart_event_handler(app_uart_evt_t *p_event)
+//
+void uart_event_handler(app_uart_evt_t *p_event)
 {
     static uint8_t  data_array[BLE_NUS_MAX_DATA_LEN];
     static uint16_t index = 0;
@@ -87,7 +87,6 @@ void                 uart_event_handler(app_uart_evt_t *p_event)
 static void uart_init(void)
 {
     ret_code_t                   err_code;
-
     app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
                                                 .tx_pin_no    = TX_PIN_NUMBER,
                                                 .rts_pin_no   = RTS_PIN_NUMBER,
@@ -495,9 +494,6 @@ static void idle_state_handle(void)
         }
         else
         {
-            //__WFE();
-            //__SEV();
-            //__WFE();
             sd_app_evt_wait();
         }
     }
@@ -514,7 +510,6 @@ int main(void)
                      "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
 
     base_timer_init();
-
     rtc_init();
     uart_init();
     buttons_leds_init();
@@ -525,12 +520,11 @@ int main(void)
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
-    
+
     calendar_init();
     calendar_set_datetime();
 
-
-    nrf_delay_ms(50);
+    nrf_delay_ms(10);
 
     NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
 

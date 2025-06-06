@@ -70,7 +70,7 @@ bool calendar_init(void)
     if (m_initialized)
     {
         NRF_LOG_RAW_INFO("\n\t>> Error al inicializar modulo RTC")
-        return false; // Already initialized
+        return false;
     }
 
     ret_code_t err_code;
@@ -133,6 +133,12 @@ void calendar_update(void)
 
 bool calendar_set_datetime(void)
 {
+    NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido\t: %d \t[segs]",
+                     read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
+    NRF_LOG_RAW_INFO("\n\t>> Tiempo de dormido\t: %d \t[segs]",
+                     read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000);
+
+    nrf_delay_ms(10);
 
     if (is_date_stored() == true)
     {
@@ -143,12 +149,12 @@ bool calendar_set_datetime(void)
         {
             NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde la memoria.");
             NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                         dt.year,
-                         dt.month,
-                         dt.day,
-                         dt.hour,
-                         dt.minute,
-                         dt.second);
+                             dt.year,
+                             dt.month,
+                             dt.day,
+                             dt.hour,
+                             dt.minute,
+                             dt.second);
             return true;
         }
         else
@@ -157,7 +163,7 @@ bool calendar_set_datetime(void)
             NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
             datetime_t now = {.year = 2000, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
             calendar_set_time(&now);
-            NRF_LOG_INFO("Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
+            NRF_LOG_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
                          now.year,
                          now.month,
                          now.day,

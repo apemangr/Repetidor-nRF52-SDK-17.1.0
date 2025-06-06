@@ -69,7 +69,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\n> Iniciando el modulo de almacenamiento...\n");
+            NRF_LOG_RAW_INFO("> Iniciando el modulo de almacenamiento...\n");
 
             fds_stat_t stat = {0};
             fds_stat(&stat);
@@ -307,15 +307,15 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
 
                 case 7: // Comando 07: Leer tiempo de apagado desde la
-                    	// memoria flash
-                    {
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: "
-                                         "Leer tiempo de dormido\x1b[0m");
-                        uint32_t sleep_time_ms = read_time_from_flash(
-                            TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+                        // memoria flash
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: "
+                                     "Leer tiempo de dormido\x1b[0m");
+                    uint32_t sleep_time_ms = read_time_from_flash(
+                        TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case 8: // Comando 08: Escribe en la memoria flash la fecha y
                         // hora, formato YYYYMMDDHHMMSS
@@ -474,7 +474,6 @@ static void conn_params_init(void)
     cp_init.disconnect_on_fail             = true;
     cp_init.evt_handler                    = on_conn_params_evt;
     cp_init.error_handler                  = conn_params_error_handler;
-
     err_code                               = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
 }

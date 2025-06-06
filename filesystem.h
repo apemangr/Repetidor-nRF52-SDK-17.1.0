@@ -12,6 +12,29 @@
 #include "nrf_log.h"
 #include "variables.h"
 
+// Estructura de guardado
+typedef struct
+{
+    uint16_t year;
+    uint8_t  month;
+    uint8_t  day;
+    uint8_t  hour;
+    uint8_t  minute;
+    uint8_t  second;
+    uint32_t contador;
+    uint16_t V1;
+    uint16_t V2;
+    uint16_t V3;
+    uint16_t V4;
+    uint16_t V5;
+    uint16_t V6;
+    uint16_t V7;
+    uint16_t V8;
+    uint8_t  temp;
+    uint8_t  battery;
+    uint8_t  antpwr;
+} store_history;
+
 typedef enum
 {
     TIEMPO_ENCENDIDO, // Tiempo de encendido
