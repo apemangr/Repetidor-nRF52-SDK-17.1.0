@@ -340,11 +340,11 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                                              dt.second);
 
                             // Llamar a la función modificada
-                            ret_code_t err = write_date_to_flash(&dt);
+                            err_code = write_date_to_flash(&dt);
 
-                            if (err != NRF_SUCCESS)
+                            if (err_code != NRF_SUCCESS)
                             {
-                                NRF_LOG_ERROR("Error guardando: 0x%X", err);
+                                NRF_LOG_ERROR("Error guardando: 0x%X", err_code);
                             }
                         }
                         else
@@ -372,6 +372,101 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         "\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u", dt.year,
                         dt.month, dt.day, dt.hour, dt.minute, dt.second);
 
+                    break;
+                }
+                case 10: // Solicitar ultimo registro de historial
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
+                                     "Solicitar ultimo registro de historial\x1b[0m");
+                    // Llama a la función para solicitar el último registro de historial
+
+                    store_history last_record;
+                    err_code = read_last_history_record(&last_record);
+                    if (err_code == NRF_SUCCESS)
+                    {
+                        NRF_LOG_RAW_INFO("\n> Solicitud de último registro enviada "
+                                         "correctamente.");
+                    }
+                    else
+                    {
+                        NRF_LOG_ERROR("Error al solicitar el último registro: 0x%X",
+                                      err_code);
+                    }
+                    print_history_record(&last_record, "Ultimo registro de historial");
+
+                    break;
+                }
+                case 11: // Solicitar un registro de historial por ID
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar registro de historial por ID\x1b[0m");
+                    if (p_evt->params.rx_data.length > 5) // Verifica que haya datos suficientes
+                    {
+                        // Extrae el ID del registro como string (todo lo que sigue después de "11111")
+                        size_t id_len    = p_evt->params.rx_data.length - 5;
+                        char   id_str[8] = {0}; // Soporta hasta 7 dígitos, ajusta si necesitas más
+                        if (id_len < sizeof(id_str))
+                        {
+                            memcpy(id_str, &message[5], id_len);
+                            id_str[id_len]       = '\0';
+                            uint16_t registro_id = (uint16_t)atoi(id_str);
+                            NRF_LOG_RAW_INFO("\nID de registro solicitado: %u", registro_id);
+                            // Llama a la función para solicitar el registro por ID
+                            store_history registro_historial;
+                            err_code = read_history_record_by_id(registro_id, &registro_historial);
+                            if (err_code == NRF_SUCCESS)
+                            {
+                                NRF_LOG_RAW_INFO("Solicitud de registro %u enviada correctamente.", registro_id);
+                                // Imprime el registro de historial
+                                print_history_record(&registro_historial, "Registro de historial solicitado");
+                            }
+                            else
+                            {
+                                NRF_LOG_ERROR("Error al solicitar el registro %u: 0x%X", registro_id, err_code);
+                            }
+                        }
+                        else
+                        {
+                            NRF_LOG_WARNING("ID de registro demasiado largo.");
+                        }
+                    }
+                    break;
+                }
+                case 12: // Guardar un nuevo historial con valores inventados
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Guardar nuevo historial de prueba\x1b[0m");
+
+                    store_history nuevo_historial;
+                    nuevo_historial.year       = 2025;
+                    nuevo_historial.month      = 6;
+                    nuevo_historial.day        = 9;
+                    nuevo_historial.hour       = 12;
+                    nuevo_historial.minute     = 34;
+                    nuevo_historial.second     = 56;
+                    nuevo_historial.contador   = 4321;
+                    nuevo_historial.V1         = 111;
+                    nuevo_historial.V2         = 222;
+                    nuevo_historial.V3         = 333;
+                    nuevo_historial.V4         = 444;
+                    nuevo_historial.V5         = 555;
+                    nuevo_historial.V6         = 666;
+                    nuevo_historial.V7         = 777;
+                    nuevo_historial.V8         = 888;
+                    nuevo_historial.temp       = 27;
+                    nuevo_historial.battery    = 99;
+                    nuevo_historial.padding[0] = 0;
+                    nuevo_historial.padding[1] = 0;
+
+                    //
+                    err_code = save_history_record(&nuevo_historial);
+                    if (err_code == NRF_SUCCESS)
+                    {
+                        NRF_LOG_RAW_INFO("\nHistorial de prueba guardado correctamente.");
+                        print_history_record(&nuevo_historial, "Historial de prueba guardado");
+                    }
+                    else
+                    {
+                        NRF_LOG_ERROR("Error al guardar historial de prueba: 0x%X", err_code);
+                    }
                     break;
                 }
                 default: // Comando desconocido

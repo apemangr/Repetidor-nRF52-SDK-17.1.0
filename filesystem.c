@@ -1,19 +1,18 @@
 #include "filesystem.h"
 
-// Sistema de guardado de registros
-
-#define WORDS_LEN(x) ((x + 3) / 4)
+//-------------------------------------------------------------------------------------------------------------
+//                                      HISTORY FUNCTIONS STARTS HERE.
+//-------------------------------------------------------------------------------------------------------------
 
 ret_code_t save_history_record(store_history const *p_history_data)
 {
     ret_code_t        ret;
-    fds_record_desc_t desc_history = {0};
-    fds_record_desc_t desc_counter = {0};
-    fds_find_token_t  token        = {0};
+    fds_record_desc_t desc_history   = {0};
+    fds_record_desc_t desc_counter   = {0};
+    fds_find_token_t  token          = {0};
 
-    // 1. Buscar contador
-    uint32_t history_count  = 0;
-    bool     counter_exists = (fds_record_find(HISTORY_FILE_ID, HISTORY_COUNTER_RECORD_KEY, &desc_counter, &token) == NRF_SUCCESS);
+    uint32_t          history_count  = 0;
+    bool              counter_exists = (fds_record_find(HISTORY_FILE_ID, HISTORY_COUNTER_RECORD_KEY, &desc_counter, &token) == NRF_SUCCESS);
 
     if (counter_exists)
     {
@@ -22,8 +21,18 @@ ret_code_t save_history_record(store_history const *p_history_data)
         if (ret != NRF_SUCCESS)
             return ret;
 
-        memcpy(&history_count, flash_record.p_data, sizeof(uint32_t));
+        // Verifica que el tamaño sea el de un uint32_t
+        if (flash_record.p_header->length_words == (sizeof(uint32_t) + sizeof(uint32_t) - 1) / sizeof(uint32_t))
+        {
+            memcpy(&history_count, flash_record.p_data, sizeof(uint32_t));
+        }
+        else
+        {
+            NRF_LOG_ERROR("El registro del contador tiene un tamaño inesperado: %u palabras", flash_record.p_header->length_words);
+            history_count = 0; // O maneja el error como prefieras
+        }
         fds_record_close(&desc_counter);
+        NRF_LOG_RAW_INFO("\nContador de historial encontrado: %lu\n", history_count);
     }
 
     // 2. Preparar nuevo registro histórico
@@ -31,13 +40,15 @@ ret_code_t save_history_record(store_history const *p_history_data)
         .file_id           = HISTORY_FILE_ID,
         .key               = (uint16_t)(HISTORY_RECORD_KEY_START + history_count),
         .data.p_data       = p_history_data,
-        .data.length_words = WORDS_LEN(sizeof(store_history)) // Tamaño seguro
-    };
+        .data.length_words = (sizeof(store_history) + sizeof(uint32_t) - 1) / sizeof(uint32_t)};
 
     // 3. Escribir registro histórico
     ret = fds_record_write(&desc_history, &new_record);
     if (ret != NRF_SUCCESS)
+    {
+        NRF_LOG_ERROR("Error al escribir registro: %d", ret);
         return ret;
+    }
 
     // 4. Actualizar contador
     history_count++;
@@ -45,18 +56,25 @@ ret_code_t save_history_record(store_history const *p_history_data)
         .file_id           = HISTORY_FILE_ID,
         .key               = HISTORY_COUNTER_RECORD_KEY,
         .data.p_data       = &history_count,
-        .data.length_words = WORDS_LEN(sizeof(uint32_t))};
+        .data.length_words = (sizeof(uint32_t) + sizeof(uint32_t) - 1) / sizeof(uint32_t)};
 
     if (counter_exists)
     {
         ret = fds_record_update(&desc_counter, &counter_record);
+        NRF_LOG_RAW_INFO("\nActualizando contador de historial: %lu\n", history_count);
     }
     else
     {
         ret = fds_record_write(&desc_counter, &counter_record);
     }
 
-    return ret;
+    if (ret != NRF_SUCCESS)
+    {
+        NRF_LOG_ERROR("Error al actualizar contador: %d", ret);
+        return ret;
+    }
+
+    return NRF_SUCCESS;
 }
 
 ret_code_t read_history_record_by_id(uint32_t record_id, store_history *p_history_data)
@@ -77,7 +95,7 @@ ret_code_t read_history_record_by_id(uint32_t record_id, store_history *p_histor
         }
 
         // Verificar que el tamaño del registro en flash coincida con el del struct.
-        if (flash_record.p_header->length_words != WORDS_LEN(sizeof(store_history)))
+        if (flash_record.p_header->length_words != (sizeof(store_history) + sizeof(uint32_t) - 1) / sizeof(uint32_t))
         {
             fds_record_close(&desc);
             return NRF_ERROR_INVALID_DATA;
@@ -124,7 +142,7 @@ ret_code_t read_last_history_record(store_history *p_history_data)
 
 void print_history_record(store_history const *p_record, const char *p_title)
 {
-    NRF_LOG_INFO("--- %s ---", p_title);
+    NRF_LOG_INFO("\n--- %s ---", p_title);
     NRF_LOG_INFO("Fecha: %d/%d/%d", p_record->day, p_record->month, p_record->year);
     NRF_LOG_INFO("Hora:  %02d:%02d:%02d", p_record->hour, p_record->minute, p_record->second);
     NRF_LOG_INFO("Contador: %lu", p_record->contador);
@@ -136,119 +154,9 @@ void print_history_record(store_history const *p_record, const char *p_title)
     NRF_LOG_INFO("--------------------------");
 }
 
-void fds_history_example_run(void)
-{
-    ret_code_t    ret;
-    store_history history_to_save;
-    store_history history_to_read;
-
-    NRF_LOG_INFO("--- INICIO EJEMPLO FDS HISTORY ---");
-
-    // =================================================================
-    // 1. EJEMPLO DE USO DE: save_history_record()
-    // =================================================================
-    NRF_LOG_INFO("1. Guardando el PRIMER registro de historial...");
-
-    // Preparamos el primer registro con datos de ejemplo
-    history_to_save.year     = 2025;
-    history_to_save.month    = 6;
-    history_to_save.day      = 7;
-    history_to_save.hour     = 10;
-    history_to_save.minute   = 30;
-    history_to_save.second   = 0;
-    history_to_save.contador = 1234;
-    history_to_save.V1       = 100;
-    history_to_save.V2       = 101;
-    history_to_save.V3       = 102;
-    history_to_save.V4       = 103;
-    history_to_save.V5       = 104;
-    history_to_save.V6       = 105;
-    history_to_save.V7       = 106;
-    history_to_save.V8       = 107;
-    history_to_save.temp     = 25;
-    history_to_save.battery  = 98;
-
-    ret                      = save_history_record(&history_to_save);
-    if (ret == NRF_SUCCESS)
-    {
-        NRF_LOG_INFO("Comando para guardar el registro 0 enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_ERROR("Error al intentar guardar el registro 0: %s", nrf_strerror_get(ret));
-    }
-
-    // Esperar un momento para que la operación de FDS se complete.
-    // En una app real, esperarías el evento FDS_EVT_WRITE en el manejador de eventos.
-    nrf_delay_ms(100);
-
-    // Guardamos un SEGUNDO registro para probar la lectura del "último"
-    NRF_LOG_INFO("1b. Guardando el SEGUNDO registro de historial...");
-    history_to_save.second   = 15;
-    history_to_save.contador = 1235; // Incrementamos el contador
-    history_to_save.V1       = 200;  // Cambiamos un valor
-    history_to_save.battery  = 97;
-
-    ret                      = save_history_record(&history_to_save);
-    if (ret == NRF_SUCCESS)
-    {
-        NRF_LOG_INFO("Comando para guardar el registro 1 enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_ERROR("Error al intentar guardar el registro 1: %s", nrf_strerror_get(ret));
-    }
-    nrf_delay_ms(100);
-
-    // =================================================================
-    // 2. EJEMPLO DE USO DE: read_history_record_by_id()
-    // =================================================================
-    NRF_LOG_INFO("\n2. Leyendo el PRIMER registro (ID = 0)...");
-
-    ret = read_history_record_by_id(0, &history_to_read);
-    if (ret == NRF_SUCCESS)
-    {
-        NRF_LOG_INFO("Registro 0 leido con exito.");
-        print_history_record(&history_to_read, "Contenido del Registro 0");
-    }
-    else
-    {
-        NRF_LOG_ERROR("No se pudo leer el registro 0. Error: %s", nrf_strerror_get(ret));
-    }
-
-    // =================================================================
-    // 3. EJEMPLO DE USO DE: read_last_history_record()
-    // =================================================================
-    NRF_LOG_INFO("\n3. Leyendo el ULTIMO registro guardado...");
-
-    ret = read_last_history_record(&history_to_read);
-    if (ret == NRF_SUCCESS)
-    {
-        NRF_LOG_INFO("Ultimo registro leído con exito.");
-        print_history_record(&history_to_read, "Contenido del Ultimo Registro");
-        // Deberías ver los datos del SEGUNDO registro que guardamos (contador=1235, second=15)
-    }
-    else
-    {
-        NRF_LOG_ERROR("No se pudo leer el ultimo registro. Error: %s", nrf_strerror_get(ret));
-    }
-
-    // =================================================================
-    // 4. PRUEBA DE ERROR: Intentar leer un registro que no existe
-    // =================================================================
-    NRF_LOG_INFO("\n4. Intentando leer un registro inexistente (ID = 99)...");
-    ret = read_history_record_by_id(99, &history_to_read);
-    if (ret == NRF_ERROR_NOT_FOUND)
-    {
-        NRF_LOG_INFO("Prueba exitosa: La funcion devolvio NRF_ERROR_NOT_FOUND como se esperaba.");
-    }
-    else
-    {
-        NRF_LOG_ERROR("La prueba fallo. Se esperaba NOT_FOUND pero se obtuvo: %s", nrf_strerror_get(ret));
-    }
-
-    NRF_LOG_INFO("--- FIN EJEMPLO FDS HISTORY ---");
-}
+//-------------------------------------------------------------------------------------------------------------
+//                                      HISTORY FUNCTIONS ENDS HERE.
+//-------------------------------------------------------------------------------------------------------------
 
 void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 {

@@ -9,7 +9,7 @@
 #define UART_TX_BUF_SIZE             256
 #define UART_RX_BUF_SIZE             256
 #define ECHOBACK_BLE_UART_DATA       1
-#define DEFAULT_DEVICE_ON_TIME_MS    11000
+#define DEFAULT_DEVICE_ON_TIME_MS    800000
 #define DEFAULT_DEVICE_SLEEP_TIME_MS 600000
 
 /** STORAGE	 */

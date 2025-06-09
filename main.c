@@ -150,8 +150,10 @@ void handle_rtc_events(void)
             m_device_active = false;
 
             // Reprogramar solo el evento de 20s (activación)
-            uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
-            uint32_t next_event      = (current_counter + (read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000) * 8) & 0xFFFFFF;
+            uint32_t current_counter       = nrfx_rtc_counter_get(&m_rtc);
+            uint32_t sleep_time_from_flash = read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+            NRF_LOG_RAW_INFO("\n\t>> Tiempo de sueno: %u ms", sleep_time_from_flash);
+            uint32_t next_event = (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
             nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
         }
     }
@@ -180,7 +182,9 @@ void handle_rtc_events(void)
 
             // Reprogramar solo el evento de 15s (sueño)
             uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
-            uint32_t next_event      = (current_counter + (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8) & 0xFFFFFF;
+            uint32_t read_time       = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+            NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido: %u ms", read_time);
+            uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
             nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
         }
     }
@@ -551,27 +555,27 @@ int main(void)
     history_to_save.temp     = 25;
     history_to_save.battery  = 98;
 
-    //
-    err_code = save_history_record(&history_to_save);
+    // Guarda el PRIMER registro de historial
+    err_code                 = save_history_record(&history_to_save);
     if (err_code == NRF_SUCCESS)
     {
-        NRF_LOG_INFO("Comando para guardar el registro 0 enviado correctamente.");
+        NRF_LOG_RAW_INFO("\n\n el registro 0 enviado correctamente.");
     }
     else
     {
         NRF_LOG_ERROR("Error al intentar guardar el registro 0: ");
     }
 
-    err_code = read_last_history_record(&history_to_read);
+    err_code = read_history_record_by_id(0, &history_to_read);
     if (err_code == NRF_SUCCESS)
     {
-        NRF_LOG_INFO("Ultimo registro leido con exito.");
+        NRF_LOG_RAW_INFO("\n\nUltimo registro leido con exito.");
         print_history_record(&history_to_read, "Contenido del Ultimo Registro");
         // Deberías ver los datos del SEGUNDO registro que guardamos (contador=1235, second=15)
     }
     else
     {
-        NRF_LOG_ERROR("No se pudo leer el ultimo registro. Error: ");
+        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el ultimo registro.");
     }
 
     // Enter main loop.
