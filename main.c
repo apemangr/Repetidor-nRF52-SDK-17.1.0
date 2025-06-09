@@ -14,6 +14,7 @@
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
 #include "calendar.h"
+#include "filesystem.h"
 #include "leds.h"
 #include "nordic_common.h"
 #include "nrf_ble_gatt.h"
@@ -527,6 +528,51 @@ int main(void)
     nrf_delay_ms(10);
 
     NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
+    NRF_LOG_RAW_INFO("\n> Comenzando con la prueba\n");
+
+    store_history history_to_save;
+    store_history history_to_read;
+
+    history_to_save.year     = 2026;
+    history_to_save.month    = 6;
+    history_to_save.day      = 7;
+    history_to_save.hour     = 10;
+    history_to_save.minute   = 30;
+    history_to_save.second   = 0;
+    history_to_save.contador = 1234;
+    history_to_save.V1       = 100;
+    history_to_save.V2       = 101;
+    history_to_save.V3       = 102;
+    history_to_save.V4       = 103;
+    history_to_save.V5       = 104;
+    history_to_save.V6       = 105;
+    history_to_save.V7       = 106;
+    history_to_save.V8       = 107;
+    history_to_save.temp     = 25;
+    history_to_save.battery  = 98;
+
+    //
+    err_code = save_history_record(&history_to_save);
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_INFO("Comando para guardar el registro 0 enviado correctamente.");
+    }
+    else
+    {
+        NRF_LOG_ERROR("Error al intentar guardar el registro 0: ");
+    }
+
+    err_code = read_last_history_record(&history_to_read);
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_INFO("Ultimo registro leido con exito.");
+        print_history_record(&history_to_read, "Contenido del Ultimo Registro");
+        // Deberías ver los datos del SEGUNDO registro que guardamos (contador=1235, second=15)
+    }
+    else
+    {
+        NRF_LOG_ERROR("No se pudo leer el ultimo registro. Error: ");
+    }
 
     // Enter main loop.
     for (;;)

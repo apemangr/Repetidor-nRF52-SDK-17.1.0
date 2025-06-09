@@ -32,7 +32,7 @@ typedef struct
     uint16_t V8;
     uint8_t  temp;
     uint8_t  battery;
-    uint8_t  antpwr;
+    uint8_t  padding[2];
 } store_history;
 
 typedef enum
@@ -42,6 +42,11 @@ typedef enum
 } valor_type_t;
 
 static uint8_t mac_address_from_flash[6] = {0};
+ret_code_t     save_history_record(store_history const *p_history_data);
+ret_code_t     read_history_record_by_id(uint32_t record_id, store_history *p_history_data);
+void           print_history_record(store_history const *p_record, const char *p_title);
+ret_code_t     read_last_history_record(store_history *p_history_data);
+void           fds_history_example_run(void);
 ret_code_t     write_date_to_flash(const datetime_t *p_date);
 datetime_t     read_date_from_flash(void);
 void           write_time_to_flash(valor_type_t valor_type, uint32_t valor);

@@ -78,10 +78,10 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="516" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="498" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="33" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="6" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="2" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="17" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="503" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="497" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="134" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/main.c" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="6" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="20" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="18" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="21" y="33" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.h" selected="0" top="9" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="110" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="ble_app_uart_relay_pca10040_s132.emProject" selected="0" top="86" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="548" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="533" codecName="Default"/>
  </Files>

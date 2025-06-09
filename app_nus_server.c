@@ -81,7 +81,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
             if (stat.dirty_records > 0)
             {
                 // Realiza la recolección de basura
-                NRF_LOG_RAW_INFO("\n\t>> Limpiando registros no validos.");
+                NRF_LOG_RAW_INFO("\n\t>> Limpiando registros no validos...");
                 perform_garbage_collection();
             }
             NRF_LOG_RAW_INFO(

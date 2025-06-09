@@ -10,22 +10,23 @@
 #define UART_RX_BUF_SIZE             256
 #define ECHOBACK_BLE_UART_DATA       1
 #define DEFAULT_DEVICE_ON_TIME_MS    11000
-#define DEFAULT_DEVICE_SLEEP_TIME_MS 600000 // Tiempo que el dispositivo estará dormido (ej: 10 segundos)
+#define DEFAULT_DEVICE_SLEEP_TIME_MS 600000
 
 /** STORAGE	 */
-#define MAC_FILE_ID              0x1111
-#define MAC_RECORD_KEY           0x1112
+#define MAC_FILE_ID                0x0001
+#define MAC_RECORD_KEY             0x0002
 
-#define TIME_FILE_ID             0x2222
-#define TIME_ON_RECORD_KEY       0x4444
-#define TIME_SLEEP_RECORD_KEY    0x5555
+#define TIME_FILE_ID               0x0003
+#define TIME_ON_RECORD_KEY         0x0004
+#define TIME_SLEEP_RECORD_KEY      0x0005
 
-#define DATE_AND_TIME_FILE_ID    0x6666
-#define DATE_AND_TIME_RECORD_KEY 0x6667
+#define DATE_AND_TIME_FILE_ID      0x0006
+#define DATE_AND_TIME_RECORD_KEY   0x0007
 
-#define HISTORY_FILE_ID          0x7777
-#define HISTORY_RECORD_KEY       0x7888
-#define HISTORY_BUFFER_SIZE      500
-#define HISTORY_RECORD_KEY_START HISTORY_RECORD_KEY
+#define HISTORY_FILE_ID            0x0008
+#define HISTORY_RECORD_KEY         0x0009
+#define HISTORY_COUNTER_RECORD_KEY 0x1000
+#define HISTORY_BUFFER_SIZE        500
+#define HISTORY_RECORD_KEY_START   HISTORY_RECORD_KEY
 
 #endif // VARIABLES_H
