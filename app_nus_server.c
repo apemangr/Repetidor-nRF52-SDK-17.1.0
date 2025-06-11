@@ -69,7 +69,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("> Iniciando el modulo de almacenamiento...\n");
+            NRF_LOG_RAW_INFO("\n> Iniciando el modulo de almacenamiento...\n");
 
             fds_stat_t stat = {0};
             fds_stat(&stat);
@@ -453,8 +453,6 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     nuevo_historial.V8         = 888;
                     nuevo_historial.temp       = 27;
                     nuevo_historial.battery    = 99;
-                    nuevo_historial.padding[0] = 0;
-                    nuevo_historial.padding[1] = 0;
 
                     //
                     err_code = save_history_record(&nuevo_historial);
@@ -467,6 +465,13 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         NRF_LOG_ERROR("Error al guardar historial de prueba: 0x%X", err_code);
                     }
+                    break;
+                }
+                case 13: // Mostrar e incrementar el record_id de history
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Mostrar e incrementar record_id de history\x1b[0m");
+
+
                     break;
                 }
                 default: // Comando desconocido
