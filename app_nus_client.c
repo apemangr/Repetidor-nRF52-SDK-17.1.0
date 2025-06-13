@@ -25,7 +25,6 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue, NRF_SDH_BLE_CENTRAL_LINK_COUNT, NRF_BLE_GQ_QUEU
 NRF_BLE_SCAN_DEF(m_scan);
 
 static app_nus_client_on_data_received_t m_on_data_received = 0;
-// static uint8_t mac_address_from_flash[6] = {0};
 static ble_gap_addr_t   m_target_periph_addr;
 
 static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE, .type = NUS_SERVICE_UUID_TYPE};
@@ -36,10 +35,20 @@ static void target_periph_addr_init(void)
     // Carga la MAC desde la memoria flash
     // 80 --
     NRF_LOG_RAW_INFO("\n\n> Configurando filtrado...");
-    load_mac_from_flash();
+    load_mac_from_flash(m_target_periph_addr.addr);
+
+    nrf_delay_ms(20);
+    // Verifica si la MAC se ha cargado correctamente
+    if (m_target_periph_addr.addr[0] == 0 && m_target_periph_addr.addr[1] == 0 &&
+        m_target_periph_addr.addr[2] == 0 && m_target_periph_addr.addr[3] == 0 &&
+        m_target_periph_addr.addr[4] == 0 && m_target_periph_addr.addr[5] == 0)
+    {
+        NRF_LOG_RAW_INFO("\n\t>> \033[0;31mError: No se pudo cargar la direccion MAC desde la memoria flash.\033[0m\n");
+        return;
+    }
     // Configura la dirección del dispositivo objetivo
     m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
-    memcpy(m_target_periph_addr.addr, mac_address_from_flash, sizeof(mac_address_from_flash));
+    memcpy(m_target_periph_addr.addr, m_target_periph_addr.addr, sizeof(m_target_periph_addr.addr));
 
     NRF_LOG_RAW_INFO("\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
 }
@@ -138,6 +147,15 @@ static void scan_init(void)
     err_code =
         nrf_ble_scan_filter_set(&m_scan, NRF_BLE_SCAN_ADDR_FILTER, m_target_periph_addr.addr);
     APP_ERROR_CHECK(err_code);
+    // Muestra la dirección MAC del dispositivo objetivo
+    NRF_LOG_RAW_INFO("\n\n> Dirección MAC del dispositivo objetivo: "
+                     "%02x:%02x:%02x:%02x:%02x:%02x",
+                     m_target_periph_addr.addr[0],
+                     m_target_periph_addr.addr[1],
+                     m_target_periph_addr.addr[2],
+                     m_target_periph_addr.addr[3],
+                     m_target_periph_addr.addr[4],
+                     m_target_periph_addr.addr[5]);
 
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
     APP_ERROR_CHECK(err_code);

@@ -26,3 +26,8 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 | 11      | Solicitar un historial por ID (WIP) | Lee un registro del repetidor segun el ID indicado                                   | 111115 <br> (Solicita el 5 historial)                   |
 | 12      | Borra un historial por ID (WIP)     | Elimina un registro del repetidor segun el ID indicado                               | 111125 <br> (Borra el 5 historial)                      |
 | 666     | Borra todos los historiales (WIP)   | Limpia de la memoria flash todos los registros almacenados                           | 111666                                                   |
+
+
+# Roadmap
+
+- [ ] Sincronizar hora y fecha con el emisor al conectarse

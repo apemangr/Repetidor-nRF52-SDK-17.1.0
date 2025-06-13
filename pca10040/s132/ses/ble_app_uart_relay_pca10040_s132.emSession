@@ -3,13 +3,6 @@
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
   <BreakpointListItem trigger="" line="112" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="4" filename="ble_app_uart_relay_pca10040_s132.emProject" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="534" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="536" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="537" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="538" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="539" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="541" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="543" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -40,12 +33,6 @@
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132"/>
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132"/>
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;Application"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;None"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_BLE"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_BLE_Services"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_Drivers"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_Libraries"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_SoftDevice"/>
  </Project>
  <Register1>
   <RegisterWindow visibleNodes="CPU - Current Context/r0;CPU - Current Context/r1;CPU - Current Context/r2;CPU - Current Context/r3;CPU - Current Context/r4;CPU - Current Context/r5;CPU - Current Context/r6;CPU - Current Context/r7;CPU - Current Context/r8;CPU - Current Context/r9;CPU - Current Context/r10;CPU - Current Context/r11;CPU - Current Context/r12;CPU - Current Context/sp(r13);CPU - Current Context/lr(r14);CPU - Current Context/pc(r15);CPU - Current Context/apsr;CPU/r0;CPU/r1;CPU/r2;CPU/r3;CPU/r4;CPU/r5;CPU/r6;CPU/r7;CPU/r8;CPU/r9;CPU/r10;CPU/r11;CPU/r12;CPU/sp(r13);CPU/lr(r14);CPU/pc(r15);CPU/xpsr;CPU/msp;CPU/psp;CPU/cfbp;CPU/internal" binaryNodes="" asciiNodes="" openNodes="CPU - Current Context" name="ble_app_uart_c_pca10040_s132" decimalNodes="" octalNodes="" unsignedNodes=""/>
@@ -86,14 +73,14 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="533" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="513" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="687" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="657" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="134" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0/main.c" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="6" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="22" y="19" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="61" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="58" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="33" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.h" selected="0" top="9" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="104" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="ble_app_uart_relay_pca10040_s132.emProject" selected="0" top="87" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="17" y="468" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="451" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="458" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="427" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="11" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../variables.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="1" top="80" codecName=""/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="80" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="ble_app_uart_relay_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/guill/OneDrive/Desktop/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

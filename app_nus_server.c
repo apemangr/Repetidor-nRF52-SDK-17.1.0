@@ -46,6 +46,7 @@ static uint16_t                          m_conn_handle          = BLE_CONN_HANDL
 static uint16_t                          m_emisor_conn_handle   = BLE_CONN_HANDLE_INVALID;
 static uint8_t                           custom_mac_addr_[6]    = {0};
 static ble_gap_addr_t                    m_target_periph_addr;
+
 static ble_uuid_t                        m_adv_uuids[] = {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
@@ -179,6 +180,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                    p_evt->params.rx_data.length);
             message[p_evt->params.rx_data.length] = '\0'; // Agregar terminador nulo
 
+            // Imprime el mensaje recibido
+            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s",
+                             message);
+
             // Verifica si el mensaje comienza con "111"
             if (p_evt->params.rx_data.length >= 5 && message[0] == '1' &&
                 message[1] == '1' && message[2] == '1')
@@ -221,11 +226,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 case 2: // Comando 02: Muestra la MAC custom guardada en la
                     // memoria flash
                     {
+                        uint8_t mac_print[6];
                         // Carga la MAC desde la memoria flash
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando "
                                          "MAC "
                                          "guardada \x1b[0m");
-                        load_mac_from_flash();
+                        load_mac_from_flash(mac_print);
                         // muestra la MAC
                     }
 
@@ -432,30 +438,31 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
                 case 12: // Guardar un nuevo historial con valores inventados
-                {
+
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Guardar nuevo historial de prueba\x1b[0m");
 
                     store_history nuevo_historial;
-                    nuevo_historial.year       = 2025;
-                    nuevo_historial.month      = 6;
-                    nuevo_historial.day        = 9;
-                    nuevo_historial.hour       = 12;
-                    nuevo_historial.minute     = 34;
-                    nuevo_historial.second     = 56;
-                    nuevo_historial.contador   = 4321;
-                    nuevo_historial.V1         = 111;
-                    nuevo_historial.V2         = 222;
-                    nuevo_historial.V3         = 333;
-                    nuevo_historial.V4         = 444;
-                    nuevo_historial.V5         = 555;
-                    nuevo_historial.V6         = 666;
-                    nuevo_historial.V7         = 777;
-                    nuevo_historial.V8         = 888;
-                    nuevo_historial.temp       = 27;
-                    nuevo_historial.battery    = 99;
+                    nuevo_historial.year     = 2025;
+                    nuevo_historial.month    = 6;
+                    nuevo_historial.day      = 9;
+                    nuevo_historial.hour     = 12;
+                    nuevo_historial.minute   = 34;
+                    nuevo_historial.second   = 56;
+                    nuevo_historial.contador = 4321;
+                    nuevo_historial.V1       = 111;
+                    nuevo_historial.V2       = 222;
+                    nuevo_historial.V3       = 333;
+                    nuevo_historial.V4       = 444;
+                    nuevo_historial.V5       = 555;
+                    nuevo_historial.V6       = 666;
+                    nuevo_historial.V7       = 777;
+                    nuevo_historial.V8       = 888;
+                    nuevo_historial.temp     = 27;
+                    nuevo_historial.battery  = 99;
 
                     //
                     err_code = save_history_record(&nuevo_historial);
+
                     if (err_code == NRF_SUCCESS)
                     {
                         NRF_LOG_RAW_INFO("\nHistorial de prueba guardado correctamente.");
@@ -466,11 +473,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         NRF_LOG_ERROR("Error al guardar historial de prueba: 0x%X", err_code);
                     }
                     break;
-                }
+
                 case 13: // Mostrar e incrementar el record_id de history
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Mostrar e incrementar record_id de history\x1b[0m");
-
 
                     break;
                 }

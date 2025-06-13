@@ -124,7 +124,8 @@ void rtc_handler(nrfx_rtc_int_type_t int_type)
 
 void handle_rtc_events(void)
 {
-    uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+    uint32_t   current_counter = nrfx_rtc_counter_get(&m_rtc);
+    ret_code_t err_code;
 
     if (m_rtc_on_flag)
     {
@@ -146,6 +147,51 @@ void handle_rtc_events(void)
             advertising_stop();
             scan_stop();
             app_uart_close();
+
+            // Guardar historial si son las 23 o 0 hrs, es decir cuando se cumple
+            if ((now.hour == 0 && now.minute < 5) || (now.hour == 23 && now.minute > 50))
+            {
+                store_history nuevo_historial =
+                    {
+                        .year   = now.year,
+                        .month  = now.month,
+                        .day    = now.day,
+                        .hour   = now.hour,
+                        .minute = now.minute,
+                        .second = now.second,
+                    };
+
+                // nuevo_historial.year     = 2025;
+                // nuevo_historial.month    = 6;
+                // nuevo_historial.day      = 9;
+                // nuevo_historial.hour     = 12;
+                // nuevo_historial.minute   = 34;
+                // nuevo_historial.second   = 56;
+                // nuevo_historial.contador = 4321;
+                // nuevo_historial.V1       = 111;
+                // nuevo_historial.V2       = 222;
+                // nuevo_historial.V3       = 333;
+                // nuevo_historial.V4       = 444;
+                // nuevo_historial.V5       = 555;
+                // nuevo_historial.V6       = 666;
+                // nuevo_historial.V7       = 777;
+                // nuevo_historial.V8       = 888;
+                // nuevo_historial.temp     = 27;
+                // nuevo_historial.battery  = 99;
+
+                // Guardar el historial de prueba
+                err_code = save_history_record(&nuevo_historial);
+
+                if (err_code == NRF_SUCCESS)
+                {
+                    NRF_LOG_RAW_INFO("\nHistorial de prueba guardado correctamente.");
+                    print_history_record(&nuevo_historial, "Historial de prueba guardado");
+                }
+                else
+                {
+                    NRF_LOG_ERROR("Error al guardar historial de prueba: 0x%X", err_code);
+                }
+            }
 
             m_device_active = false;
 
@@ -532,268 +578,111 @@ int main(void)
     nrf_delay_ms(100);
 
     NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
-    NRF_LOG_RAW_INFO("\n> Comenzando con la prueba\n");
-    NRF_LOG_RAW_INFO("\n\033[1;35m>>> Probando con el registro 0\033[0m\n");
+    // NRF_LOG_RAW_INFO("\n> Comenzando con la prueba\n");
+    // NRF_LOG_RAW_INFO("\n\033[1;35m>>> Probando con el registro 0\033[0m\n");
 
-    store_history history_to_save;
-    store_history history_to_read;
+    // store_history history_to_save;
+    // store_history history_to_read;
 
-    history_to_save.year     = 2026;
-    history_to_save.month    = 6;
-    history_to_save.day      = 7;
-    history_to_save.hour     = 10;
-    history_to_save.minute   = 30;
-    history_to_save.second   = 0;
-    history_to_save.contador = 1234;
-    history_to_save.V1       = 100;
-    history_to_save.V2       = 101;
-    history_to_save.V3       = 102;
-    history_to_save.V4       = 103;
-    history_to_save.V5       = 104;
-    history_to_save.V6       = 105;
-    history_to_save.V7       = 106;
-    history_to_save.V8       = 107;
-    history_to_save.temp     = 25;
-    history_to_save.battery  = 98;
+    // history_to_save.year     = 2026;
+    // history_to_save.month    = 6;
+    // history_to_save.day      = 7;
+    // history_to_save.hour     = 10;
+    // history_to_save.minute   = 30;
+    // history_to_save.second   = 0;
+    // history_to_save.contador = 1234;
+    // history_to_save.V1       = 100;
+    // history_to_save.V2       = 101;
+    // history_to_save.V3       = 102;
+    // history_to_save.V4       = 103;
+    // history_to_save.V5       = 104;
+    // history_to_save.V6       = 105;
+    // history_to_save.V7       = 106;
+    // history_to_save.V8       = 107;
+    // history_to_save.temp     = 25;
+    // history_to_save.battery  = 98;
 
-    // nrf_delay_ms(2000);
-    // Guarda el PRIMER registro de historial
-    NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    err_code = save_history_record(&history_to_save);
+    // // nrf_delay_ms(2000);
+    // // Guarda el PRIMER registro de historial
+    // NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
+    // err_code = save_history_record(&history_to_save);
 
-    // nrf_delay_ms(2000);
+    // // nrf_delay_ms(2000);
 
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    }
+    // if (err_code == NRF_SUCCESS)
+    // {
+    //     NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
+    // }
+    // else
+    // {
+    //     NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
+    // }
 
-    NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
-    err_code = read_history_record_by_id(0, &history_to_read);
+    // NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
+    // err_code = read_history_record_by_id(0, &history_to_read);
 
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-        print_history_record(&history_to_read, "Contenido del Ultimo Registro");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 0.");
-    }
+    // // nrf_delay_ms(2000);
+    // if (err_code == NRF_SUCCESS)
+    // {
+    //     NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
+    //     print_history_record(&history_to_read, "Contenido del Ultimo Registro");
+    // }
+    // else
+    // {
+    //     NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 0.");
+    // }
 
-    // Pone de color morado el texto  NRF_LOG_RAW_INFO("\n\n>>> Probando con el registro 1\n");
-    NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 1\033[0m\n");
+    // // Pone de color morado el texto  NRF_LOG_RAW_INFO("\n\n>>> Probando con el registro 1\n");
+    // NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 1\033[0m\n");
 
-    store_history history_to_save1;
-    store_history history_to_read1;
+    // store_history history_to_save1;
+    // store_history history_to_read1;
 
-    history_to_save1.year     = 3026;
-    history_to_save1.month    = 6;
-    history_to_save1.day      = 7;
-    history_to_save1.hour     = 10;
-    history_to_save1.minute   = 30;
-    history_to_save1.second   = 0;
-    history_to_save1.contador = 1234;
-    history_to_save1.V1       = 100;
-    history_to_save1.V2       = 101;
-    history_to_save1.V3       = 102;
-    history_to_save1.V4       = 103;
-    history_to_save1.V5       = 104;
-    history_to_save1.V6       = 105;
-    history_to_save1.V7       = 106;
-    history_to_save1.V8       = 107;
-    history_to_save1.temp     = 25;
-    history_to_save1.battery  = 98;
+    // history_to_save1.year     = 3026;
+    // history_to_save1.month    = 6;
+    // history_to_save1.day      = 7;
+    // history_to_save1.hour     = 10;
+    // history_to_save1.minute   = 30;
+    // history_to_save1.second   = 0;
+    // history_to_save1.contador = 1234;
+    // history_to_save1.V1       = 100;
+    // history_to_save1.V2       = 101;
+    // history_to_save1.V3       = 102;
+    // history_to_save1.V4       = 103;
+    // history_to_save1.V5       = 104;
+    // history_to_save1.V6       = 105;
+    // history_to_save1.V7       = 106;
+    // history_to_save1.V8       = 107;
+    // history_to_save1.temp     = 25;
+    // history_to_save1.battery  = 98;
 
-    // Guarda el PRIMER registro de historial
-    NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    err_code = save_history_record(&history_to_save1);
+    // // Guarda el PRIMER registro de historial
+    // NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
+    // err_code = save_history_record(&history_to_save1);
 
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    }
+    // // nrf_delay_ms(2000);
+    // if (err_code == NRF_SUCCESS)
+    // {
+    //     NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
+    // }
+    // else
+    // {
+    //     NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
+    // }
 
-    NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n")
-    err_code = read_history_record_by_id(1, &history_to_read1);
+    // NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n")
+    // err_code = read_history_record_by_id(1, &history_to_read1);
 
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-        print_history_record(&history_to_read1, "Contenido del Ultimo Registro");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 1.");
-    }
-
-    // nrf_delay_ms(2000);
-    NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 2\033[0m\n");
-
-    store_history history_to_save2;
-    store_history history_to_read2;
-
-    history_to_save2.year     = 1026;
-    history_to_save2.month    = 6;
-    history_to_save2.day      = 7;
-    history_to_save2.hour     = 10;
-    history_to_save2.minute   = 30;
-    history_to_save2.second   = 0;
-    history_to_save2.contador = 1234;
-    history_to_save2.V1       = 100;
-    history_to_save2.V2       = 101;
-    history_to_save2.V3       = 102;
-    history_to_save2.V4       = 103;
-    history_to_save2.V5       = 104;
-    history_to_save2.V6       = 105;
-    history_to_save2.V7       = 106;
-    history_to_save2.V8       = 107;
-    history_to_save2.temp     = 25;
-    history_to_save2.battery  = 98;
-
-    // Guarda el PRIMER registro de historial
-    NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    err_code = save_history_record(&history_to_save2);
-
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    }
-
-    NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
-    err_code = read_history_record_by_id(2, &history_to_read2);
-
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-        print_history_record(&history_to_read2, "Contenido del Ultimo Registro");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 2.");
-    }
-
-    NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 3\033[0m\n");
-
-    store_history history_to_save3;
-    store_history history_to_read3;
-
-    history_to_save3.year     = 1026;
-    history_to_save3.month    = 6;
-    history_to_save3.day      = 7;
-    history_to_save3.hour     = 10;
-    history_to_save3.minute   = 30;
-    history_to_save3.second   = 0;
-    history_to_save3.contador = 1234;
-    history_to_save3.V1       = 100;
-    history_to_save3.V2       = 101;
-    history_to_save3.V3       = 102;
-    history_to_save3.V4       = 103;
-    history_to_save3.V5       = 104;
-    history_to_save3.V6       = 105;
-    history_to_save3.V7       = 106;
-    history_to_save3.V8       = 107;
-    history_to_save3.temp     = 25;
-    history_to_save3.battery  = 98;
-
-    // Guarda el PRIMER registro de historial
-    NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    err_code = save_history_record(&history_to_save3);
-
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    }
-
-    NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
-    err_code = read_history_record_by_id(3, &history_to_read3);
-
-    // nrf_delay_ms(2000);
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-        print_history_record(&history_to_read3, "Contenido del Ultimo Registro");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 3.");
-    }
-
-    // Crea el registro 3
-    NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 4\033[0m\n");
-
-    store_history history_to_save4;
-    store_history history_to_read4;
-
-    history_to_save4.year     = 1026;
-    history_to_save4.month    = 6;
-    history_to_save4.day      = 7;
-    history_to_save4.hour     = 10;
-    history_to_save4.minute   = 30;
-    history_to_save4.second   = 0;
-    history_to_save4.contador = 1234;
-    history_to_save4.V1       = 100;
-    history_to_save4.V2       = 101;
-    history_to_save4.V3       = 102;
-    history_to_save4.V4       = 103;
-    history_to_save4.V5       = 104;
-    history_to_save4.V6       = 105;
-    history_to_save4.V7       = 106;
-    history_to_save4.V8       = 107;
-    history_to_save4.temp     = 25;
-    history_to_save4.battery  = 98;
-
-    // Guarda el PRIMER registro de historial
-    NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    err_code = save_history_record(&history_to_save4);
-
-    // nrf_delay_ms(2000);
-
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    }
-
-    NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
-    err_code = read_history_record_by_id(4, &history_to_read4);
-
-    // nrf_delay_ms(2000);
-
-    if (err_code == NRF_SUCCESS)
-    {
-        NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-        print_history_record(&history_to_read4, "Contenido del Ultimo Registro");
-    }
-    else
-    {
-        NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 4.");
-    }
+    // // nrf_delay_ms(2000);
+    // if (err_code == NRF_SUCCESS)
+    // {
+    //     NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
+    //     print_history_record(&history_to_read1, "Contenido del Ultimo Registro");
+    // }
+    // else
+    // {
+    //     NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 1.");
+    // }
 
     // Enter main loop.
     for (;;)

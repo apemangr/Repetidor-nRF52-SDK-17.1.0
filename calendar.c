@@ -177,7 +177,7 @@ bool calendar_set_datetime(void)
     {
         NRF_LOG_RAW_INFO("\n\t>> No se encontro una fecha en la memoria.");
         NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
-        datetime_t now = {.year = 2000, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
+        datetime_t now = {.year = 2000, .month = 2, .day = 29, .hour = 23, .minute = 59, .second = 50};
         calendar_set_time(&now);
         NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
                          now.year,
