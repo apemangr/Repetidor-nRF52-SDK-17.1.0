@@ -543,38 +543,38 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
     uint8_t hour = data_ptr[position++];
     uint8_t minute = data_ptr[position++];
     uint8_t second = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nFecha:");
-    NRF_LOG_RAW_INFO("Día: %02d Mes: %02d Año: %04d", day, month, year);
-    NRF_LOG_RAW_INFO("\nHora:");
-    NRF_LOG_RAW_INFO("Hora: %02d Minuto: %02d Segundo: %02d", hour, minute, second);
+    NRF_LOG_RAW_INFO("\nFecha: ");
+    NRF_LOG_RAW_INFO("%02d / %02d / %04d", day, month, year);
+    NRF_LOG_RAW_INFO("\nHora: ");
+    NRF_LOG_RAW_INFO("%02d : %02d : %02d", hour, minute, second);
 
     // Interpretar y mostrar el contador
     uint32_t contador = (data_ptr[position++] << 24) |
                         (data_ptr[position++] << 16) |
                         (data_ptr[position++] << 8) |
                         data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nContador:");
-    NRF_LOG_RAW_INFO("Valor: %lu", contador);
+    NRF_LOG_RAW_INFO("\nContador reinicios: ");
+    NRF_LOG_RAW_INFO("%lu", contador);
 
     // Interpretar y mostrar los voltajes V1 y V2
     uint16_t V1 = (data_ptr[position++] << 8) | data_ptr[position++];
     uint16_t V2 = (data_ptr[position++] << 8) | data_ptr[position++];
     NRF_LOG_RAW_INFO("\nVoltajes:");
-    NRF_LOG_RAW_INFO("V1: %u V2: %u", V1, V2);
+    NRF_LOG_RAW_INFO("\nV1: %u V2: %u", V1, V2);
 
     // Mostrar el nivel de batería
     uint8_t battery = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nBatería:");
-    NRF_LOG_RAW_INFO("Nivel: %u%%", battery);
+    NRF_LOG_RAW_INFO("\nBateria: ");
+    NRF_LOG_RAW_INFO("%u%%", battery);
 
     // Interpretar y mostrar las MACs
-    NRF_LOG_RAW_INFO("\nMAC Original:");
+    NRF_LOG_RAW_INFO("\nMAC Original: ");
     NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
                      data_ptr[position], data_ptr[position + 1], data_ptr[position + 2],
                      data_ptr[position + 3], data_ptr[position + 4], data_ptr[position + 5]);
     position += 6;
 
-    NRF_LOG_RAW_INFO("\nMAC Custom:");
+    NRF_LOG_RAW_INFO("\nMAC Custom: ");
     NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
                      data_ptr[position], data_ptr[position + 1], data_ptr[position + 2],
                      data_ptr[position + 3], data_ptr[position + 4], data_ptr[position + 5]);
@@ -587,18 +587,18 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
     uint16_t V6 = (data_ptr[position++] << 8) | data_ptr[position++];
     uint16_t V7 = (data_ptr[position++] << 8) | data_ptr[position++];
     uint16_t V8 = (data_ptr[position++] << 8) | data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nVoltajes adicionales:");
-    NRF_LOG_RAW_INFO("V3: %u V4: %u", V3, V4);
-    NRF_LOG_RAW_INFO("V5: %u V6: %u", V5, V6);
-    NRF_LOG_RAW_INFO("V7: %u V8: %u", V7, V8);
+    NRF_LOG_RAW_INFO("\nVoltajes adicionales: ");
+    NRF_LOG_RAW_INFO("\nV3: %u V4: %u", V3, V4);
+    NRF_LOG_RAW_INFO("\nV5: %u V6: %u", V5, V6);
+    NRF_LOG_RAW_INFO("\nV7: %u V8: %u", V7, V8);
 
     // Mostrar temperatura y potencia de antena
     uint8_t temp = data_ptr[position++];
     uint8_t antpwr = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nTemperatura:");
-    NRF_LOG_RAW_INFO("Valor: %u°C", temp);
-    NRF_LOG_RAW_INFO("\nPotencia Antena:");
-    NRF_LOG_RAW_INFO("Valor: %u", antpwr);
+    NRF_LOG_RAW_INFO("\nTemperatura: ");
+    NRF_LOG_RAW_INFO("%u C", temp);
+    NRF_LOG_RAW_INFO("\nPotencia Antena: ");
+    NRF_LOG_RAW_INFO("%u", antpwr);
 
     // Mostrar los valores reservados y posición de envío
     uint8_t reserved1 = data_ptr[position++];
@@ -607,12 +607,12 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
     uint8_t reserved4 = data_ptr[position++];
     uint16_t sending_position = (data_ptr[position++] << 8) | data_ptr[position++];
     uint16_t total_sending = (data_ptr[position++] << 8) | data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nReservados:");
-    NRF_LOG_RAW_INFO("R1: %u R2: %u R3: %u R4: %u", reserved1, reserved2, reserved3, reserved4);
-    NRF_LOG_RAW_INFO("\nPosición de envío:");
-    NRF_LOG_RAW_INFO("Posición: %u", sending_position);
-    NRF_LOG_RAW_INFO("\nTotal de envíos:");
-    NRF_LOG_RAW_INFO("Total: %u", total_sending);
+    NRF_LOG_RAW_INFO("\nReservados: ");
+    NRF_LOG_RAW_INFO("\nR1: %u R2: %u R3: %u R4: %u", reserved1, reserved2, reserved3, reserved4);
+    NRF_LOG_RAW_INFO("\nPosicion de envio: ");
+    NRF_LOG_RAW_INFO("%u", sending_position);
+    NRF_LOG_RAW_INFO("\nTotal de envios: ");
+    NRF_LOG_RAW_INFO("%u", total_sending);
 }
 
 static void idle_state_handle(void)
