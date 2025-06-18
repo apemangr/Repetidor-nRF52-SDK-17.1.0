@@ -513,10 +513,10 @@ static void power_management_init(void)
 void app_nus_server_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
     // Output the data to the UART
-    printf("Server data received: ");
+    NRF_LOG_RAW_INFO("\nServer data received: ");
     for (int i = 0; i < data_length; i++)
-        printf("%c", data_ptr[i]);
-    printf("\r\n");
+        NRF_LOG_RAW_INFO("\n%c", data_ptr[i]);
+    NRF_LOG_RAW_INFO("\n");
 
     // Forward the data from the client to the server
     app_nus_client_send_data(data_ptr, data_length);
@@ -524,14 +524,95 @@ void app_nus_server_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
 
 void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
-    // Output the data to the  UART
-    printf("Client data received: ");
-    for (int i = 0; i < data_length; i++)
-        printf("%c", data_ptr[i]);
-    printf("\r\n");
+    // if (data_length < 50) // Verifica que los datos tengan al menos el tamaño esperado
+    // {
+    //     NRF_LOG_RAW_INFO("\nDatos recibidos son demasiado cortos para interpretar.\n");
+    //     return;
+    // }
 
-    // Forward the data from the client to the server
-    app_nus_server_send_data(data_ptr, data_length);
+    uint16_t position = 0;
+
+    // Mostrar el identificador de comando
+    uint8_t command = data_ptr[position++];
+    NRF_LOG_RAW_INFO("\n\n\nComando: 0x%02X", command);
+
+    // Interpretar y mostrar la fecha y hora
+    uint8_t day = data_ptr[position++];
+    uint8_t month = data_ptr[position++];
+    uint16_t year = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint8_t hour = data_ptr[position++];
+    uint8_t minute = data_ptr[position++];
+    uint8_t second = data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nFecha:");
+    NRF_LOG_RAW_INFO("Día: %02d Mes: %02d Año: %04d", day, month, year);
+    NRF_LOG_RAW_INFO("\nHora:");
+    NRF_LOG_RAW_INFO("Hora: %02d Minuto: %02d Segundo: %02d", hour, minute, second);
+
+    // Interpretar y mostrar el contador
+    uint32_t contador = (data_ptr[position++] << 24) |
+                        (data_ptr[position++] << 16) |
+                        (data_ptr[position++] << 8) |
+                        data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nContador:");
+    NRF_LOG_RAW_INFO("Valor: %lu", contador);
+
+    // Interpretar y mostrar los voltajes V1 y V2
+    uint16_t V1 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V2 = (data_ptr[position++] << 8) | data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nVoltajes:");
+    NRF_LOG_RAW_INFO("V1: %u V2: %u", V1, V2);
+
+    // Mostrar el nivel de batería
+    uint8_t battery = data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nBatería:");
+    NRF_LOG_RAW_INFO("Nivel: %u%%", battery);
+
+    // Interpretar y mostrar las MACs
+    NRF_LOG_RAW_INFO("\nMAC Original:");
+    NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
+                     data_ptr[position], data_ptr[position + 1], data_ptr[position + 2],
+                     data_ptr[position + 3], data_ptr[position + 4], data_ptr[position + 5]);
+    position += 6;
+
+    NRF_LOG_RAW_INFO("\nMAC Custom:");
+    NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
+                     data_ptr[position], data_ptr[position + 1], data_ptr[position + 2],
+                     data_ptr[position + 3], data_ptr[position + 4], data_ptr[position + 5]);
+    position += 6;
+
+    // Interpretar y mostrar los nuevos voltajes V3 a V8
+    uint16_t V3 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V4 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V5 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V6 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V7 = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t V8 = (data_ptr[position++] << 8) | data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nVoltajes adicionales:");
+    NRF_LOG_RAW_INFO("V3: %u V4: %u", V3, V4);
+    NRF_LOG_RAW_INFO("V5: %u V6: %u", V5, V6);
+    NRF_LOG_RAW_INFO("V7: %u V8: %u", V7, V8);
+
+    // Mostrar temperatura y potencia de antena
+    uint8_t temp = data_ptr[position++];
+    uint8_t antpwr = data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nTemperatura:");
+    NRF_LOG_RAW_INFO("Valor: %u°C", temp);
+    NRF_LOG_RAW_INFO("\nPotencia Antena:");
+    NRF_LOG_RAW_INFO("Valor: %u", antpwr);
+
+    // Mostrar los valores reservados y posición de envío
+    uint8_t reserved1 = data_ptr[position++];
+    uint8_t reserved2 = data_ptr[position++];
+    uint8_t reserved3 = data_ptr[position++];
+    uint8_t reserved4 = data_ptr[position++];
+    uint16_t sending_position = (data_ptr[position++] << 8) | data_ptr[position++];
+    uint16_t total_sending = (data_ptr[position++] << 8) | data_ptr[position++];
+    NRF_LOG_RAW_INFO("\nReservados:");
+    NRF_LOG_RAW_INFO("R1: %u R2: %u R3: %u R4: %u", reserved1, reserved2, reserved3, reserved4);
+    NRF_LOG_RAW_INFO("\nPosición de envío:");
+    NRF_LOG_RAW_INFO("Posición: %u", sending_position);
+    NRF_LOG_RAW_INFO("\nTotal de envíos:");
+    NRF_LOG_RAW_INFO("Total: %u", total_sending);
 }
 
 static void idle_state_handle(void)
@@ -578,111 +659,6 @@ int main(void)
     nrf_delay_ms(100);
 
     NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
-    // NRF_LOG_RAW_INFO("\n> Comenzando con la prueba\n");
-    // NRF_LOG_RAW_INFO("\n\033[1;35m>>> Probando con el registro 0\033[0m\n");
-
-    // store_history history_to_save;
-    // store_history history_to_read;
-
-    // history_to_save.year     = 2026;
-    // history_to_save.month    = 6;
-    // history_to_save.day      = 7;
-    // history_to_save.hour     = 10;
-    // history_to_save.minute   = 30;
-    // history_to_save.second   = 0;
-    // history_to_save.contador = 1234;
-    // history_to_save.V1       = 100;
-    // history_to_save.V2       = 101;
-    // history_to_save.V3       = 102;
-    // history_to_save.V4       = 103;
-    // history_to_save.V5       = 104;
-    // history_to_save.V6       = 105;
-    // history_to_save.V7       = 106;
-    // history_to_save.V8       = 107;
-    // history_to_save.temp     = 25;
-    // history_to_save.battery  = 98;
-
-    // // nrf_delay_ms(2000);
-    // // Guarda el PRIMER registro de historial
-    // NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    // err_code = save_history_record(&history_to_save);
-
-    // // nrf_delay_ms(2000);
-
-    // if (err_code == NRF_SUCCESS)
-    // {
-    //     NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    // }
-    // else
-    // {
-    //     NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    // }
-
-    // NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n");
-    // err_code = read_history_record_by_id(0, &history_to_read);
-
-    // // nrf_delay_ms(2000);
-    // if (err_code == NRF_SUCCESS)
-    // {
-    //     NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-    //     print_history_record(&history_to_read, "Contenido del Ultimo Registro");
-    // }
-    // else
-    // {
-    //     NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 0.");
-    // }
-
-    // // Pone de color morado el texto  NRF_LOG_RAW_INFO("\n\n>>> Probando con el registro 1\n");
-    // NRF_LOG_RAW_INFO("\n\n\033[1;35m>>> Probando con el registro 1\033[0m\n");
-
-    // store_history history_to_save1;
-    // store_history history_to_read1;
-
-    // history_to_save1.year     = 3026;
-    // history_to_save1.month    = 6;
-    // history_to_save1.day      = 7;
-    // history_to_save1.hour     = 10;
-    // history_to_save1.minute   = 30;
-    // history_to_save1.second   = 0;
-    // history_to_save1.contador = 1234;
-    // history_to_save1.V1       = 100;
-    // history_to_save1.V2       = 101;
-    // history_to_save1.V3       = 102;
-    // history_to_save1.V4       = 103;
-    // history_to_save1.V5       = 104;
-    // history_to_save1.V6       = 105;
-    // history_to_save1.V7       = 106;
-    // history_to_save1.V8       = 107;
-    // history_to_save1.temp     = 25;
-    // history_to_save1.battery  = 98;
-
-    // // Guarda el PRIMER registro de historial
-    // NRF_LOG_RAW_INFO("\n>ETAPA: GUARDADO<\n");
-    // err_code = save_history_record(&history_to_save1);
-
-    // // nrf_delay_ms(2000);
-    // if (err_code == NRF_SUCCESS)
-    // {
-    //     NRF_LOG_RAW_INFO("\nEl registro fue enviado correctamente.");
-    // }
-    // else
-    // {
-    //     NRF_LOG_RAW_INFO("\nError al intentar guardar el registro");
-    // }
-
-    // NRF_LOG_RAW_INFO("\n\n>ETAPA: LECTURA<\n")
-    // err_code = read_history_record_by_id(1, &history_to_read1);
-
-    // // nrf_delay_ms(2000);
-    // if (err_code == NRF_SUCCESS)
-    // {
-    //     NRF_LOG_RAW_INFO("\nUltimo registro leido con exito.\n");
-    //     print_history_record(&history_to_read1, "Contenido del Ultimo Registro");
-    // }
-    // else
-    // {
-    //     NRF_LOG_RAW_INFO("\n\nNo se pudo leer el registro 1.");
-    // }
 
     // Enter main loop.
     for (;;)

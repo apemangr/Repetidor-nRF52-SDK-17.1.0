@@ -380,27 +380,25 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     break;
                 }
-                case 10: // Solicitar ultimo registro de historial
+                case 10: // Comando para solicitar el último historial al periférico
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
-                                     "Solicitar ultimo registro de historial\x1b[0m");
-                    // Llama a la función para solicitar el último registro de historial
+                    // NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: Solicitar último historial al periférico\x1b[0m");
 
-                    store_history last_record;
-                    err_code = read_last_history_record(&last_record);
-                    if (err_code == NRF_SUCCESS)
-                    {
-                        NRF_LOG_RAW_INFO("\n> Solicitud de último registro enviada "
-                                         "correctamente.");
-                    }
-                    else
-                    {
-                        NRF_LOG_ERROR("Error al solicitar el último registro: 0x%X",
-                                      err_code);
-                    }
-                    print_history_record(&last_record, "Ultimo registro de historial");
+                    // // Comando a enviar al periférico
+                    // uint8_t  command_to_peripheral = 0x08; // Comando 08 para solicitar el último historial
+                    // uint16_t command_length        = 1;
 
-                    break;
+                    // // Enviar el comando al periférico a través del cliente NUS
+                    // ret_code_t err_code = app_nus_client_send_command(&command_to_peripheral, command_length);
+                    // if (err_code == NRF_SUCCESS)
+                    // {
+                    //     NRF_LOG_RAW_INFO("\nComando 08 enviado al periférico para solicitar el último historial.\n");
+                    // }
+                    // else
+                    // {
+                    //     NRF_LOG_RAW_INFO("\nError al enviar el comando 08 al periférico: 0x%X\n", err_code);
+                    // }
+                    // break;
                 }
                 case 11: // Solicitar un registro de historial por ID
                 {

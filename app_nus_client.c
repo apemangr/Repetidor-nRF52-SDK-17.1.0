@@ -181,8 +181,16 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
     case BLE_NUS_C_EVT_NUS_TX_EVT:
         if (m_on_data_received)
         {
+
             m_on_data_received(p_ble_nus_evt->p_data, p_ble_nus_evt->data_len);
         }
+        // Imprime los datos recibidos
+        // NRF_LOG_RAW_INFO("\nClient data received: ");
+        // for (uint32_t i = 0; i < p_ble_nus_evt->data_len; i++)
+        // {
+        //     NRF_LOG_RAW_INFO("%c", p_ble_nus_evt->p_data[i]);
+        // }
+        // NRF_LOG_RAW_INFO("\n");
         break;
 
     case BLE_NUS_C_EVT_DISCONNECTED:
