@@ -1,5 +1,56 @@
 #include "filesystem.h"
 
+ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset)
+{
+    ret_code_t        ret;
+    fds_record_desc_t desc_history   = {0};
+    fds_record_desc_t desc_counter   = {0};
+    fds_find_token_t  token          = {0};
+
+    // Preparar nuevo registro histórico
+    uint16_t     record_key = HISTORY_RECORD_KEY_START + offset;
+    fds_record_t new_record = {
+        .file_id           = HISTORY_FILE_ID,
+        .key               = record_key,
+        .data.p_data       = p_history_data,
+        .data.length_words = (sizeof(store_history) + 3) / sizeof(uint32_t) // Cálculo correcto
+    };
+
+    // Buscar el registro del historial, si no existe lo escribe 
+    ret = fds_record_find(HISTORY_FILE_ID, record_key, &desc_history, &token);
+    if( ret == NRF_SUCCESS)
+    {
+        // Si el registro ya existe, lo actualiza
+        ret = fds_record_update(&desc_history, &new_record);
+        nrf_delay_ms(100); // Delay tras actualizar
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nError al actualizar el registro: %d", ret);
+            return ret;
+        }
+        NRF_LOG_RAW_INFO("\nRegistro actualizado con KEY: 0x%04X", record_key);
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        // Si no existe, lo escribe
+        ret = fds_record_write(&desc_history, &new_record);
+        nrf_delay_ms(100); // Delay tras escribir
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nError al escribir el registro: %d", ret);
+            return ret;
+        }
+        NRF_LOG_RAW_INFO("\nRegistro escrito con KEY: 0x%04X", record_key);
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\nError al buscar el registro: %d", ret);
+        return ret;
+    }
+
+    return NRF_SUCCESS;
+}
+
 ret_code_t update_history_counter(uint32_t new_count)
 {
     fds_record_desc_t desc_counter = {0};
@@ -209,21 +260,15 @@ ret_code_t read_last_history_record(store_history *p_history_data)
 
 void print_history_record(store_history const *p_record, const char *p_title)
 {
-    NRF_LOG_INFO("--- %s ---", p_title);
-    NRF_LOG_INFO("Fecha: %d/%d/%d", p_record->day, p_record->month, p_record->year);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    NRF_LOG_INFO("Hora:  %02d:%02d:%02d", p_record->hour, p_record->minute, p_record->second);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    NRF_LOG_INFO("Contador: %lu", p_record->contador);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    // Split the Log in two, showing 4 and 4
-    NRF_LOG_INFO("Voltajes: V1=%u, V2=%u, V3=%u, V4=%u", p_record->V1, p_record->V2, p_record->V3, p_record->V4);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    NRF_LOG_INFO("Voltajes: V5=%u, V6=%u, V7=%u, V8=%u", p_record->V5, p_record->V6, p_record->V7, p_record->V8);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    NRF_LOG_INFO("Temp: %u C, Bateria: %u %%", p_record->temp, p_record->battery);
-    nrf_delay_ms(100); // Pequeño delay para evitar problemas de sincronización en el log
-    NRF_LOG_INFO("--------------------------");
+    NRF_LOG_RAW_INFO("\n\n--- %s ---", p_title);
+    NRF_LOG_RAW_INFO("\nFecha: %d/%d/%d", p_record->day, p_record->month, p_record->year);
+    NRF_LOG_RAW_INFO("\nHora:  %02d:%02d:%02d", p_record->hour, p_record->minute, p_record->second);
+    NRF_LOG_RAW_INFO("\nContador: %lu", p_record->contador);
+    NRF_LOG_RAW_INFO("\nVoltajes: V1=%u, V2=%u, V3=%u, V4=%u", p_record->V1, p_record->V2, p_record->V3, p_record->V4);
+    NRF_LOG_RAW_INFO("\nVoltajes: V5=%u, V6=%u, V7=%u, V8=%u", p_record->V5, p_record->V6, p_record->V7, p_record->V8);
+    NRF_LOG_RAW_INFO("\nTemp: %u C, Bateria: %u %%", p_record->temp, p_record->battery);
+    NRF_LOG_RAW_INFO("\n--------------------------");
+    NRF_LOG_FLUSH();
 }
 
 //-------------------------------------------------------------------------------------------------------------

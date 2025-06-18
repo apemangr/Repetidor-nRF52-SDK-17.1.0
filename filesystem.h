@@ -10,6 +10,7 @@
 #include "fds.h"
 #include "nrf_delay.h"
 #include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 #include "variables.h"
 
 // Estructura de guardado
@@ -42,6 +43,7 @@ typedef enum
 } valor_type_t;
 
 static uint8_t mac_address_from_flash[6] = {0};
+ret_code_t     save_history_record_emisor(store_history const *p_history_data, uint16_t offset);
 ret_code_t     save_history_record(store_history const *p_history_data);
 ret_code_t     read_history_record_by_id(uint16_t record_id, store_history *p_history_data);
 void           print_history_record(store_history const *p_record, const char *p_title);

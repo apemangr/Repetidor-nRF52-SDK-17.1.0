@@ -625,6 +625,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
     case BLE_GAP_EVT_DISCONNECTED:
         if (p_gap_evt->conn_handle == m_conn_handle)
         {
+            ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
             NRF_LOG_RAW_INFO("\nCelular desconectado\n");
             m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
         }
