@@ -28,8 +28,8 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
-#define RTC_ON_TICKS    (100 * 8)
-#define RTC_SLEEP_TICKS (10 * 8)
+// #define RTC_ON_TICKS    (100 * 8)
+// #define RTC_SLEEP_TICKS (10 * 8)
 #define RTC_PRESCALER   4095
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
@@ -151,6 +151,11 @@ void handle_rtc_events(void)
             // Guardar historial si son las 23 o 0 hrs, es decir cuando se cumple
             if ((now.hour == 0 && now.minute < 5) || (now.hour == 23 && now.minute > 50))
             {
+                // Manda el comando solicitando el ultimo historial al emisor y luego
+                // lo guarda en la memoria
+
+                // app_nus_client_send_data()
+
                 store_history nuevo_historial =
                     {
                         .year   = now.year,
@@ -180,7 +185,7 @@ void handle_rtc_events(void)
             // Reprogramar solo el evento de 20s (activación)
             uint32_t current_counter       = nrfx_rtc_counter_get(&m_rtc);
             uint32_t sleep_time_from_flash = read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
-            NRF_LOG_RAW_INFO("\n\t>> Tiempo de sueno: %u ms", sleep_time_from_flash);
+            NRF_LOG_RAW_INFO("\n\t>> Tiempo de sleep: %u ms", sleep_time_from_flash);
             uint32_t next_event = (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
             nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
         }
@@ -494,115 +499,109 @@ static void power_management_init(void)
 
 void app_nus_server_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
-    // Output the data to the UART
-    NRF_LOG_RAW_INFO("\nServer data received: ");
-    for (int i = 0; i < data_length; i++)
-        NRF_LOG_RAW_INFO("\n%c", data_ptr[i]);
-    NRF_LOG_RAW_INFO("\n");
+    // // Output the data to the UART
+    // NRF_LOG_RAW_INFO("\nServer data received: ");
+    // for (int i = 0; i < data_length; i++)
+    //     NRF_LOG_RAW_INFO("\n%c", data_ptr[i]);
+    // NRF_LOG_RAW_INFO("\n");
 
     // Forward the data from the client to the server
     app_nus_client_send_data(data_ptr, data_length);
 }
+// Interpreta y muestra un mensaje de fecha/hora tipo "DD/MM/YYYY HH:MM:SS"
+static void interpretar_fecha_hora_emisor(const uint8_t *data, uint16_t length)
+{
+    if (length < 19) {
+        NRF_LOG_WARNING("Mensaje de fecha/hora demasiado corto.");
+        return;
+    }
+
+    char fecha[11] = {0}; // "DD/MM/YYYY"
+    char hora[9]   = {0}; // "HH:MM:SS"
+
+    memcpy(fecha, &data[0], 10);
+    memcpy(hora,  &data[11], 8);
+
+    NRF_LOG_RAW_INFO("\n\x1b[1;32mFecha/hora recibida del emisor:\x1b[0m %s %s\n", fecha, hora);
+
+    int dia, mes, anio, hora_i, min, seg;
+    if (sscanf((const char*)data, "%2d/%2d/%4d %2d:%2d:%2d", &dia, &mes, &anio, &hora_i, &min, &seg) == 6) {
+        NRF_LOG_RAW_INFO("-> Dia: %02d, Mes: %02d, Ano: %04d, Hora: %02d:%02d:%02d\n", dia, mes, anio, hora_i, min, seg);
+    }
+}
 
 void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
+    // Si el mensaje es de tipo fecha/hora (por ejemplo, contiene '/' y ':')
+    if (data_length >= 19 && data_ptr[2] == '/' && data_ptr[5] == '/' && data_ptr[10] == ' ') {
+        interpretar_fecha_hora_emisor(data_ptr, data_length);
+        return; // Si solo quieres interpretar y no procesar como historial
+    }
+
+
     uint16_t position = 0;
 
-    // Comando
-    uint8_t command = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nComando: 0x%02X", command);
-
-    // Fecha y hora
-    uint8_t  day    = data_ptr[position++];
-    uint8_t  month  = data_ptr[position++];
-    uint16_t year   = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint8_t  hour   = data_ptr[position++];
-    uint8_t  minute = data_ptr[position++];
-    uint8_t  second = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nFecha: %02d/%02d/%04d", day, month, year);
-    NRF_LOG_RAW_INFO("Hora: %02d:%02d:%02d", hour, minute, second);
-
-    // Contador
-    uint32_t contador = (data_ptr[position++] << 24) |
-                        (data_ptr[position++] << 16) |
-                        (data_ptr[position++] << 8) |
-                        data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nContador: %lu", contador);
-
-    // V1 y V2
-    uint16_t V1 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V2 = (data_ptr[position++] << 8) | data_ptr[position++];
-    NRF_LOG_RAW_INFO("V1: %u", V1);
-    NRF_LOG_RAW_INFO("V2: %u", V2);
-
-    // Batería
-    uint8_t battery = data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nBatería: %u%%", battery);
-
-    // MAC original
-    NRF_LOG_RAW_INFO("\nMAC Original:");
-    NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X", data_ptr[position], data_ptr[position + 1], data_ptr[position + 2], data_ptr[position + 3]);
-    NRF_LOG_RAW_INFO("%02X:%02X", data_ptr[position + 4], data_ptr[position + 5]);
-    position += 6;
-
-    // MAC custom
-    NRF_LOG_RAW_INFO("\nMAC Custom:");
-    NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X", data_ptr[position], data_ptr[position + 1], data_ptr[position + 2], data_ptr[position + 3]);
-    NRF_LOG_RAW_INFO("%02X:%02X", data_ptr[position + 4], data_ptr[position + 5]);
-    position += 6;
-
-    // V3 a V8
-    uint16_t V3 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V4 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V5 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V6 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V7 = (data_ptr[position++] << 8) | data_ptr[position++];
-    uint16_t V8 = (data_ptr[position++] << 8) | data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nV3: %u V4: %u", V3, V4);
-    NRF_LOG_RAW_INFO("V5: %u V6: %u", V5, V6);
-    NRF_LOG_RAW_INFO("V7: %u V8: %u", V7, V8);
-
-    // Número de historial (index)
-    uint16_t last_position = (data_ptr[position++] << 8) | data_ptr[position++];
-    NRF_LOG_RAW_INFO("\nNúmero de historial (index): %u", last_position);
-
-    // Guardar el historial en la posición recibida
-    store_history nuevo_historial = {
-        .year     = year,
-        .month    = month,
-        .day      = day,
-        .hour     = hour,
-        .minute   = minute,
-        .second   = second,
-        .contador = contador,
-        .V1       = V1,
-        .V2       = V2,
-        .V3       = V3,
-        .V4       = V4,
-        .V5       = V5,
-        .V6       = V6,
-        .V7       = V7,
-        .V8       = V8,
-        .battery  = battery};
-
-    // Guarda el historial en el arreglo global usando el índice recibido
-
-    NRF_LOG_RAW_INFO("\nHistorial guardado en posición: %u", last_position);
-
-    // Guarda el ultimo historial en la memoria flash con save_history_record_emisor
-    ret_code_t err_code = save_history_record_emisor(&nuevo_historial, last_position);
-    if(err_code == NRF_SUCCESS)
+    // Se recibio un historial del emisor
+    if (data_length > 20 && data_ptr[0] == 0x98)
     {
-        NRF_LOG_RAW_INFO("\nHistorial guardado correctamente.");
-        print_history_record(&nuevo_historial, "Historial guardado");
-    }
-    else
-    {
-        NRF_LOG_ERROR("Error al guardar historial: 0x%X", err_code);
-    }
+        // Desempaquetar datos
+        uint8_t  command  = data_ptr[position++];
+        uint8_t  day      = data_ptr[position++];
+        uint8_t  month    = data_ptr[position++];
+        uint16_t year     = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  hour     = data_ptr[position++];
+        uint8_t  minute   = data_ptr[position++];
+        uint8_t  second   = data_ptr[position++];
+        uint32_t contador = (data_ptr[position++] << 24) |
+                            (data_ptr[position++] << 16) |
+                            (data_ptr[position++] << 8) |
+                            data_ptr[position++];
+        uint16_t V1      = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V2      = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  battery = data_ptr[position++];
+        position += 6; // MAC original
+        position += 6; // MAC custom
+        uint16_t V3            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V4            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V5            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V6            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V7            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V8            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t last_position = (data_ptr[position++] << 8) | data_ptr[position++];
 
+        // Construir el registro temporal
+        store_history nuevo_historial = {
+            .year     = year,
+            .month    = month,
+            .day      = day,
+            .hour     = hour,
+            .minute   = minute,
+            .second   = second,
+            .contador = contador,
+            .V1       = V1,
+            .V2       = V2,
+            .V3       = V3,
+            .V4       = V4,
+            .V5       = V5,
+            .V6       = V6,
+            .V7       = V7,
+            .V8       = V8,
+            .battery  = battery};
 
-    NRF_LOG_FLUSH(); // Asegura que todos los logs se envíen inmediatamente
+        // Guardar el historial recibido en la posición indicada
+        ret_code_t ret = save_history_record_emisor(&nuevo_historial, last_position);
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nError al guardar historial en posicion: %u (ret=%d)\n", last_position, ret);
+        }
+
+        // Imprimir usando print_history_record con el número de historial en el título
+        char titulo[41];
+        snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", last_position);
+        print_history_record(&nuevo_historial, titulo);
+
+        NRF_LOG_FLUSH();
+    }
 }
 
 static void idle_state_handle(void)
@@ -611,7 +610,6 @@ static void idle_state_handle(void)
     {
         if (!m_device_active)
         {
-            // Entrar en bajo consumo solo cuando esta inactivo
             nrf_pwr_mgmt_run();
         }
         else
@@ -643,23 +641,17 @@ int main(void)
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
 
-    NRF_LOG_FLUSH();
-
     calendar_init();
 
     NRF_LOG_FLUSH();
     calendar_set_datetime();
 
-    NRF_LOG_FLUSH();
-
     NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
-
     NRF_LOG_FLUSH();
+
     // Enter main loop.
     for (;;)
     {
-        NRF_LOG_PROCESS();
-
         calendar_update();
         handle_rtc_events();
         idle_state_handle();

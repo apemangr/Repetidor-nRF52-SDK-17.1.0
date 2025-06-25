@@ -40,6 +40,7 @@ BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_ADVERTISING_DEF(m_advertising);
 
+static bool                              m_emisor_nus_ready     = false;
 static app_nus_server_on_data_received_t m_on_data_received     = 0;
 static uint16_t                          m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;
 static uint16_t                          m_conn_handle          = BLE_CONN_HANDLE_INVALID;
@@ -413,19 +414,21 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             memcpy(id_str, &message[5], id_len);
                             id_str[id_len]       = '\0';
                             uint16_t registro_id = (uint16_t)atoi(id_str);
-                            NRF_LOG_RAW_INFO("\nID de registro solicitado: %u", registro_id);
                             // Llama a la función para solicitar el registro por ID
                             store_history registro_historial;
                             err_code = read_history_record_by_id(registro_id, &registro_historial);
                             if (err_code == NRF_SUCCESS)
                             {
-                                NRF_LOG_RAW_INFO("Solicitud de registro %u enviada correctamente.", registro_id);
+                                NRF_LOG_RAW_INFO("\nSolicitud de registro %u enviada correctamente.", registro_id);
                                 // Imprime el registro de historial
-                                print_history_record(&registro_historial, "Registro de historial solicitado");
+                                char titulo[41];
+                                snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", registro_id);
+                                print_history_record(&registro_historial, titulo);
+                                NRF_LOG_FLUSH();
                             }
                             else
                             {
-                                NRF_LOG_ERROR("Error al solicitar el registro %u: 0x%X", registro_id, err_code);
+                                NRF_LOG_RAW_INFO("\nError al solicitar el registro %u: 0x%X", registro_id, err_code);
                             }
                         }
                         else
@@ -607,20 +610,46 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     switch (p_ble_evt->header.evt_id)
     {
+
     case BLE_GAP_EVT_CONNECTED:
         if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_PERIPH)
         {
             NRF_LOG_RAW_INFO("\nCelular conectado");
-            m_conn_handle =
-                p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del celular
+            m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
             NRF_LOG_RAW_INFO("\nEmisor conectado");
-            m_emisor_conn_handle =
-                p_ble_evt->evt.gap_evt.conn_handle; // Guardar handle del emisor
+            m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
         }
         break;
+
+    case BLE_GATTS_EVT_WRITE:
+    {
+        ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+        NRF_LOG_RAW_INFO("\nWRITE handle: 0x%04X, cccd_handle: 0x%04X, conn_handle: 0x%04X, emisor_conn_handle: 0x%04X",
+            p_evt_write->handle, m_nus.tx_handles.cccd_handle,
+            p_ble_evt->evt.gatts_evt.conn_handle, m_emisor_conn_handle);
+
+        if (p_evt_write->handle == m_nus.tx_handles.cccd_handle &&
+            p_ble_evt->evt.gatts_evt.conn_handle == m_emisor_conn_handle &&
+            p_evt_write->data[0] == 0x01)
+        {
+            NRF_LOG_RAW_INFO("\nNotificaciones habilitadas por el emisor, enviando comando...");
+            uint8_t comando_conexion[] = {0xAA};
+            uint16_t len = sizeof(comando_conexion);
+            err_code = ble_nus_data_send(&m_nus, comando_conexion, &len, m_emisor_conn_handle);
+            if (err_code == NRF_SUCCESS)
+            {
+                NRF_LOG_RAW_INFO("\nComando enviado al emisor tras habilitar notificaciones.");
+            }
+            else
+            {
+                NRF_LOG_ERROR("Error al enviar comando al emisor: 0x%X", err_code);
+            }
+        }
+    }
+    break;
 
     case BLE_GAP_EVT_DISCONNECTED:
         if (p_gap_evt->conn_handle == m_conn_handle)

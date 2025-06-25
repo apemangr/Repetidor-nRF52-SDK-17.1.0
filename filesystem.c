@@ -195,8 +195,7 @@ ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_histor
     // La clave del registro se calcula sumando el ID a la clave base.
     uint16_t record_key = (uint16_t)(HISTORY_RECORD_KEY_START + record_id);
 
-    NRF_LOG_RAW_INFO("\nTratando de leer registro de historial con ID: %u (RECORD_KEY: 0x%04X)",
-                     record_id, record_key);
+    NRF_LOG_RAW_INFO("\nLeyendo registro de historial con \x1B[33mID:\x1B[0m %u y \x1B[33mRECORD_KEY:\x1B[0m 0x%04X", record_id, record_key);
 
     if (fds_record_find(HISTORY_FILE_ID, record_key, &desc, &token) == NRF_SUCCESS)
     {
@@ -260,14 +259,22 @@ ret_code_t read_last_history_record(store_history *p_history_data)
 
 void print_history_record(store_history const *p_record, const char *p_title)
 {
-    NRF_LOG_RAW_INFO("\n\n--- %s ---", p_title);
-    NRF_LOG_RAW_INFO("\nFecha: %d/%d/%d", p_record->day, p_record->month, p_record->year);
-    NRF_LOG_RAW_INFO("\nHora:  %02d:%02d:%02d", p_record->hour, p_record->minute, p_record->second);
-    NRF_LOG_RAW_INFO("\nContador: %lu", p_record->contador);
-    NRF_LOG_RAW_INFO("\nVoltajes: V1=%u, V2=%u, V3=%u, V4=%u", p_record->V1, p_record->V2, p_record->V3, p_record->V4);
-    NRF_LOG_RAW_INFO("\nVoltajes: V5=%u, V6=%u, V7=%u, V8=%u", p_record->V5, p_record->V6, p_record->V7, p_record->V8);
-    NRF_LOG_RAW_INFO("\nTemp: %u C, Bateria: %u %%", p_record->temp, p_record->battery);
-    NRF_LOG_RAW_INFO("\n--------------------------");
+    // Calcula el largo de la línea de cierre según el título
+    NRF_LOG_RAW_INFO("\n\n\x1B[36m=======\x1B[0m %s \x1B[36m=======\x1B[0m\n\n", p_title);
+    NRF_LOG_RAW_INFO("Fecha        : %02d/%02d/%04d\n", p_record->day, p_record->month, p_record->year);
+    NRF_LOG_RAW_INFO("Hora         : %02d:%02d:%02d\n", p_record->hour, p_record->minute, p_record->second);
+    NRF_LOG_RAW_INFO("Contador     : %lu\n", p_record->contador);
+    NRF_LOG_RAW_INFO("V1           : %u\n", p_record->V1);
+    NRF_LOG_RAW_INFO("V2           : %u\n", p_record->V2);
+    NRF_LOG_RAW_INFO("V3           : %u\n", p_record->V3);
+    NRF_LOG_RAW_INFO("V4           : %u\n", p_record->V4);
+    NRF_LOG_RAW_INFO("V5           : %u\n", p_record->V5);
+    NRF_LOG_RAW_INFO("V6           : %u\n", p_record->V6);
+    NRF_LOG_RAW_INFO("V7           : %u\n", p_record->V7);
+    NRF_LOG_RAW_INFO("V8           : %u\n", p_record->V8);
+    NRF_LOG_RAW_INFO("Temp         : %u\n", p_record->temp);
+    NRF_LOG_RAW_INFO("Bateria      : %u%%\n", p_record->battery);
+    NRF_LOG_RAW_INFO("\n\x1B[36m================\x1B[0m FIN \x1B[36m================\x1B[0m\n");
     NRF_LOG_FLUSH();
 }
 

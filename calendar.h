@@ -25,6 +25,7 @@ typedef struct
     uint8_t  second;
 } datetime_t;
 
+extern datetime_t m_time;
 extern nrfx_rtc_t m_rtc;
 
 bool              calendar_init(void);

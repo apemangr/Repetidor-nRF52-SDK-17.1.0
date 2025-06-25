@@ -3,7 +3,7 @@
 
 static volatile bool m_tick_flag   = false;
 static volatile bool m_initialized = false;
-static datetime_t    m_time;
+datetime_t m_time = {0};
 
 bool                 is_date_stored()
 {
@@ -45,8 +45,8 @@ bool calendar_set_time(const datetime_t *now)
     }
     // Validate fields
     uint8_t max_day = (now->month == 2)
-                          ? (is_leap_year(now->year) ? 29 : 28)
-                          : days_in_month[now->month - 1];
+        ? (is_leap_year(now->year) ? 29 : 28)
+        : days_in_month[now->month - 1];
     if (now->month < 1 || now->month > 12 ||
         now->day < 1 || now->day > max_day ||
         now->hour > 23 || now->minute > 59 || now->second > 59)
@@ -66,11 +66,11 @@ bool calendar_set_time(const datetime_t *now)
 
 bool calendar_init(void)
 {
-    NRF_LOG_RAW_INFO("\n> Iniciando modulo RTC...\n");
 
-    nrf_delay_ms(10);
-    NRF_LOG_FLUSH();
-    if (m_initialized)
+    NRF_LOG_RAW_INFO("\n> Iniciando modulo RTC...");
+    ret_code_t        err_code;
+
+   if (m_initialized)
     {
         NRF_LOG_RAW_INFO("\n\t>> Error al inicializar modulo RTC");
 
@@ -78,14 +78,14 @@ bool calendar_init(void)
         return false;
     }
 
-    ret_code_t err_code;
+
     nrfx_rtc_cc_set(&m_rtc, RTC_CHANNEL, 8, true);
 
     memset(&m_time, 0, sizeof(m_time));
 
     m_initialized = true;
 
-    NRF_LOG_RAW_INFO("\t>> \033[0;32mModulo RTC inicializado correctamente.\033[0m");
+    NRF_LOG_RAW_INFO("\n\t>> \033[0;32mModulo RTC inicializado correctamente.\033[0m");
 
     NRF_LOG_FLUSH();
     return true;
@@ -121,8 +121,8 @@ void calendar_update(void)
                 m_time.hour = 0;
                 // Day rollover
                 uint8_t dim = (m_time.month == 2)
-                                  ? (is_leap_year(m_time.year) ? 29 : 28)
-                                  : days_in_month[m_time.month - 1];
+                    ? (is_leap_year(m_time.year) ? 29 : 28)
+                    : days_in_month[m_time.month - 1];
                 if (++m_time.day > dim)
                 {
                     m_time.day = 1;
@@ -168,7 +168,7 @@ bool calendar_set_datetime(void)
             return true;
         }
         else
-        {
+    {
             NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha y hora.");
             NRF_LOG_FLUSH();
 
@@ -190,7 +190,7 @@ bool calendar_set_datetime(void)
         }
     }
     else
-    {
+{
         NRF_LOG_RAW_INFO("\n\t>> No se encontro una fecha en la memoria.");
         NRF_LOG_FLUSH();
 

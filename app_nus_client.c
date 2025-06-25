@@ -151,6 +151,16 @@ static void scan_init(void)
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
     APP_ERROR_CHECK(err_code);
 }
+void string_to_command(const char* input, uint8_t* output, uint16_t output_size)
+{
+    uint16_t input_len = strlen(input);
+    if (input_len > output_size)
+    {
+        input_len = output_size;
+    }
+    memcpy(output, input, input_len);
+}
+
 
 static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t const *p_ble_nus_evt)
 {
@@ -166,7 +176,11 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
 
         err_code = ble_nus_c_tx_notif_enable(p_ble_nus_c);
         APP_ERROR_CHECK(err_code);
-        // NRF_LOG_INFO("Emisor conectado mediante BLE NUS");
+
+        uint8_t cmd_buffer[32];
+        string_to_command("07", cmd_buffer, sizeof(cmd_buffer));
+        app_nus_client_send_data(cmd_buffer, strlen((const char *)cmd_buffer));
+        
         break;
 
     case BLE_NUS_C_EVT_NUS_TX_EVT:
