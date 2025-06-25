@@ -1,7 +1,7 @@
 # Firmaware para dispositivo BLE Repetidor
 
 ## Como usar
-Extraer en `examples/ble_central_and_peripheral`.
+Extraer en `${NORDIC_SDK}/examples/ble_central_and_peripheral`.
 
 ## Soporta
 - NRF52832
