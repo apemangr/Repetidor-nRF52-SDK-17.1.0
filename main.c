@@ -28,6 +28,75 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
+
+
+/**
+ * @brief Lee todos los registros de historial e imprime la hora de cada uno
+ * 
+ * @param file_id       ID del archivo a leer
+ * @return ret_code_t   Código de retorno
+ */
+ret_code_t fds_print_all_record_times(uint16_t file_id)
+{
+    ret_code_t err_code;
+    fds_find_token_t token = {0};
+    fds_record_desc_t record_desc = {0};
+    fds_flash_record_t flash_record = {0};
+    uint32_t record_count = 0;
+    uint16_t expected_words = BYTES_TO_WORDS(sizeof(store_history));
+
+    NRF_LOG_INFO("\n=== Leyendo registros de historial (File ID: 0x%04X) ===", file_id);
+
+    // Iterar a través de todos los registros del file_id
+    while (fds_record_iterate(&record_desc, &token) == NRF_SUCCESS)
+    {
+        // Abrir el registro para lectura
+        err_code = fds_record_open(&record_desc, &flash_record);
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_ERROR("Error abriendo registro ID %d", record_desc.record_id);
+            continue;
+        }
+
+        // Verificar que el tamaño sea correcto
+        if (flash_record.p_header->length_words != expected_words)
+        {
+            NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)", 
+                          record_desc.record_id, flash_record.p_header->length_words);
+            fds_record_close(&record_desc);
+            continue;
+        }
+
+        // Obtener puntero a los datos del historial
+        const store_history* p_history = (const store_history*)flash_record.p_data;
+        
+        // Imprimir la hora del registro
+        NRF_LOG_INFO("Registro %d: %04d-%02d-%02d", 
+                     record_desc.record_id,
+                     p_history->year, 
+                     p_history->month, 
+                     p_history->day);
+        NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d", 
+                     p_history->hour, 
+                     p_history->minute,
+                     p_history->second,
+                     p_history->contador);
+
+        record_count++;
+
+        // Cerrar el registro
+        fds_record_close(&record_desc);
+    }
+
+    NRF_LOG_INFO("=== Total de registros procesados: %d ===", record_count);
+	NRF_LOG_FLUSH();
+	nrf_delay_ms(1000);
+    return NRF_SUCCESS;
+}
+
+
+
+
 // #define RTC_ON_TICKS    (100 * 8)
 // #define RTC_SLEEP_TICKS (10 * 8)
 #define RTC_PRESCALER 4095
@@ -158,6 +227,8 @@ void handle_rtc_events(void)
         {
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
             write_date_to_flash(&m_time);
+
+            fds_print_all_record_times(HISTORY_FILE_ID);
 
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "

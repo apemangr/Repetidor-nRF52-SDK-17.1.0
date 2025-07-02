@@ -110,8 +110,8 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO(
-                "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
+            //NRF_LOG_RAW_INFO(
+            //    "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
         }
         else
         {

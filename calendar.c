@@ -137,7 +137,7 @@ void calendar_update(void)
 
         if (++m_time.minute > 59)
         {
-            if(device)
+  
             m_time.minute = 0;
 
             if (++m_time.hour > 23)
