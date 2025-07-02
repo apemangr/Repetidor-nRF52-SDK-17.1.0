@@ -6,7 +6,8 @@
                 "${default}",
                 "C:\\Users\\guill\\OneDrive\\Desktop\\nRF5_SDK_17.1.0_ddde560\\**",
                 "${workspaceFolder}\\pca10040\\**",
-                "C:\\Users\\guill\\OneDrive\\Desktop\\nRF5_SDK_17.1.0_ddde560\\examples\\ble_central_and_peripheral\\Repetidor-nRF52-SDK-17.1.0\\pca10040\\s132\\config"
+                "${workspaceFolder}\\pca10056\\**",
+                "${workspaceFolder}\\**"
             ],
             "defines": [
                 "_DEBUG",
