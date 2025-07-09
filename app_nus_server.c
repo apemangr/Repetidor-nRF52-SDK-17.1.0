@@ -37,6 +37,12 @@
 #define MAX_CONN_PARAMS_UPDATE_COUNT   3
 #define DEAD_BEEF                      0xDEADBEEF
 
+#define Largo_Advertising 0x18 // Largo_Advertising  10 son 16 y 18 son 24
+
+uint8_t m_beacon_info[Largo_Advertising];
+uint8_t adv_buffer[BLE_GAP_ADV_SET_DATA_SIZE_MAX];
+
+
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_ADVERTISING_DEF(m_advertising);
@@ -64,6 +70,43 @@ static void perform_garbage_collection(void)
     {
         NRF_LOG_RAW_INFO("\n\t>> Error en la recoleccion de basura: %d", err_code);
     }
+}
+
+
+void advertising_update_from_struct(void)
+{
+    // Rellena el buffer codificado a mano
+    memset(adv_buffer, 0, sizeof(adv_buffer));
+    m_beacon_info[3] = MSB_16(adc_values.V1);
+    m_beacon_info[4] = LSB_16(adc_values.V1);
+    m_beacon_info[5] = MSB_16(adc_values.V2);
+    m_beacon_info[6] = LSB_16(adc_values.V2);
+
+    ble_advdata_t advpacket;
+    ble_advdata_manuf_data_t manuf;
+    memset(&advpacket, 0, sizeof(advpacket));
+    memset(&manuf, 0, sizeof(manuf));
+    manuf.company_identifier = 0x2233;
+    manuf.data.p_data        = m_beacon_info;
+    manuf.data.size          = sizeof(m_beacon_info);
+    advpacket.name_type             = BLE_ADVDATA_NO_NAME;
+    advpacket.flags                 = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    advpacket.p_manuf_specific_data = &manuf;
+
+    uint16_t adv_data_len = sizeof(adv_buffer);
+
+    uint32_t err = ble_advdata_encode(&advpacket, adv_buffer, &adv_data_len);
+    APP_ERROR_CHECK(err);
+
+    ble_gap_adv_data_t new_data;
+    memset(&new_data, 0, sizeof(new_data));
+    new_data.adv_data.p_data = adv_buffer;
+    new_data.adv_data.len    = adv_data_len;
+    new_data.scan_rsp_data.p_data = NULL;
+    new_data.scan_rsp_data.len    = 0;
+
+    err = ble_advertising_advdata_update(&m_advertising, &new_data, true);
+    APP_ERROR_CHECK(err);
 }
 
 static void fds_evt_handler(fds_evt_t const *p_evt)
@@ -110,8 +153,8 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            //NRF_LOG_RAW_INFO(
-            //    "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
+            // NRF_LOG_RAW_INFO(
+            //     "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
         }
         else
         {
@@ -476,9 +519,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 13: // Mostrar e incrementar el record_id de history
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Mostrar e incrementar record_id de history\x1b[0m");
-
-                    break;
+                    
                 }
                 default: // Comando desconocido
                     NRF_LOG_WARNING("Comando desconocido: %s", command);
@@ -615,6 +656,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             NRF_LOG_RAW_INFO("\nCelular conectado");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            restart_on_rtc();
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
@@ -664,6 +706,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
             m_emisor_conn_handle =
                 BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
+            scan_start();
         }
         break;
 
@@ -717,20 +760,40 @@ uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
                              m_conn_handle);
 }
 
+
 /**@brief Function for initializing the Advertising functionality.
  */
-static void advertising_init(void)
+
+//static void advertising_init(void)
+void advertising_init(void)
 {
-    uint32_t               err_code;
-    ble_advertising_init_t init;
+    uint32_t                 err_code;
+    ble_advertising_init_t   init;
+    ble_advdata_manuf_data_t manuf_specific_data;
+
+    memset(&m_beacon_info, 0, sizeof(m_beacon_info));
+
+    // Llena el m_beacon_info desde el 0 al 17 con zeros
+    // Asignale los valores de adc_values de V1 y V2, 3,4 y 5,6 respectivamente
+    m_beacon_info[3] = MSB_16(adc_values.V1);
+    m_beacon_info[4] = LSB_16(adc_values.V1);
+	// Segundo Sector
+	m_beacon_info[5] = MSB_16(adc_values.V2);
+	m_beacon_info[6] = LSB_16(adc_values.V2);
+
+    
+
+    manuf_specific_data.company_identifier = 0x2233;
+    manuf_specific_data.data.p_data = (uint8_t *)m_beacon_info;
+    manuf_specific_data.data.size   = sizeof(m_beacon_info);
 
     memset(&init, 0, sizeof(init));
 
-    init.advdata.name_type                     = BLE_ADVDATA_FULL_NAME;
+    init.advdata.name_type                     = BLE_ADVDATA_NO_NAME; //BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance            = false;
     init.advdata.flags                         = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
-
     init.config.ble_adv_on_disconnect_disabled = true;
+    init.advdata.p_manuf_specific_data = &manuf_specific_data;
 
     init.srdata.uuids_complete.uuid_cnt =
         sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
@@ -752,6 +815,11 @@ static void advertising_init(void)
 void advertising_start(void)
 {
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+     if (err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO("\n\nble_advertising_start error: 0x%08X\n", err_code);
+    }
+    // Posible crash
     APP_ERROR_CHECK(err_code);
 }
 
@@ -772,15 +840,24 @@ void disconnect_all_connections(void)
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nCelular desconectado.");
     }
+
+    if (m_emisor_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        err_code = sd_ble_gap_disconnect(m_emisor_conn_handle,
+                                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        APP_ERROR_CHECK(err_code);
+        m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
+        NRF_LOG_RAW_INFO("\nEmisor desconectado.");
+    }
 }
 
 void app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 {
+    fds_initialize();
     m_on_data_received = on_data_received;
     gap_params_init();
     services_init();
     advertising_init();
     conn_params_init();
-    fds_initialize();
     advertising_start();
 }

@@ -28,6 +28,9 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
+//store_flash Flash_array = {0};
+adc_values_t adc_values = {0};
+
 
 
 /**
@@ -142,13 +145,13 @@ void uart_event_handler(app_uart_evt_t *p_event)
     case APP_UART_COMMUNICATION_ERROR:
 
         NRF_LOG_ERROR("Communication error occurred while handling UART.");
-        // APP_ERROR_HANDLER(p_event->data.error_communication);
+        APP_ERROR_HANDLER(p_event->data.error_communication);
         break;
 
     case APP_UART_FIFO_ERROR:
 
         NRF_LOG_ERROR("Error occurred in FIFO module used by UART.");
-        // APP_ERROR_HANDLER(p_event->data.error_code);
+        APP_ERROR_HANDLER(p_event->data.error_code);
         break;
 
     default:
@@ -159,7 +162,6 @@ void uart_event_handler(app_uart_evt_t *p_event)
 /**@brief Function for initializing the UART. */
 
 static void uart_init(void)
-
 {
 
     ret_code_t                   err_code;
@@ -180,7 +182,6 @@ static void uart_init(void)
 }
 
 void rtc_handler(nrfx_rtc_int_type_t int_type)
-
 {
 
     if (int_type == NRFX_RTC_INT_COMPARE0)
@@ -226,9 +227,19 @@ void handle_rtc_events(void)
         if (!m_device_active)
         {
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
-            write_date_to_flash(&m_time);
 
-            fds_print_all_record_times(HISTORY_FILE_ID);
+            // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE 
+            // INICIAR EL ADVERTISING Y EL SCANEO
+
+            // Modificar el advertising payload para mostrar
+            // los valores de los ADC
+            //advertising_update_from_struct();
+            advertising_init();
+
+
+            //write_date_to_flash(&m_time);
+
+            //fds_print_all_record_times(HISTORY_FILE_ID);
 
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "
@@ -236,6 +247,11 @@ void handle_rtc_events(void)
                              m_time.year, m_time.month, m_time.day,
                              m_time.hour, m_time.minute, m_time.second);
 
+
+
+
+
+            // Actualizar el payload para mostrar los adc_values
             scan_start();
             advertising_start();
             uart_init();
@@ -572,17 +588,48 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
                                      uint16_t       data_length)
 {
     // Si el mensaje es de tipo fecha/hora (por ejemplo, contiene '/' y ':')
-    if (data_length >= 19 && data_ptr[2] == '/' && data_ptr[5] == '/' &&
-        data_ptr[10] == ' ')
-    {
-        interpretar_fecha_hora_emisor(data_ptr, data_length);
-        return; // Si solo quieres interpretar y no procesar como historial
-    }
+    //if (data_length >= 19 && data_ptr[2] == '/' && data_ptr[5] == '/' &&
+    //    data_ptr[10] == ' ')
+    //{
+    //    interpretar_fecha_hora_emisor(data_ptr, data_length);
+    //    return; // Si solo quieres interpretar y no procesar como historial
+    //}
 
     uint16_t position = 0;
 
+    // if(data_length == sizeof(Flash_array) && data_ptr[0] == '9' && data_ptr[1] == '9')
+    // {
+    //NRF_LOG_RAW_INFO("\n\nParece que me conecte a la app de Tega\n");
+    //interpretar_config_recibida(data_ptr, data_length);
+    // }
+
+    // Se recibieron los valores de los ADC V1-V8
+    if (data_length >= 12 && data_ptr[0] == 0x96)
+    {
+        uint16_t pos = 1;
+        adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V2 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V3 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V4 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V5 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V6 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V7 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
+        adc_values.V8 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
+
+        NRF_LOG_RAW_INFO("\nValores ADC recibidos:\n");
+        NRF_LOG_RAW_INFO("V1: %u\n", adc_values.V1);
+        NRF_LOG_RAW_INFO("V2: %u\n", adc_values.V2);
+        NRF_LOG_RAW_INFO("V3: %u\n", adc_values.V3);
+        NRF_LOG_RAW_INFO("V4: %u\n", adc_values.V4);
+        NRF_LOG_RAW_INFO("V5: %u\n", adc_values.V5);
+        NRF_LOG_RAW_INFO("V6: %u\n", adc_values.V6);
+        NRF_LOG_RAW_INFO("V7: %u\n", adc_values.V7);
+        NRF_LOG_RAW_INFO("V8: %u\n", adc_values.V8);
+        NRF_LOG_FLUSH();
+    }
+
     // Se recibio un historial del emisor
-    if (data_length > 20 && data_ptr[0] == 0x98)
+    if (data_length > 20 && data_ptr[0] == 9 && data_ptr[1] == 9)
     {
         // Desempaquetar datos
         uint8_t  command  = data_ptr[position++];
@@ -645,6 +692,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
 
         NRF_LOG_FLUSH();
     }
+    app_nus_server_send_data(data_ptr, data_length);
 }
 
 static void idle_state_handle(void)

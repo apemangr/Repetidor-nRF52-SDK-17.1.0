@@ -11,8 +11,10 @@ uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length);
 void     app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt);
 void     app_nus_server_init(app_nus_server_on_data_received_t on_data_received);
 void     advertising_stop(void);
+void     advertising_init(void);
 void     advertising_start(void);
 void     disconnect_all_connections(void);
 uint16_t get_conn_handle(void);
+void advertising_update_from_struct(void);
 
 #endif
