@@ -39,7 +39,7 @@ adc_values_t adc_values = {0};
  * @param file_id       ID del archivo a leer
  * @return ret_code_t   Código de retorno
  */
-ret_code_t fds_print_all_record_times(uint16_t file_id)
+ret_code_t fds_print_all_record_times(void)
 {
     ret_code_t err_code;
     fds_find_token_t token = {0};
@@ -47,8 +47,6 @@ ret_code_t fds_print_all_record_times(uint16_t file_id)
     fds_flash_record_t flash_record = {0};
     uint32_t record_count = 0;
     uint16_t expected_words = BYTES_TO_WORDS(sizeof(store_history));
-
-    NRF_LOG_INFO("\n=== Leyendo registros de historial (File ID: 0x%04X) ===", file_id);
 
     // Iterar a través de todos los registros del file_id
     while (fds_record_iterate(&record_desc, &token) == NRF_SUCCESS)
@@ -74,16 +72,16 @@ ret_code_t fds_print_all_record_times(uint16_t file_id)
         const store_history* p_history = (const store_history*)flash_record.p_data;
         
         // Imprimir la hora del registro
-        NRF_LOG_INFO("Registro %d: %04d-%02d-%02d", 
-                     record_desc.record_id,
-                     p_history->year, 
-                     p_history->month, 
-                     p_history->day);
-        NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d", 
-                     p_history->hour, 
-                     p_history->minute,
-                     p_history->second,
-                     p_history->contador);
+        // NRF_LOG_INFO("Registro %d: %04d-%02d-%02d", 
+        //              record_desc.record_id,
+        //              p_history->year, 
+        //              p_history->month, 
+        //              p_history->day);
+        // NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d", 
+        //              p_history->hour, 
+        //              p_history->minute,
+        //              p_history->second,
+        //              p_history->contador);
 
         record_count++;
 
@@ -689,7 +687,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m",
                  last_position);
         print_history_record(&nuevo_historial, titulo);
-
+        fds_print_all_record_times();
         NRF_LOG_FLUSH();
     }
     app_nus_server_send_data(data_ptr, data_length);
