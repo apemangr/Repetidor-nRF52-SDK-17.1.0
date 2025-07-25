@@ -37,11 +37,10 @@
 #define MAX_CONN_PARAMS_UPDATE_COUNT   3
 #define DEAD_BEEF                      0xDEADBEEF
 
-#define Largo_Advertising 0x18 // Largo_Advertising  10 son 16 y 18 son 24
+#define Largo_Advertising              0x18 // Largo_Advertising  10 son 16 y 18 son 24
 
 uint8_t m_beacon_info[Largo_Advertising];
 uint8_t adv_buffer[BLE_GAP_ADV_SET_DATA_SIZE_MAX];
-
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 NRF_BLE_QWR_DEF(m_qwr);
@@ -72,7 +71,6 @@ static void perform_garbage_collection(void)
     }
 }
 
-
 void advertising_update_from_struct(void)
 {
     // Rellena el buffer codificado a mano
@@ -82,30 +80,30 @@ void advertising_update_from_struct(void)
     m_beacon_info[5] = MSB_16(adc_values.V2);
     m_beacon_info[6] = LSB_16(adc_values.V2);
 
-    ble_advdata_t advpacket;
+    ble_advdata_t            advpacket;
     ble_advdata_manuf_data_t manuf;
     memset(&advpacket, 0, sizeof(advpacket));
     memset(&manuf, 0, sizeof(manuf));
-    manuf.company_identifier = 0x2233;
-    manuf.data.p_data        = m_beacon_info;
-    manuf.data.size          = sizeof(m_beacon_info);
+    manuf.company_identifier        = 0x2233;
+    manuf.data.p_data               = m_beacon_info;
+    manuf.data.size                 = sizeof(m_beacon_info);
     advpacket.name_type             = BLE_ADVDATA_NO_NAME;
     advpacket.flags                 = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
     advpacket.p_manuf_specific_data = &manuf;
 
-    uint16_t adv_data_len = sizeof(adv_buffer);
+    uint16_t adv_data_len           = sizeof(adv_buffer);
 
-    uint32_t err = ble_advdata_encode(&advpacket, adv_buffer, &adv_data_len);
+    uint32_t err                    = ble_advdata_encode(&advpacket, adv_buffer, &adv_data_len);
     APP_ERROR_CHECK(err);
 
     ble_gap_adv_data_t new_data;
     memset(&new_data, 0, sizeof(new_data));
-    new_data.adv_data.p_data = adv_buffer;
-    new_data.adv_data.len    = adv_data_len;
+    new_data.adv_data.p_data      = adv_buffer;
+    new_data.adv_data.len         = adv_data_len;
     new_data.scan_rsp_data.p_data = NULL;
     new_data.scan_rsp_data.len    = 0;
 
-    err = ble_advertising_advdata_update(&m_advertising, &new_data, true);
+    err                           = ble_advertising_advdata_update(&m_advertising, &new_data, true);
     APP_ERROR_CHECK(err);
 }
 
@@ -218,18 +216,19 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                               p_evt->params.rx_data.length);
 
         // Asegúrate de que el mensaje sea tratado como una cadena de texto
-        char message[BLE_NUS_MAX_DATA_LEN + 1]; // +1 para el carácter nulo
+        char message[BLE_NUS_MAX_DATA_LEN]; // +1 para el carácter nulo
         if (p_evt->params.rx_data.length < sizeof(message))
         {
             memcpy(message, p_evt->params.rx_data.p_data,
                    p_evt->params.rx_data.length);
+
             message[p_evt->params.rx_data.length] = '\0'; // Agregar terminador nulo
 
             // Imprime el mensaje recibido
             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s",
                              message);
 
-            // Verifica si el mensaje comienza con "111"
+            // Verifica si el mensaje comienza con "111" par interpretar el comando
             if (p_evt->params.rx_data.length >= 5 && message[0] == '1' &&
                 message[1] == '1' && message[2] == '1')
             {
@@ -425,23 +424,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 10: // Comando para solicitar el último historial al periférico
                 {
-                    // NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: Solicitar último historial al periférico\x1b[0m");
-
-                    // // Comando a enviar al periférico
-                    // uint8_t  command_to_peripheral = 0x08; // Comando 08 para solicitar el último historial
-                    // uint16_t command_length        = 1;
-
-                    // // Enviar el comando al periférico a través del cliente NUS
-                    // ret_code_t err_code = app_nus_client_send_command(&command_to_peripheral, command_length);
-                    // if (err_code == NRF_SUCCESS)
-                    // {
-                    //     NRF_LOG_RAW_INFO("\nComando 08 enviado al periférico para solicitar el último historial.\n");
-                    // }
-                    // else
-                    // {
-                    //     NRF_LOG_RAW_INFO("\nError al enviar el comando 08 al periférico: 0x%X\n", err_code);
-                    // }
-                    // break;
+                    // Work in progress
+                    break;
                 }
                 case 11: // Solicitar un registro de historial por ID
                 {
@@ -482,44 +466,14 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 12: // Guardar un nuevo historial con valores inventados
 
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Guardar nuevo historial de prueba\x1b[0m");
-
-                    store_history nuevo_historial;
-                    nuevo_historial.year     = 2025;
-                    nuevo_historial.month    = 6;
-                    nuevo_historial.day      = 9;
-                    nuevo_historial.hour     = 12;
-                    nuevo_historial.minute   = 34;
-                    nuevo_historial.second   = 56;
-                    nuevo_historial.contador = 4321;
-                    nuevo_historial.V1       = 111;
-                    nuevo_historial.V2       = 222;
-                    nuevo_historial.V3       = 333;
-                    nuevo_historial.V4       = 444;
-                    nuevo_historial.V5       = 555;
-                    nuevo_historial.V6       = 666;
-                    nuevo_historial.V7       = 777;
-                    nuevo_historial.V8       = 888;
-                    nuevo_historial.temp     = 27;
-                    nuevo_historial.battery  = 99;
-
-                    //
-                    err_code = save_history_record(&nuevo_historial);
-
-                    if (err_code == NRF_SUCCESS)
-                    {
-                        NRF_LOG_RAW_INFO("\nHistorial de prueba guardado correctamente.");
-                        print_history_record(&nuevo_historial, "Historial de prueba guardado");
-                    }
-                    else
-                    {
-                        NRF_LOG_ERROR("Error al guardar historial de prueba: 0x%X", err_code);
-                    }
+                    // Descartar funcionalidad
                     break;
 
-                case 13: // Mostrar e incrementar el record_id de history
+                case 13: // Pide una lectura de todos los historiales
                 {
-                    
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 : Solicitud del historial completo\x1b[0m");
+
+					break;
                 }
                 default: // Comando desconocido
                     NRF_LOG_WARNING("Comando desconocido: %s", command);
@@ -665,33 +619,6 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         }
         break;
 
-        // case BLE_GATTS_EVT_WRITE:
-        // {
-        //     ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
-        //     NRF_LOG_RAW_INFO("\nWRITE handle: 0x%04X, cccd_handle: 0x%04X, conn_handle: 0x%04X, emisor_conn_handle: 0x%04X",
-        //         p_evt_write->handle, m_nus.tx_handles.cccd_handle,
-        //         p_ble_evt->evt.gatts_evt.conn_handle, m_emisor_conn_handle);
-
-        //     if (p_evt_write->handle == m_nus.tx_handles.cccd_handle &&
-        //         p_ble_evt->evt.gatts_evt.conn_handle == m_emisor_conn_handle &&
-        //         p_evt_write->data[0] == 0x01)
-        //     {
-        //         NRF_LOG_RAW_INFO("\nNotificaciones habilitadas por el emisor, enviando comando...");
-        //         uint8_t comando_conexion[] = {0xAA};
-        //         uint16_t len = sizeof(comando_conexion);
-        //         err_code = ble_nus_data_send(&m_nus, comando_conexion, &len, m_emisor_conn_handle);
-        //         if (err_code == NRF_SUCCESS)
-        //         {
-        //             NRF_LOG_RAW_INFO("\nComando enviado al emisor tras habilitar notificaciones.");
-        //         }
-        //         else
-        //         {
-        //             NRF_LOG_ERROR("Error al enviar comando al emisor: 0x%X", err_code);
-        //         }
-        //     }
-        // }
-        // break;
-
     case BLE_GAP_EVT_DISCONNECTED:
         if (p_gap_evt->conn_handle == m_conn_handle)
         {
@@ -760,11 +687,10 @@ uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
                              m_conn_handle);
 }
 
-
 /**@brief Function for initializing the Advertising functionality.
  */
 
-//static void advertising_init(void)
+// static void advertising_init(void)
 void advertising_init(void)
 {
     uint32_t                 err_code;
@@ -777,23 +703,21 @@ void advertising_init(void)
     // Asignale los valores de adc_values de V1 y V2, 3,4 y 5,6 respectivamente
     m_beacon_info[3] = MSB_16(adc_values.V1);
     m_beacon_info[4] = LSB_16(adc_values.V1);
-	// Segundo Sector
-	m_beacon_info[5] = MSB_16(adc_values.V2);
-	m_beacon_info[6] = LSB_16(adc_values.V2);
+    // Segundo Sector
+    m_beacon_info[5]                       = MSB_16(adc_values.V2);
+    m_beacon_info[6]                       = LSB_16(adc_values.V2);
 
-    
-
-    manuf_specific_data.company_identifier = 0x2233;
-    manuf_specific_data.data.p_data = (uint8_t *)m_beacon_info;
-    manuf_specific_data.data.size   = sizeof(m_beacon_info);
+    manuf_specific_data.company_identifier = 0x1133;
+    manuf_specific_data.data.p_data        = (uint8_t *)m_beacon_info;
+    manuf_specific_data.data.size          = sizeof(m_beacon_info);
 
     memset(&init, 0, sizeof(init));
 
-    init.advdata.name_type                     = BLE_ADVDATA_NO_NAME; //BLE_ADVDATA_FULL_NAME;
+    init.advdata.name_type                     = BLE_ADVDATA_NO_NAME; // BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance            = false;
     init.advdata.flags                         = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
     init.config.ble_adv_on_disconnect_disabled = true;
-    init.advdata.p_manuf_specific_data = &manuf_specific_data;
+    init.advdata.p_manuf_specific_data         = &manuf_specific_data;
 
     init.srdata.uuids_complete.uuid_cnt =
         sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
@@ -815,7 +739,7 @@ void advertising_init(void)
 void advertising_start(void)
 {
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-     if (err_code != NRF_SUCCESS)
+    if (err_code != NRF_SUCCESS)
     {
         NRF_LOG_RAW_INFO("\n\nble_advertising_start error: 0x%08X\n", err_code);
     }
@@ -828,7 +752,7 @@ void advertising_stop(void)
     sd_ble_gap_adv_stop(m_advertising.adv_handle);
 }
 
-void disconnect_all_connections(void)
+void disconnect_all_devices(void)
 {
     ret_code_t err_code;
 

@@ -1,15 +1,16 @@
 #ifndef VARIABLES_H
 #define VARIABLES_H
 
+#define RTC_PRESCALER                4095
 #define MAGIC_PASSWORD               0xABCD /** MAGIC */
 #define APP_BLE_CONN_CFG_TAG         1      /** NORDIC VARS */
 #define APP_BLE_OBSERVER_PRIO        3
 #define UART_TX_BUF_SIZE             256
 #define UART_RX_BUF_SIZE             256
 #define ECHOBACK_BLE_UART_DATA       1
-#define DEFAULT_DEVICE_ON_TIME_MS    15000
-#define DEFAULT_DEVICE_SLEEP_TIME_MS (30000 + 5000)   // Agregar siempre los 5 segundos de procesamiento del emisor
-#define MAC_FILE_ID                  0x0001 /** STORAGE	 */
+#define DEFAULT_DEVICE_ON_TIME_MS    95000
+#define DEFAULT_DEVICE_SLEEP_TIME_MS (00000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
+#define MAC_FILE_ID                  0x0001         /** STORAGE	 */
 #define MAC_RECORD_KEY               0x0002
 #define TIME_FILE_ID                 0x0003
 #define TIME_ON_RECORD_KEY           0x0004

@@ -214,8 +214,8 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
             NRF_LOG_ERROR("Failed to send command: %d", err_code);
         }
 
-        cmd_config[0] = '9';
-        cmd_config[1] = '6';
+        cmd_config[0] = '0';
+        cmd_config[1] = '8';
 
         err_code = app_nus_client_send_data(cmd_config, 2);
         if (err_code != NRF_SUCCESS)

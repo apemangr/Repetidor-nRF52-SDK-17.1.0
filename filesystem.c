@@ -1,5 +1,8 @@
 #include "filesystem.h"
 
+// Buffer estático para evitar problemas con variables locales en el stack
+static store_history g_temp_history_buffer;
+
 ret_code_t save_history_record_emisor(store_history const *p_history_data,
                                       uint16_t             offset)
 {
@@ -8,14 +11,25 @@ ret_code_t save_history_record_emisor(store_history const *p_history_data,
     fds_record_desc_t desc_counter = {0};
     fds_find_token_t  token        = {0};
 
+    // CRÍTICO: Copiar los datos a un buffer estático para evitar 
+    // problemas con variables locales que se destruyen
+    memcpy(&g_temp_history_buffer, p_history_data, sizeof(store_history));
+    
+    // Debug: Verificar que los datos se copiaron correctamente
+    NRF_LOG_RAW_INFO("\n[DEBUG] Offset: %u, Fecha: %02d/%02d/%04d", 
+                     offset, g_temp_history_buffer.day, g_temp_history_buffer.month, 
+                     g_temp_history_buffer.year);
+    NRF_LOG_RAW_INFO("[DEBUG] Contador: %lu, V1: %u, V2: %u", 
+                     g_temp_history_buffer.contador, g_temp_history_buffer.V1, 
+                     g_temp_history_buffer.V2);
+
     // Preparar nuevo registro histórico
     uint16_t     record_key = HISTORY_RECORD_KEY_START + offset;
     fds_record_t new_record = {
         .file_id     = HISTORY_FILE_ID,
         .key         = record_key,
-        .data.p_data = p_history_data,
-        .data.length_words =
-            (sizeof(store_history) + 3) / sizeof(uint32_t) // Cálculo correcto
+        .data.p_data = &g_temp_history_buffer,  // Usar buffer estático
+        .data.length_words = BYTES_TO_WORDS(sizeof(store_history))
     };
 
     // Buscar el registro del historial, si no existe lo escribe
@@ -24,25 +38,31 @@ ret_code_t save_history_record_emisor(store_history const *p_history_data,
     {
         // Si el registro ya existe, lo actualiza
         ret = fds_record_update(&desc_history, &new_record);
-        nrf_delay_ms(100); // Delay tras actualizar
         if (ret != NRF_SUCCESS)
         {
             NRF_LOG_RAW_INFO("\nError al actualizar el registro: %d", ret);
             return ret;
         }
         NRF_LOG_RAW_INFO("\nRegistro actualizado con KEY: 0x%04X", record_key);
+        
+        // Esperar que FDS complete la operación + flush de GC si es necesario
+        nrf_delay_ms(1000);
+        (void)fds_gc(); // Forzar garbage collection si es necesario
     }
     else if (ret == FDS_ERR_NOT_FOUND)
     {
         // Si no existe, lo escribe
         ret = fds_record_write(&desc_history, &new_record);
-        nrf_delay_ms(100); // Delay tras escribir
         if (ret != NRF_SUCCESS)
         {
             NRF_LOG_RAW_INFO("\nError al escribir el registro: %d", ret);
             return ret;
         }
         NRF_LOG_RAW_INFO("\nRegistro escrito con KEY: 0x%04X", record_key);
+        
+        // Esperar que FDS complete la operación + flush de GC si es necesario
+        nrf_delay_ms(1000);
+        (void)fds_gc(); // Forzar garbage collection si es necesario
     }
     else
     {
@@ -158,14 +178,17 @@ ret_code_t save_history_record(store_history const *p_history_data)
         NRF_LOG_RAW_INFO("\nContador no encontrado, usando 0.");
     }
 
+    // CRÍTICO: Copiar los datos a un buffer estático para evitar 
+    // problemas con variables locales que se destruyen
+    memcpy(&g_temp_history_buffer, p_history_data, sizeof(store_history));
+
     // Preparar nuevo registro histórico
     uint16_t     record_key = HISTORY_RECORD_KEY_START + history_count;
     fds_record_t new_record = {
         .file_id     = HISTORY_FILE_ID,
         .key         = record_key,
-        .data.p_data = p_history_data,
-        .data.length_words =
-            (sizeof(store_history) + 3) / sizeof(uint32_t) // Cálculo correcto
+        .data.p_data = &g_temp_history_buffer,  // Usar buffer estático
+        .data.length_words = BYTES_TO_WORDS(sizeof(store_history))
     };
 
     // Escribir registro histórico
@@ -221,8 +244,7 @@ ret_code_t read_history_record_by_id(uint16_t       record_id,
         }
 
         // Verificar que el tamaño del registro en flash coincida con el del struct.
-        if (flash_record.p_header->length_words !=
-            (sizeof(store_history) + sizeof(uint32_t) - 1) / sizeof(uint32_t))
+        if (flash_record.p_header->length_words != BYTES_TO_WORDS(sizeof(store_history)))
         {
             NRF_LOG_RAW_INFO(
                 "\nTamano del registro en flash no coincide con el esperado.");
@@ -250,11 +272,11 @@ ret_code_t read_last_history_record(store_history *p_history_data)
                         &desc, &token) == NRF_SUCCESS)
     {
         fds_flash_record_t flash_record  = {0};
-        uint16_t           history_count = 0; // <-- Ahora uint16_t
+        uint32_t           history_count = 0; // Correcto: uint32_t
 
         fds_record_open(&desc, &flash_record);
         memcpy(&history_count, flash_record.p_data,
-               sizeof(uint16_t)); // <-- Lee solo 2 bytes
+               sizeof(uint32_t)); // Leer 4 bytes, no 2
         fds_record_close(&desc);
 
         if (history_count == 0)
@@ -263,8 +285,8 @@ ret_code_t read_last_history_record(store_history *p_history_data)
         }
 
         // 2. El ID del último registro es (contador - 1).
-        uint16_t last_record_id = history_count - 1;
-        return read_history_record_by_id(last_record_id, p_history_data);
+        uint32_t last_record_id = history_count - 1;
+        return read_history_record_by_id((uint16_t)last_record_id, p_history_data);
     }
 
     // Si el contador no se encuentra, significa que no hay registros.

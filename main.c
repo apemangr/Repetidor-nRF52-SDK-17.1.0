@@ -102,7 +102,6 @@ ret_code_t fds_print_all_record_times(uint16_t file_id)
 
 // #define RTC_ON_TICKS    (100 * 8)
 // #define RTC_SLEEP_TICKS (10 * 8)
-#define RTC_PRESCALER 4095
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
 nrfx_rtc_t           m_rtc            = NRFX_RTC_INSTANCE(2);
@@ -211,7 +210,7 @@ void handle_rtc_events(void)
         if (m_device_active)
         {
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
-            disconnect_all_connections();
+            disconnect_all_devices();
             advertising_stop();
             scan_stop();
             app_uart_close();
@@ -629,7 +628,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
     }
 
     // Se recibio un historial del emisor
-    if (data_length > 20 && data_ptr[0] == 9 && data_ptr[1] == 9)
+    if (data_length > 20 && data_ptr[0] == 0x98)
     {
         // Desempaquetar datos
         uint8_t  command  = data_ptr[position++];
@@ -653,6 +652,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         uint16_t V6            = (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V7            = (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V8            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  temp          = data_ptr[position++]; // Temperatura del módulo
         uint16_t last_position = (data_ptr[position++] << 8) | data_ptr[position++];
 
         // Construir el registro temporal

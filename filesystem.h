@@ -13,6 +13,9 @@
 #include "nrf_log_ctrl.h"
 #include "variables.h"
 
+// Macro para convertir bytes a words (32-bit words)
+#define BYTES_TO_WORDS(bytes) (((bytes) + 3) / 4)
+
 // Estructura de guardado de historiales
 typedef struct
 {

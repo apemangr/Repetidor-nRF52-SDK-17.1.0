@@ -13,7 +13,7 @@ void     app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 void     advertising_stop(void);
 void     advertising_init(void);
 void     advertising_start(void);
-void     disconnect_all_connections(void);
+void     disconnect_all_devices(void);
 uint16_t get_conn_handle(void);
 void advertising_update_from_struct(void);
 
