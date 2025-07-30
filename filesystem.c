@@ -2,6 +2,7 @@
 
 // Buffer estático para evitar problemas con variables locales en el stack
 static store_history g_temp_history_buffer;
+extern void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length);
 
 ret_code_t save_history_record_emisor(store_history const *p_history_data,
                                       uint16_t             offset)
@@ -19,7 +20,7 @@ ret_code_t save_history_record_emisor(store_history const *p_history_data,
     NRF_LOG_RAW_INFO("\n[DEBUG] Offset: %u, Fecha: %02d/%02d/%04d", 
                      offset, g_temp_history_buffer.day, g_temp_history_buffer.month, 
                      g_temp_history_buffer.year);
-    NRF_LOG_RAW_INFO("[DEBUG] Contador: %lu, V1: %u, V2: %u", 
+    NRF_LOG_RAW_INFO("\n[DEBUG] Contador: %lu, V1: %u, V2: %u", 
                      g_temp_history_buffer.contador, g_temp_history_buffer.V1, 
                      g_temp_history_buffer.V2);
 
@@ -572,6 +573,13 @@ void load_mac_from_flash(uint8_t *mac_out)
         NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC. Usando valor "
                          "predeterminado.");
         // Si no se encuentra una MAC, usa una dirección predeterminada
+        // mac_out[0] = 0x6A;
+        // mac_out[1] = 0x0C;
+        // mac_out[2] = 0x04;
+        // mac_out[3] = 0xB3;
+        // mac_out[4] = 0x72;
+        // mac_out[5] = 0xE4;
+
         mac_out[0] = 0x10;
         mac_out[1] = 0x4A;
         mac_out[2] = 0x7C;
@@ -635,4 +643,305 @@ void save_mac_to_flash(uint8_t *mac_addr)
             NRF_LOG_ERROR("Error al crear el registro: %d", ret);
         }
     }
+}
+
+
+// Variables globales para el envío asíncrono de historial (similar a cmd15)
+static bool history_send_active = false;
+static uint32_t history_current_record = 0;
+static uint32_t history_total_records = 0;
+static uint32_t history_sent_count = 0;
+static uint32_t history_failed_count = 0;
+
+// Buffer para almacenar los record keys válidos encontrados por fds_record_iterate
+#define MAX_HISTORY_RECORDS 248
+static uint16_t history_valid_keys[MAX_HISTORY_RECORDS];
+static uint16_t history_valid_count = 0;
+
+/**
+ * @brief Lee un registro de historial por record key
+ * @param record_key Key del registro a leer
+ * @param p_history_data Puntero donde almacenar los datos leídos
+ * @return ret_code_t Código de retorno
+ */
+static ret_code_t read_history_record_by_key(uint16_t record_key, store_history *p_history_data)
+{
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
+
+    NRF_LOG_DEBUG("Leyendo registro con RECORD_KEY: 0x%04X", record_key);
+
+    if (fds_record_find(HISTORY_FILE_ID, record_key, &desc, &token) == NRF_SUCCESS)
+    {
+        fds_flash_record_t flash_record = {0};
+        ret_code_t ret = fds_record_open(&desc, &flash_record);
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_ERROR("Error al abrir el registro");
+            return ret;
+        }
+
+        // Verificar que el tamaño del registro sea correcto
+        if (flash_record.p_header->length_words != BYTES_TO_WORDS(sizeof(store_history)))
+        {
+            NRF_LOG_ERROR("Tamaño del registro no coincide");
+            fds_record_close(&desc);
+            return NRF_ERROR_INVALID_DATA;
+        }
+
+        // Copiar los datos al puntero de salida
+        memcpy(p_history_data, flash_record.p_data, sizeof(store_history));
+
+        return fds_record_close(&desc);
+    }
+
+    return NRF_ERROR_NOT_FOUND;
+}
+
+
+
+// Función auxiliar para enviar el siguiente paquete de historial (similar a cmd15_send_next_packet)
+void history_send_next_packet(void)
+{
+    if (!history_send_active || history_current_record >= history_total_records) {
+        return;
+    }
+    
+    uint32_t packets_sent_this_round = 0;
+    const uint32_t MAX_PACKETS_PER_ROUND = 5; // Enviar hasta 5 paquetes por vez
+    
+    while (history_send_active && 
+           history_current_record < history_total_records && 
+           packets_sent_this_round < MAX_PACKETS_PER_ROUND)
+    {
+        // Verificar que tengamos un índice válido
+        if (history_current_record >= history_valid_count) {
+            NRF_LOG_ERROR("Índice fuera de rango: %d >= %d", history_current_record, history_valid_count);
+            history_send_active = false;
+            break;
+        }
+        
+        // Obtener el record key del registro actual
+        uint16_t current_key = history_valid_keys[history_current_record];
+        
+        // Leer el registro actual directamente desde flash usando el record key
+        store_history current_record;
+        ret_code_t read_result = read_history_record_by_key(current_key, &current_record);
+        
+        if (read_result != NRF_SUCCESS) {
+            // Si no se puede leer el registro, pasar al siguiente
+            NRF_LOG_WARNING("No se pudo leer registro key 0x%04X: 0x%X", current_key, read_result);
+            history_current_record++;
+            history_failed_count++;
+            continue;
+        }
+        
+        // Estructurar los datos en array BLE
+        static uint8_t data_array[244];
+        uint16_t position = 0;
+
+        // Byte 0: Magic
+        data_array[position++] = 0x08;
+
+        // Bytes 1-7: Fecha y hora
+        data_array[position++] = current_record.day;
+        data_array[position++] = current_record.month;
+        data_array[position++] = (current_record.year >> 8) & 0xFF;
+        data_array[position++] = (current_record.year & 0xFF);
+        data_array[position++] = current_record.hour;
+        data_array[position++] = current_record.minute;
+        data_array[position++] = current_record.second;
+
+        // Bytes 8-11: Contador (4 bytes) - convertir a big-endian
+        data_array[position++] = (current_record.contador >> 24) & 0xFF;
+        data_array[position++] = (current_record.contador >> 16) & 0xFF;
+        data_array[position++] = (current_record.contador >> 8) & 0xFF;
+        data_array[position++] = (current_record.contador & 0xFF);
+
+        // Bytes 12-15: V1, V2 (2 bytes cada uno) - convertir a big-endian
+        data_array[position++] = (current_record.V1 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V1 & 0xFF);
+        data_array[position++] = (current_record.V2 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V2 & 0xFF);
+
+        // Byte 16: Battery
+        data_array[position++] = current_record.battery;
+
+        // Bytes 17-28: MACs (rellenar con ceros)
+        for (int j = 0; j < 12; j++) {
+            data_array[position++] = 0x00;
+        }
+
+        // Bytes 29-40: V3-V8 (2 bytes cada uno) - convertir a big-endian
+        data_array[position++] = (current_record.V3 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V3 & 0xFF);
+        data_array[position++] = (current_record.V4 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V4 & 0xFF);
+        data_array[position++] = (current_record.V5 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V5 & 0xFF);
+        data_array[position++] = (current_record.V6 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V6 & 0xFF);
+        data_array[position++] = (current_record.V7 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V7 & 0xFF);
+        data_array[position++] = (current_record.V8 >> 8) & 0xFF;
+        data_array[position++] = (current_record.V8 & 0xFF);
+
+        // Byte 41: Temperatura
+        data_array[position++] = current_record.temp;
+
+        // Byte 42-43: last_position
+        data_array[position++] = 0x11;
+        data_array[position++] = 0x22;
+
+        // Intentar enviar el paquete
+        ret_code_t ret = app_nus_server_send_data(data_array, position);
+        
+        if (ret == NRF_SUCCESS) {
+            history_current_record++;
+            history_sent_count++;
+            packets_sent_this_round++;
+            
+            // Mostrar progreso cada 10 registros
+            if (history_sent_count % 10 == 0) {
+                NRF_LOG_RAW_INFO("\nHistorial: %d/%d enviados", history_sent_count, history_total_records);
+            }
+        }
+        else if (ret == NRF_ERROR_RESOURCES || ret == NRF_ERROR_BUSY) {
+            // Buffer lleno - esperar al próximo TX_RDY
+            break;
+        }
+        else {
+            // Error real - detener el envío
+            history_failed_count++;
+            NRF_LOG_RAW_INFO("\nError enviando registro %d: 0x%X - Deteniendo envío", history_current_record + 1, ret);
+            history_send_active = false;
+            break;
+        }
+    }
+    
+    // Verificar finalización
+    if (history_send_active && history_current_record >= history_total_records) {
+        history_send_active = false;
+        NRF_LOG_RAW_INFO("\n=== ENVIO DE HISTORIAL COMPLETADO ===");
+        NRF_LOG_RAW_INFO("\nRegistros enviados: %d/%d, Fallos: %d", 
+                         history_sent_count, history_total_records, history_failed_count);
+        if (history_total_records > 0) {
+            NRF_LOG_RAW_INFO("\nTasa exito: %d%%\n", (history_sent_count * 100) / history_total_records);
+        }
+    }
+}
+
+ret_code_t send_all_history_ble(void)
+{
+    ret_code_t    err_code;
+    store_history history_record = {0};
+    uint16_t      valid_records = 0;
+
+    NRF_LOG_RAW_INFO("\n\n--- INICIANDO ENVIO DE HISTORIAL ASINCRONO ---");
+    
+    // Verificar si ya hay un envío activo
+    if (history_send_active) {
+        NRF_LOG_RAW_INFO("\nEnvio de historial ya esta activo - ignorando nueva solicitud");
+        return NRF_ERROR_BUSY;
+    }
+    
+    // Verificar estado inicial enviando un pequeño paquete de prueba
+    uint8_t test_data[] = {0x08, 0x00}; // Magic + test byte
+    err_code = app_nus_server_send_data(test_data, 2);
+    if (err_code != NRF_SUCCESS) {
+        NRF_LOG_RAW_INFO("\nError: No se puede enviar por BLE (0x%X). Verifica conexion.", err_code);
+        if (err_code == NRF_ERROR_INVALID_STATE) {
+            NRF_LOG_RAW_INFO("\n- Asegurate de que hay un dispositivo conectado");
+            NRF_LOG_RAW_INFO("\n- Verifica que las notificaciones esten habilitadas");
+        }
+        return err_code;
+    }
+    nrf_delay_ms(100);
+
+    NRF_LOG_RAW_INFO("\n--- FASE 1: Contando registros validos en flash ---");
+
+    // FASE 1: Contar y almacenar los record keys de registros válidos usando fds_record_iterate
+    fds_find_token_t token = {0};
+    fds_record_desc_t record_desc = {0};
+    fds_flash_record_t flash_record = {0};
+    uint16_t expected_words = BYTES_TO_WORDS(sizeof(store_history));
+    
+    // Resetear contador y array de keys válidos
+    history_valid_count = 0;
+
+    // Iterar a través de todos los registros del HISTORY_FILE_ID
+    while (fds_record_iterate(&record_desc, &token) == NRF_SUCCESS && 
+           history_valid_count < MAX_HISTORY_RECORDS)
+    {
+        // Abrir el registro para acceder a su header
+        err_code = fds_record_open(&record_desc, &flash_record);
+        if (err_code != NRF_SUCCESS) {
+            continue;
+        }
+        
+        // Verificar que sea un registro de historial
+        if (flash_record.p_header->file_id != HISTORY_FILE_ID) {
+            fds_record_close(&record_desc);
+            continue;
+        }
+        
+        // Verificar que no sea el registro del contador
+        if (flash_record.p_header->record_key == HISTORY_COUNTER_RECORD_KEY) {
+            fds_record_close(&record_desc);
+            continue;
+        }
+
+        // Verificar que el tamaño sea correcto
+        if (flash_record.p_header->length_words == expected_words) {
+            // Almacenar el record key válido
+            history_valid_keys[history_valid_count] = flash_record.p_header->record_key;
+            history_valid_count++;
+            valid_records++;
+            
+            if (valid_records % 10 == 0) {
+                NRF_LOG_RAW_INFO("\nContados %d registros...", valid_records);
+            }
+        }
+
+        // Cerrar el registro
+        fds_record_close(&record_desc);
+    }
+
+    NRF_LOG_RAW_INFO("\n\n--- FASE 1 COMPLETADA: %d registros validos encontrados ---", history_valid_count);
+    
+    if (history_valid_count == 0) {
+        NRF_LOG_RAW_INFO("\nNo hay registros para enviar");
+        return NRF_SUCCESS;
+    }
+
+    // FASE 2: Inicializar variables para envío asíncrono (usando array de record keys)
+    NRF_LOG_RAW_INFO("\n--- FASE 2: Iniciando envio asincrono (usando record keys) ---");
+    
+    history_send_active = true;
+    history_current_record = 0;
+    history_total_records = history_valid_count;
+    history_sent_count = 0;
+    history_failed_count = 0;
+    
+    NRF_LOG_RAW_INFO("\nEnviando %d registros de forma asincrona...", history_total_records);
+    
+    // Enviar el primer lote de paquetes - los siguientes se enviarán en BLE_NUS_EVT_TX_RDY
+    history_send_next_packet();
+    
+    NRF_LOG_FLUSH();
+    // Deleted delay function
+    //nrf_delay_ms(1000);
+    return NRF_SUCCESS;
+}
+
+// Funciones de estado para el envío de historial
+bool history_send_is_active(void)
+{
+    return history_send_active;
+}
+
+uint32_t history_get_progress(void)
+{
+    if (history_total_records == 0) return 0;
+    return (history_sent_count * 100) / history_total_records;
 }

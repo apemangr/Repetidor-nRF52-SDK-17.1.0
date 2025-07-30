@@ -8,7 +8,7 @@
 #define UART_TX_BUF_SIZE             256
 #define UART_RX_BUF_SIZE             256
 #define ECHOBACK_BLE_UART_DATA       1
-#define DEFAULT_DEVICE_ON_TIME_MS    95000
+#define DEFAULT_DEVICE_ON_TIME_MS    999000
 #define DEFAULT_DEVICE_SLEEP_TIME_MS (00000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
 #define MAC_FILE_ID                  0x0001         /** STORAGE	 */
 #define MAC_RECORD_KEY               0x0002

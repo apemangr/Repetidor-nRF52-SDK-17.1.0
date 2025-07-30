@@ -71,42 +71,6 @@ static void perform_garbage_collection(void)
     }
 }
 
-void advertising_update_from_struct(void)
-{
-    // Rellena el buffer codificado a mano
-    memset(adv_buffer, 0, sizeof(adv_buffer));
-    m_beacon_info[3] = MSB_16(adc_values.V1);
-    m_beacon_info[4] = LSB_16(adc_values.V1);
-    m_beacon_info[5] = MSB_16(adc_values.V2);
-    m_beacon_info[6] = LSB_16(adc_values.V2);
-
-    ble_advdata_t            advpacket;
-    ble_advdata_manuf_data_t manuf;
-    memset(&advpacket, 0, sizeof(advpacket));
-    memset(&manuf, 0, sizeof(manuf));
-    manuf.company_identifier        = 0x2233;
-    manuf.data.p_data               = m_beacon_info;
-    manuf.data.size                 = sizeof(m_beacon_info);
-    advpacket.name_type             = BLE_ADVDATA_NO_NAME;
-    advpacket.flags                 = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
-    advpacket.p_manuf_specific_data = &manuf;
-
-    uint16_t adv_data_len           = sizeof(adv_buffer);
-
-    uint32_t err                    = ble_advdata_encode(&advpacket, adv_buffer, &adv_data_len);
-    APP_ERROR_CHECK(err);
-
-    ble_gap_adv_data_t new_data;
-    memset(&new_data, 0, sizeof(new_data));
-    new_data.adv_data.p_data      = adv_buffer;
-    new_data.adv_data.len         = adv_data_len;
-    new_data.scan_rsp_data.p_data = NULL;
-    new_data.scan_rsp_data.len    = 0;
-
-    err                           = ble_advertising_advdata_update(&m_advertising, &new_data, true);
-    APP_ERROR_CHECK(err);
-}
-
 static void fds_evt_handler(fds_evt_t const *p_evt)
 {
     if (p_evt->id == FDS_EVT_INIT)
@@ -472,8 +436,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 case 13: // Pide una lectura de todos los historiales
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 : Solicitud del historial completo\x1b[0m");
+                    // Llama a la función para solicitar el historial completo
+                    send_all_history_ble();
 
-					break;
+                    break;
                 }
                 default: // Comando desconocido
                     NRF_LOG_WARNING("Comando desconocido: %s", command);
@@ -493,6 +459,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
         {
             NRF_LOG_WARNING("Mensaje demasiado largo para procesar.");
         }
+    }
+    else if (p_evt->type == BLE_NUS_EVT_TX_RDY)
+    {
+        // El buffer de transmisión está listo - enviar siguiente paquete del comando 15/16 si está activo
+        // También manejar el envío asíncrono de historial
+        history_send_next_packet();
     }
 }
 
@@ -629,7 +601,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
         {
             NRF_LOG_RAW_INFO("\nEmisor desconectado");
-            NRF_LOG_RAW_INFO("\n\nBuscando emisor...\n");
+            NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Buscando emisor...\n");
 
             m_emisor_conn_handle =
                 BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
@@ -690,7 +662,6 @@ uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
 /**@brief Function for initializing the Advertising functionality.
  */
 
-// static void advertising_init(void)
 void advertising_init(void)
 {
     uint32_t                 err_code;
@@ -698,15 +669,16 @@ void advertising_init(void)
     ble_advdata_manuf_data_t manuf_specific_data;
 
     memset(&m_beacon_info, 0, sizeof(m_beacon_info));
-
-    // Llena el m_beacon_info desde el 0 al 17 con zeros
-    // Asignale los valores de adc_values de V1 y V2, 3,4 y 5,6 respectivamente
+    // Se modifica para tener un numero de advertising mayor a 0
+    // y poder ser procesado por la app
+    m_beacon_info[1] = MSB_16(adc_values.contador);
+    m_beacon_info[2] = LSB_16(adc_values.contador);
     m_beacon_info[3] = MSB_16(adc_values.V1);
     m_beacon_info[4] = LSB_16(adc_values.V1);
-    // Segundo Sector
-    m_beacon_info[5]                       = MSB_16(adc_values.V2);
-    m_beacon_info[6]                       = LSB_16(adc_values.V2);
+    m_beacon_info[5] = MSB_16(adc_values.V2);
+    m_beacon_info[6] = LSB_16(adc_values.V2);
 
+    // Indentificador
     manuf_specific_data.company_identifier = 0x1133;
     manuf_specific_data.data.p_data        = (uint8_t *)m_beacon_info;
     manuf_specific_data.data.size          = sizeof(m_beacon_info);

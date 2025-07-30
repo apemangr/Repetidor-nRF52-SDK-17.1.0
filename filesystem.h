@@ -41,14 +41,9 @@ typedef struct
 
 typedef struct
 {
-    uint16_t V1; // Voltaje 1
-    uint16_t V2; // Voltaje 2
-    uint16_t V3; // Voltaje 3
-    uint16_t V4; // Voltaje 4
-    uint16_t V5; // Voltaje 5
-    uint16_t V6; // Voltaje 6
-    uint16_t V7; // Voltaje 7
-    uint16_t V8; // Voltaje 8
+    uint16_t V1;       // Voltaje 1
+    uint16_t V2;       // Voltaje 2
+    uint32_t contador; // Contador de advertisings
 } adc_values_t;
 
 extern adc_values_t adc_values;
@@ -68,6 +63,11 @@ ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_histor
 void       print_history_record(store_history const *p_record, const char *p_title);
 ret_code_t read_last_history_record(store_history *p_history_data);
 
+ret_code_t send_all_history_ble(void);
+void       history_send_next_packet(void);
+bool       history_send_is_active(void);
+uint32_t   history_get_progress(void);
+
 // Date and time functions
 ret_code_t write_date_to_flash(const datetime_t *p_date);
 datetime_t read_date_from_flash(void);
@@ -75,7 +75,6 @@ void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
 uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
 void       load_mac_from_flash(uint8_t *mac_out);
 void       save_mac_to_flash(uint8_t *mac_addr);
-
 
 // typedef struct
 // {
@@ -111,7 +110,5 @@ void       save_mac_to_flash(uint8_t *mac_addr);
 // } store_flash;
 
 // extern store_flash Flash_array;
-
-
 
 #endif // FILESYSTEM_H

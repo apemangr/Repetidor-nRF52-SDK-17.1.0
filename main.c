@@ -28,25 +28,23 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
-//store_flash Flash_array = {0};
+// store_flash Flash_array = {0};
 adc_values_t adc_values = {0};
-
-
 
 /**
  * @brief Lee todos los registros de historial e imprime la hora de cada uno
- * 
+ *
  * @param file_id       ID del archivo a leer
  * @return ret_code_t   Código de retorno
  */
 ret_code_t fds_print_all_record_times(void)
 {
-    ret_code_t err_code;
-    fds_find_token_t token = {0};
-    fds_record_desc_t record_desc = {0};
-    fds_flash_record_t flash_record = {0};
-    uint32_t record_count = 0;
-    uint16_t expected_words = BYTES_TO_WORDS(sizeof(store_history));
+    ret_code_t         err_code;
+    fds_find_token_t   token          = {0};
+    fds_record_desc_t  record_desc    = {0};
+    fds_flash_record_t flash_record   = {0};
+    uint32_t           record_count   = 0;
+    uint16_t           expected_words = BYTES_TO_WORDS(sizeof(store_history));
 
     // Iterar a través de todos los registros del file_id
     while (fds_record_iterate(&record_desc, &token) == NRF_SUCCESS)
@@ -62,23 +60,23 @@ ret_code_t fds_print_all_record_times(void)
         // Verificar que el tamaño sea correcto
         if (flash_record.p_header->length_words != expected_words)
         {
-            NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)", 
-                          record_desc.record_id, flash_record.p_header->length_words);
+            NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)",
+                            record_desc.record_id, flash_record.p_header->length_words);
             fds_record_close(&record_desc);
             continue;
         }
 
         // Obtener puntero a los datos del historial
-        const store_history* p_history = (const store_history*)flash_record.p_data;
-        
+        const store_history *p_history = (const store_history *)flash_record.p_data;
+
         // Imprimir la hora del registro
-        // NRF_LOG_INFO("Registro %d: %04d-%02d-%02d", 
+        // NRF_LOG_INFO("Registro %d: %04d-%02d-%02d",
         //              record_desc.record_id,
-        //              p_history->year, 
-        //              p_history->month, 
+        //              p_history->year,
+        //              p_history->month,
         //              p_history->day);
-        // NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d", 
-        //              p_history->hour, 
+        // NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d",
+        //              p_history->hour,
         //              p_history->minute,
         //              p_history->second,
         //              p_history->contador);
@@ -90,13 +88,10 @@ ret_code_t fds_print_all_record_times(void)
     }
 
     NRF_LOG_INFO("=== Total de registros procesados: %d ===", record_count);
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(1000);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(1000);
     return NRF_SUCCESS;
 }
-
-
-
 
 // #define RTC_ON_TICKS    (100 * 8)
 // #define RTC_SLEEP_TICKS (10 * 8)
@@ -225,28 +220,22 @@ void handle_rtc_events(void)
         {
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
 
-            // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE 
+            // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
             // INICIAR EL ADVERTISING Y EL SCANEO
 
             // Modificar el advertising payload para mostrar
             // los valores de los ADC
-            //advertising_update_from_struct();
             advertising_init();
 
+            // write_date_to_flash(&m_time);
 
-            //write_date_to_flash(&m_time);
-
-            //fds_print_all_record_times(HISTORY_FILE_ID);
+            // fds_print_all_record_times(HISTORY_FILE_ID);
 
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "
                              "%02u:%02u:%02u",
                              m_time.year, m_time.month, m_time.day,
                              m_time.hour, m_time.minute, m_time.second);
-
-
-
-
 
             // Actualizar el payload para mostrar los adc_values
             scan_start();
@@ -552,84 +541,35 @@ void app_nus_server_on_data_received(const uint8_t *data_ptr,
     // Forward the data from the client to the server
     app_nus_client_send_data(data_ptr, data_length);
 }
-// Interpreta y muestra un mensaje de fecha/hora tipo "DD/MM/YYYY HH:MM:SS"
-static void interpretar_fecha_hora_emisor(const uint8_t *data,
-                                          uint16_t       length)
-{
-    if (length < 19)
-    {
-        NRF_LOG_WARNING("Mensaje de fecha/hora demasiado corto.");
-        return;
-    }
 
-    char fecha[11] = {0}; // "DD/MM/YYYY"
-    char hora[9]   = {0}; // "HH:MM:SS"
-
-    memcpy(fecha, &data[0], 10);
-    memcpy(hora, &data[11], 8);
-
-    NRF_LOG_RAW_INFO("\n\x1b[1;32mFecha/hora recibida del emisor:\x1b[0m %s %s\n",
-                     fecha, hora);
-
-    int dia, mes, anio, hora_i, min, seg;
-    if (sscanf((const char *)data, "%2d/%2d/%4d %2d:%2d:%2d", &dia, &mes, &anio,
-               &hora_i, &min, &seg) == 6)
-    {
-        NRF_LOG_RAW_INFO(
-            "-> Dia: %02d, Mes: %02d, Ano: %04d, Hora: %02d:%02d:%02d\n", dia, mes,
-            anio, hora_i, min, seg);
-    }
-}
-
+// Procesa la información recibida desde el emisor
 void app_nus_client_on_data_received(const uint8_t *data_ptr,
                                      uint16_t       data_length)
 {
-    // Si el mensaje es de tipo fecha/hora (por ejemplo, contiene '/' y ':')
-    //if (data_length >= 19 && data_ptr[2] == '/' && data_ptr[5] == '/' &&
-    //    data_ptr[10] == ' ')
-    //{
-    //    interpretar_fecha_hora_emisor(data_ptr, data_length);
-    //    return; // Si solo quieres interpretar y no procesar como historial
-    //}
-
     uint16_t position = 0;
 
-    // if(data_length == sizeof(Flash_array) && data_ptr[0] == '9' && data_ptr[1] == '9')
-    // {
-    //NRF_LOG_RAW_INFO("\n\nParece que me conecte a la app de Tega\n");
-    //interpretar_config_recibida(data_ptr, data_length);
-    // }
-
-    // Se recibieron los valores de los ADC V1-V8
-    if (data_length >= 12 && data_ptr[0] == 0x96)
+    // Se recibieron los datos de los ADC's y contador
+    if (data_ptr[0] == 0x96 && data_length == 9)
     {
-        uint16_t pos = 1;
-        adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V2 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V3 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V4 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V5 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V6 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V7 = (data_ptr[pos] << 8) | data_ptr[pos + 1]; pos += 2;
-        adc_values.V8 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
+        uint16_t pos  = 1;
+        adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
+        pos += 2;
+        adc_values.V2 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
+        pos += 2;
+        adc_values.contador = (data_ptr[pos] << 24) | (data_ptr[pos + 1] << 16) |
+                              (data_ptr[pos + 2] << 8) | data_ptr[pos + 3];
 
-        NRF_LOG_RAW_INFO("\nValores ADC recibidos:\n");
-        NRF_LOG_RAW_INFO("V1: %u\n", adc_values.V1);
-        NRF_LOG_RAW_INFO("V2: %u\n", adc_values.V2);
-        NRF_LOG_RAW_INFO("V3: %u\n", adc_values.V3);
-        NRF_LOG_RAW_INFO("V4: %u\n", adc_values.V4);
-        NRF_LOG_RAW_INFO("V5: %u\n", adc_values.V5);
-        NRF_LOG_RAW_INFO("V6: %u\n", adc_values.V6);
-        NRF_LOG_RAW_INFO("V7: %u\n", adc_values.V7);
-        NRF_LOG_RAW_INFO("V8: %u\n", adc_values.V8);
+        NRF_LOG_RAW_INFO("\nDatos cortos recibidos (0x96):");
+        NRF_LOG_RAW_INFO("V1: %u, V2: %u", adc_values.V1, adc_values.V2);
+        NRF_LOG_RAW_INFO("Contador: %lu", adc_values.contador);
         NRF_LOG_FLUSH();
     }
 
-    // Se recibio un historial del emisor
-    if (data_length > 20 && data_ptr[0] == 0x98)
+    // Se recibio el 'ultimo' historial del emisor
+    if (data_length > 20 && data_ptr[0] == 0x08)
     {
+        position = 1; // Comenzar después del primer byte
         // Desempaquetar datos
-        uint8_t  command  = data_ptr[position++];
         uint8_t  day      = data_ptr[position++];
         uint8_t  month    = data_ptr[position++];
         uint16_t year     = (data_ptr[position++] << 8) | data_ptr[position++];
@@ -669,6 +609,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
                                          .V6       = V6,
                                          .V7       = V7,
                                          .V8       = V8,
+                                         .temp     = temp,
                                          .battery  = battery};
 
         // Guardar el historial recibido en la posición indicada
@@ -687,7 +628,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m",
                  last_position);
         print_history_record(&nuevo_historial, titulo);
-        fds_print_all_record_times();
+        // fds_print_all_record_times();
         NRF_LOG_FLUSH();
     }
     app_nus_server_send_data(data_ptr, data_length);
@@ -737,7 +678,7 @@ int main(void)
     NRF_LOG_FLUSH();
     calendar_set_datetime();
 
-    NRF_LOG_RAW_INFO("\n> Buscando emisor...\n");
+    NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m Buscando emisor...\n");
     NRF_LOG_FLUSH();
 
     // Enter main loop.

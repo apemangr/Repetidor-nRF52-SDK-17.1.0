@@ -87,7 +87,7 @@ bool calendar_set_time(const datetime_t *now)
 bool calendar_init(void)
 {
 
-    NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m  Iniciando modulo RTC...");
+    NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m Iniciando modulo RTC...");
     ret_code_t err_code;
 
     if (m_initialized)

@@ -15,6 +15,5 @@ void     advertising_init(void);
 void     advertising_start(void);
 void     disconnect_all_devices(void);
 uint16_t get_conn_handle(void);
-void advertising_update_from_struct(void);
 
 #endif

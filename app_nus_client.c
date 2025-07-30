@@ -200,31 +200,40 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
         // app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor, strlen((const char *)cmd_enviar_hora_a_emisor));
 
         // Comando para solicitar la configuracion del emisor con 99
-        //uint8_t cmd_config[32];
-        //string_to_command("99", cmd_config, sizeof(cmd_config));
+        // uint8_t cmd_config[32];
+        // string_to_command("99", cmd_config, sizeof(cmd_config));
 
-        uint8_t cmd_config[2];
+        //==============================
+        // COMANDOS
+        //==============================
+        uint8_t cmd_id[2];
 
-        cmd_config[0] = '9';
-        cmd_config[1] = '9';
+        // Enviar la hora actual del repetidor al emisor
+        char cmd_enviar_hora_a_emisor[24] = {0};
+        snprintf(cmd_enviar_hora_a_emisor, sizeof(cmd_enviar_hora_a_emisor),
+                 "060%04u.%02u.%02u %02u.%02u.%02u", m_time.year, m_time.month, m_time.day,
+                 m_time.hour, m_time.minute, m_time.second);
+        app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor, strlen((const char *)cmd_enviar_hora_a_emisor));
 
-        err_code = app_nus_client_send_data(cmd_config, 2);
+        // Solicitar los valores de los ADC y contador
+        cmd_id[0] = '9';
+        cmd_id[1] = '6';
+
+        err_code      = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_ERROR("Failed to send command: %d", err_code);
+            NRF_LOG_RAW_INFO("\nFallo al solicitar datos de ADC y contador: %d", err_code);
         }
+    
+        // Solicitar el ultimo historial del emisor
+        cmd_id[0] = '0';
+        cmd_id[1] = '8';
 
-        cmd_config[0] = '0';
-        cmd_config[1] = '8';
-
-        err_code = app_nus_client_send_data(cmd_config, 2);
+        err_code      = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_ERROR("Failed to send command: %d", err_code);
+            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
         }
-
-
-
 
         break;
 
