@@ -134,6 +134,17 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
             NRF_LOG_ERROR("Error al eliminar el registro: %d", p_evt->result);
         }
     }
+    else if (p_evt->id == FDS_EVT_DEL_FILE)
+    {
+        if (p_evt->result == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nArchivo eliminado correctamente y todos los registros asociados.");
+        }
+        else
+        {
+            NRF_LOG_ERROR("Error al eliminar el archivo: %d", p_evt->result);
+        }
+    }
 }
 
 static void fds_initialize(void)
@@ -210,16 +221,16 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         for (size_t i = 0; i < 6; i++)
                         {
-                            char byte_str[3]    = {message[5 + i * 2], message[6 + i * 2], '\0'};
-                            custom_mac_addr_[i] = (uint8_t)strtol(byte_str, NULL, 16);
+                            char byte_str[3]        = {message[5 + i * 2], message[6 + i * 2], '\0'};
+                            custom_mac_addr_[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
                         }
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 01 recibido: "
                                          "Cambiar MAC \x1b[0m");
                         NRF_LOG_RAW_INFO("\n> MAC recibida: "
                                          "%02X:%02X:%02X:%02X:%02X:%02X",
-                                         custom_mac_addr_[0], custom_mac_addr_[1],
-                                         custom_mac_addr_[2], custom_mac_addr_[3],
-                                         custom_mac_addr_[4], custom_mac_addr_[5]);
+                                         custom_mac_addr_[5], custom_mac_addr_[4],
+                                         custom_mac_addr_[3], custom_mac_addr_[2],
+                                         custom_mac_addr_[1], custom_mac_addr_[0]);
 
                         // Guarda la MAC en la memoria flash y reinicia el
                         // dispositivo
@@ -386,14 +397,43 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     break;
                 }
-                case 10: // Comando para solicitar el último historial al periférico
+                case 10: // Guarda en la memoria el tiempo de encendido extendido
                 {
-                    // Work in progress
+                    if (p_evt->params.rx_data.length >=
+                        6) // Verifica que haya datos suficientes 
+                    {
+                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
+                        uint32_t time_in_seconds_extended __attribute__((aligned(4))) =
+                            atoi(time_str) * 1000;
+                        if (time_in_seconds_extended <= 666000)
+                        {
+                            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
+                                             "Cambiar tiempo de encendido extendido\x1b[0m");
+                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED, time_in_seconds_extended);
+                        }
+                        else
+                        {
+                            NRF_LOG_WARNING("El tiempo de encendido excede el máximo "
+                                            "permitido (666 segundos).");
+                        }
+                    }
+                    else
+                    {
+                        NRF_LOG_WARNING("Comando 10 recibido con datos insuficientes.");
+                    }
                     break;
                 }
-                case 11: // Solicitar un registro de historial por ID
+                case 11: // Solicitar tiempo de encendido extendido
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar registro de historial por ID\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de encendido extendido\x1b[0m");
+                    uint32_t encendido_extendido_ms = read_time_from_flash(
+                        TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+
+                    break;
+                }
+                case 12: // Solicitar un registro de historial por ID
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de historial por ID\x1b[0m");
                     if (p_evt->params.rx_data.length > 5) // Verifica que haya datos suficientes
                     {
                         // Extrae el ID del registro como string (todo lo que sigue después de "11111")
@@ -428,17 +468,19 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
-                case 12: // Guardar un nuevo historial con valores inventados
-
-                    // Descartar funcionalidad
-                    break;
-
-                case 13: // Pide una lectura de todos los historiales
+                case 98: // Pide una lectura de todos los historiales
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 : Solicitud del historial completo\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 98: Solicitud del historial completo\x1b[0m");
                     // Llama a la función para solicitar el historial completo
-                    send_all_history_ble();
+                    send_all_history();
 
+                    break;
+                }
+                case 99: // Comando para borrar todos los historiales
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 99 recibido: Borrar todos los historiales\x1b[0m");
+
+                    delete_all_history();
                     break;
                 }
                 default: // Comando desconocido
@@ -582,11 +624,11 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             NRF_LOG_RAW_INFO("\nCelular conectado");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            restart_on_rtc();
+            restart_on_rtc_extended();
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
-            NRF_LOG_RAW_INFO("\nEmisor conectado");
+            NRF_LOG_RAW_INFO("\nEmisor conectado\n");
             m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
         }
         break;

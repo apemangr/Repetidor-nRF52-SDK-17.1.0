@@ -50,8 +50,9 @@ extern adc_values_t adc_values;
 
 typedef enum
 {
-    TIEMPO_ENCENDIDO, // Tiempo de encendido
-    TIEMPO_SLEEP      // Tiempo de apagado
+    TIEMPO_ENCENDIDO,
+    TIEMPO_ENCENDIDO_EXTENDED,
+    TIEMPO_SLEEP
 } valor_type_t;
 
 static uint8_t mac_address_from_flash[6] = {0};
@@ -63,7 +64,8 @@ ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_histor
 void       print_history_record(store_history const *p_record, const char *p_title);
 ret_code_t read_last_history_record(store_history *p_history_data);
 
-ret_code_t send_all_history_ble(void);
+void       delete_all_history(void);
+ret_code_t send_all_history(void);
 void       history_send_next_packet(void);
 bool       history_send_is_active(void);
 uint32_t   history_get_progress(void);

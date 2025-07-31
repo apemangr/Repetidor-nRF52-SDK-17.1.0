@@ -10,7 +10,7 @@ void                 restart_sleep_rtc(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t sleep_time_from_flash =
         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
-    //NRF_LOG_RAW_INFO("\n\t>> Tiempo de sleep: %u ms", sleep_time_from_flash);
+    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de sleep: %u ms", sleep_time_from_flash);
     uint32_t next_event =
         (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
@@ -21,9 +21,20 @@ void restart_on_rtc(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t read_time =
         read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
-    //NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido: %u ms", read_time);
+    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
+}
+
+void restart_on_rtc_extended(void)
+{
+    uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+    uint32_t read_time =
+        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido extendido: %u ms", read_time);
+    uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
+    nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
+    NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo extendido: %u ms", read_time);
 }
 
 bool is_date_stored()
@@ -129,7 +140,6 @@ void calendar_update(void)
     }
     m_tick_flag = false;
 
-
     // Increment seconds
     if (++m_time.second > 59)
     {
@@ -137,7 +147,7 @@ void calendar_update(void)
 
         if (++m_time.minute > 59)
         {
-  
+
             m_time.minute = 0;
 
             if (++m_time.hour > 23)
@@ -164,12 +174,13 @@ void calendar_update(void)
 bool calendar_set_datetime(void)
 {
     NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo de encendido\t: %d \t[segs]",
+        "\n\t>> Tiempo encendido\t: %d \t[segs]",
         read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
-
-    NRF_LOG_FLUSH();
     NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo de dormido\t: %d \t[segs]",
+        "\n\t>> Tiempo encendido ext\t: %d \t[segs]",
+        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS) / 1000);
+    NRF_LOG_RAW_INFO(
+        "\n\t>> Tiempo dormido\t: %d \t[segs]",
         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000);
 
     NRF_LOG_FLUSH();

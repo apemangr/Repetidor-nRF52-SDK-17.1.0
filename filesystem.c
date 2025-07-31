@@ -333,8 +333,13 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
     uint16_t           record_key;
     ret_code_t         err_code;
     // Determinar el Record Key según el tipo de valor
-    record_key = (valor_type == TIEMPO_ENCENDIDO) ? TIME_ON_RECORD_KEY
-                                                  : TIME_SLEEP_RECORD_KEY;
+    if (valor_type == TIEMPO_ENCENDIDO) {
+        record_key = TIME_ON_RECORD_KEY;
+    } else if (valor_type == TIEMPO_ENCENDIDO_EXTENDED) {
+        record_key = TIME_ON_EXTENDED_RECORD_KEY;
+    } else {
+        record_key = TIME_SLEEP_RECORD_KEY;
+    }
 
     // Busca el registro en la memoria flash
     err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
@@ -351,10 +356,10 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
                 // Copiar directamente el valor desde flash
                 data      = (uint32_t *)flash_record.p_data;
                 resultado = *data;
-                NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms",
-                                 (valor_type == TIEMPO_ENCENDIDO) ? "encendido"
-                                                                  : "sleep",
-                                 resultado);
+                const char* tipo_str = (valor_type == TIEMPO_ENCENDIDO) ? "encendido" :
+                                      (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido" :
+                                      "sleep";
+                NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
             }
             else
             {
@@ -450,9 +455,15 @@ datetime_t read_date_from_flash(void)
 
 void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 {
-    uint16_t          record_key = (valor_type == TIEMPO_ENCENDIDO)
-                                       ? TIME_ON_RECORD_KEY
-                                       : TIME_SLEEP_RECORD_KEY;
+    uint16_t record_key;
+    if (valor_type == TIEMPO_ENCENDIDO) {
+        record_key = TIME_ON_RECORD_KEY;
+    } else if (valor_type == TIEMPO_ENCENDIDO_EXTENDED) {
+        record_key = TIME_ON_EXTENDED_RECORD_KEY;
+    } else {
+        record_key = TIME_SLEEP_RECORD_KEY;
+    }
+    
     fds_record_t      record     = {.file_id           = TIME_FILE_ID,
                                     .key               = record_key,
                                     .data.p_data       = &valor,
@@ -462,11 +473,15 @@ void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
     ret_code_t        err_code =
         fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
 
+    const char* tipo_str = (valor_type == TIEMPO_ENCENDIDO) ? "encendido" :
+                          (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido" :
+                          "sleep";
+
     if (err_code == NRF_SUCCESS)
     {
         err_code = fds_record_update(&record_desc, &record);
         NRF_LOG_RAW_INFO("\n> Tiempo de %s %s: %d segundos.",
-                         (valor_type == TIEMPO_ENCENDIDO) ? "encendido" : "sleep",
+                         tipo_str,
                          (err_code == NRF_SUCCESS) ? "actualizado"
                                                    : "falló al actualizar",
                          valor / 1000);
@@ -475,7 +490,7 @@ void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
     {
         err_code = fds_record_write(&record_desc, &record);
         NRF_LOG_RAW_INFO("\nTiempo de %s %s: %d segundos.\n",
-                         (valor_type == TIEMPO_ENCENDIDO) ? "encendido" : "sleep",
+                         tipo_str,
                          (err_code == NRF_SUCCESS) ? "guardado"
                                                    : "falló al guardar",
                          valor / 1000);
@@ -555,8 +570,8 @@ void load_mac_from_flash(uint8_t *mac_out)
             fds_record_close(&record_desc);
             NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                              "%02X:%02X:%02X:%02X:%02X:%02X",
-                             mac_out[0], mac_out[1], mac_out[2], mac_out[3],
-                             mac_out[4], mac_out[5]);
+                             mac_out[5], mac_out[4], mac_out[3], mac_out[2],
+                             mac_out[1], mac_out[0]);
         }
         else
         {
@@ -564,8 +579,8 @@ void load_mac_from_flash(uint8_t *mac_out)
             fds_record_close(&record_desc);
             NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                              "%02X:%02X:%02X:%02X:%02X:%02X",
-                             mac_out[0], mac_out[1], mac_out[2], mac_out[3],
-                             mac_out[4], mac_out[5]);
+                             mac_out[5], mac_out[4], mac_out[3], mac_out[2],
+                             mac_out[1], mac_out[0]);
         }
     }
     else
@@ -573,12 +588,12 @@ void load_mac_from_flash(uint8_t *mac_out)
         NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC. Usando valor "
                          "predeterminado.");
         // Si no se encuentra una MAC, usa una dirección predeterminada
-        // mac_out[0] = 0x6A;
-        // mac_out[1] = 0x0C;
-        // mac_out[2] = 0x04;
-        // mac_out[3] = 0xB3;
-        // mac_out[4] = 0x72;
-        // mac_out[5] = 0xE4;
+        // mac_out[5] = 0x6A;
+        // mac_out[4] = 0x0C;
+        // mac_out[3] = 0x04;
+        // mac_out[2] = 0xB3;
+        // mac_out[1] = 0x72;
+        // mac_out[0] = 0xE4;
 
         mac_out[0] = 0x10;
         mac_out[1] = 0x4A;
@@ -589,8 +604,8 @@ void load_mac_from_flash(uint8_t *mac_out)
 
         NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                          "%02X:%02X:%02X:%02X:%02X:%02X",
-                         mac_out[0], mac_out[1], mac_out[2], mac_out[3], mac_out[4],
-                         mac_out[5]);
+                         mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
+                         mac_out[0]);
     }
 }
 
@@ -831,7 +846,7 @@ void history_send_next_packet(void)
     }
 }
 
-ret_code_t send_all_history_ble(void)
+ret_code_t send_all_history(void)
 {
     ret_code_t    err_code;
     store_history history_record = {0};
@@ -944,4 +959,24 @@ uint32_t history_get_progress(void)
 {
     if (history_total_records == 0) return 0;
     return (history_sent_count * 100) / history_total_records;
+}
+
+
+void delete_all_history(void)
+{
+    ret_code_t ret;
+
+    ret = fds_file_delete(HISTORY_FILE_ID);
+
+    if (ret != NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO("\n[\033[1;31mERROR\033[0m] No se pudieron eliminar todos los historiales: %d", ret);
+    }
+    NRF_LOG_RAW_INFO("\n[INFO] Corriendo el recolector de basura...");
+
+    ret = fds_gc();
+    if (ret != NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO("\n[\033[1;31mERROR\033[0m] Error al correr el recolector de basura: %d", ret);
+    }
 }

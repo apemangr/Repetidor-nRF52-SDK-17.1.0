@@ -113,11 +113,11 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
             p_scan_evt->params.connected.p_connected;
 
         NRF_LOG_RAW_INFO(
-            "\n\nConectado a dispositivo autorizado: "
-            "%02x:%02x:%02x:%02x:%02x:%02x",
-            p_connected->peer_addr.addr[0], p_connected->peer_addr.addr[1],
-            p_connected->peer_addr.addr[2], p_connected->peer_addr.addr[3],
-            p_connected->peer_addr.addr[4], p_connected->peer_addr.addr[5]);
+            "\n\n\033[1;32mConectado a dispositivo autorizado:\033[0m "
+            "\033[1;36m%02x:%02x:%02x:%02x:%02x:%02x\033[0m",
+            p_connected->peer_addr.addr[5], p_connected->peer_addr.addr[4],
+            p_connected->peer_addr.addr[3], p_connected->peer_addr.addr[2],
+            p_connected->peer_addr.addr[1], p_connected->peer_addr.addr[0]);
     }
     break;
 
@@ -183,57 +183,52 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
         err_code = ble_nus_c_tx_notif_enable(p_ble_nus_c);
         APP_ERROR_CHECK(err_code);
 
-        // Comando para solicitar el ultimo registro
-        // uint8_t cmd_buffer[32];
-        // string_to_command("08", cmd_buffer, sizeof(cmd_buffer));
-        // err_code = app_nus_client_send_data(cmd_buffer, strlen((const char *)cmd_buffer));
-        // if (err_code != NRF_SUCCESS)
-        // {
-        //     NRF_LOG_ERROR("Failed to send command: %d", err_code);
-        // }
+        //============================================================
+        //                         COMANDOS
+        //============================================================
 
-        // char cmd_enviar_hora_a_emisor[18] = {0};
-        // snprintf(cmd_enviar_hora_a_emisor, sizeof(cmd_enviar_hora_a_emisor),
-        //          "06%04u%02u%02u%02u%02u%02u", m_time.year, m_time.month, m_time.day,
-        //          m_time.hour, m_time.minute, m_time.second);
-        // //NRF_LOG_RAW_INFO("\nEnviando comando de hora actual: %s\n", cmd_enviar_hora_a_emisor);
-        // app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor, strlen((const char *)cmd_enviar_hora_a_emisor));
-
-        // Comando para solicitar la configuracion del emisor con 99
-        // uint8_t cmd_config[32];
-        // string_to_command("99", cmd_config, sizeof(cmd_config));
-
-        //==============================
-        // COMANDOS
-        //==============================
         uint8_t cmd_id[2];
 
+        //
         // Enviar la hora actual del repetidor al emisor
+        //
         char cmd_enviar_hora_a_emisor[24] = {0};
         snprintf(cmd_enviar_hora_a_emisor, sizeof(cmd_enviar_hora_a_emisor),
                  "060%04u.%02u.%02u %02u.%02u.%02u", m_time.year, m_time.month, m_time.day,
                  m_time.hour, m_time.minute, m_time.second);
         app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor, strlen((const char *)cmd_enviar_hora_a_emisor));
 
+        //
         // Solicitar los valores de los ADC y contador
+        //
         cmd_id[0] = '9';
         cmd_id[1] = '6';
 
-        err_code      = app_nus_client_send_data(cmd_id, 2);
+        err_code  = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
             NRF_LOG_RAW_INFO("\nFallo al solicitar datos de ADC y contador: %d", err_code);
         }
-    
-        // Solicitar el ultimo historial del emisor
-        cmd_id[0] = '0';
-        cmd_id[1] = '8';
 
-        err_code      = app_nus_client_send_data(cmd_id, 2);
-        if (err_code != NRF_SUCCESS)
+        //
+        // Solicitar el ultimo historial del emisor
+        //
+        if (m_time.hour >= 23 || m_time.hour == 0)
         {
-            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
+            cmd_id[0] = '0';
+            cmd_id[1] = '8';
+
+            err_code  = app_nus_client_send_data(cmd_id, 2);
+            if (err_code != NRF_SUCCESS)
+            {
+                NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
+            }
         }
+
+
+        //============================================================
+        //                  AQUI TERMINAN LOS COMANDOS
+        //============================================================
 
         break;
 
