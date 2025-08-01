@@ -602,6 +602,15 @@ void load_mac_from_flash(uint8_t *mac_out)
         mac_out[4] = 0x3E;
         mac_out[5] = 0xC7;
 
+        // mac_out[0] = 0x08;
+        // mac_out[1] = 0x63;
+        // mac_out[2] = 0x50;
+        // mac_out[3] = 0xD4;
+        // mac_out[4] = 0x4C;
+        // mac_out[5] = 0xD2;
+
+
+
         NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria: "
                          "%02X:%02X:%02X:%02X:%02X:%02X",
                          mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],

@@ -31,6 +31,54 @@
 // store_flash Flash_array = {0};
 adc_values_t adc_values = {0};
 
+// Sistema de sincronización con emisor
+typedef enum {
+    SYNC_STATE_NORMAL,           // Modo normal: lee tiempos desde flash
+    SYNC_STATE_EXTENDED_SEARCH   // Modo búsqueda: usa tiempo extendido fijo
+} sync_state_t;
+
+static sync_state_t current_sync_state = SYNC_STATE_NORMAL;
+static uint32_t cycles_without_emisor = 0;
+static const uint32_t MAX_FAILED_CYCLES = 2;
+static bool emisor_connected_this_cycle = false;
+
+// Funciones del sistema de sincronización
+void sync_system_reset_connection_flag(void)
+{
+    emisor_connected_this_cycle = false;
+}
+
+void sync_system_mark_emisor_connected(void)
+{
+    emisor_connected_this_cycle = true;
+    cycles_without_emisor = 0; // Reset contador de fallos
+    
+    // Si estábamos en búsqueda extendida, volver a normal INMEDIATAMENTE
+    if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH) {
+        current_sync_state = SYNC_STATE_NORMAL;
+        NRF_LOG_RAW_INFO("\n[SYNC] Emisor encontrado - Cambiando INMEDIATAMENTE a tiempo normal");
+        
+        // Reprogramar usando la función existente
+        restart_on_rtc();
+        NRF_LOG_RAW_INFO("\n[SYNC] RTC reprogramado con tiempo normal desde flash");
+    }
+}
+
+void sync_system_handle_cycle_end(void)
+{
+    if (!emisor_connected_this_cycle) {
+        cycles_without_emisor++;
+        NRF_LOG_RAW_INFO("\n[SYNC] Ciclo sin emisor: %d/%d", cycles_without_emisor, MAX_FAILED_CYCLES);
+        
+        if (cycles_without_emisor >= MAX_FAILED_CYCLES && current_sync_state == SYNC_STATE_NORMAL) {
+            current_sync_state = SYNC_STATE_EXTENDED_SEARCH;
+            NRF_LOG_RAW_INFO("\n[SYNC] Cambiando a modo BUSQUEDA EXTENDIDA");
+        }
+    } else {
+        NRF_LOG_RAW_INFO("\n[SYNC] Emisor conectado en este ciclo");
+    }
+}
+
 /**
  * @brief Lee todos los registros de historial e imprime la hora de cada uno
  *
@@ -202,13 +250,28 @@ void handle_rtc_events(void)
 
         if (m_device_active)
         {
+            // Manejar el final del ciclo activo
+            sync_system_handle_cycle_end();
+            
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
             disconnect_all_devices();
             advertising_stop();
             scan_stop();
             app_uart_close();
             m_device_active = false;
-            restart_sleep_rtc();
+            
+            // Decidir el tiempo de sleep según el estado de sincronización
+            if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH) {
+                // En búsqueda extendida: usar sleep fijo de 10 segundos
+                uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+                uint32_t sleep_time_fixed = 10000; // 10 segundos fijos
+                uint32_t next_event = (current_counter + (sleep_time_fixed / 1000) * 8) & 0xFFFFFF;
+                nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
+                NRF_LOG_RAW_INFO("\n[SYNC] Sleep extendido: 10s fijos");
+            } else {
+                // En modo normal: usar tiempo desde flash
+                restart_sleep_rtc();
+            }
         }
     }
 
@@ -218,7 +281,11 @@ void handle_rtc_events(void)
 
         if (!m_device_active)
         {
-            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
+            // Reset flag de conexión para el nuevo ciclo
+            sync_system_reset_connection_flag();
+            
+            const char* mode_str = (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
+            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)", mode_str);
 
             // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
             // INICIAR EL ADVERTISING Y EL SCANEO
@@ -242,7 +309,13 @@ void handle_rtc_events(void)
             advertising_start();
             uart_init();
             m_device_active = true;
-            restart_on_rtc();
+            
+            // Decidir qué función de RTC usar según el estado de sincronización
+            if (current_sync_state == SYNC_STATE_NORMAL) {
+                restart_on_rtc(); // Usa tiempo desde flash
+            } else {
+                restart_on_rtc_search_mode(); // Usa tiempo fijo para búsqueda del emisor
+            }
         }
     }
 }
@@ -551,6 +624,9 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
     // Se recibieron los datos de los ADC's y contador
     if (data_ptr[0] == 0x96 && data_length == 9)
     {
+        // Marcar que el emisor se conectó en este ciclo
+        sync_system_mark_emisor_connected();
+        
         uint16_t pos  = 1;
         adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
         pos += 2;
@@ -559,15 +635,17 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         adc_values.contador = (data_ptr[pos] << 24) | (data_ptr[pos + 1] << 16) |
                               (data_ptr[pos + 2] << 8) | data_ptr[pos + 3];
 
-        NRF_LOG_RAW_INFO("\nDatos cortos recibidos (0x96):");
-        NRF_LOG_RAW_INFO("V1: %u, V2: %u", adc_values.V1, adc_values.V2);
-        NRF_LOG_RAW_INFO("Contador: %lu", adc_values.contador);
+        NRF_LOG_RAW_INFO("\nDatos cortos recibidos (0x96): ");
+        NRF_LOG_RAW_INFO("V1: %u, V2: %u,", adc_values.V1, adc_values.V2);
+        NRF_LOG_RAW_INFO(" Contador: %lu", adc_values.contador);
         NRF_LOG_FLUSH();
     }
 
     // Se recibio el 'ultimo' historial del emisor
     if (data_length > 20 && data_ptr[0] == 0x08)
     {
+        // Marcar que el emisor se conectó en este ciclo
+        sync_system_mark_emisor_connected();
         position = 1; // Comenzar después del primer byte
         // Desempaquetar datos
         uint8_t  day      = data_ptr[position++];

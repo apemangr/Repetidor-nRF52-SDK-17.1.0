@@ -37,6 +37,16 @@ void restart_on_rtc_extended(void)
     NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo extendido: %u ms", read_time);
 }
 
+void restart_on_rtc_search_mode(void)
+{
+    uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+    uint32_t search_time = EXTENDED_SEARCH_TIME_MS; // Usar tiempo fijo de variables.h
+    uint32_t next_event = (current_counter + (search_time / 1000) * 8) & 0xFFFFFF;
+    nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
+    NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo de BUSQUEDA: %u ms", search_time);
+}
+
+
 bool is_date_stored()
 {
     ret_code_t        err_code;
@@ -176,9 +186,11 @@ bool calendar_set_datetime(void)
     NRF_LOG_RAW_INFO(
         "\n\t>> Tiempo encendido\t: %d \t[segs]",
         read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
+
     NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo encendido ext\t: %d \t[segs]",
-        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS) / 1000);
+        "\n\t>> Tiempo encendido ext\t: %d \t[segs]");
+
+
     NRF_LOG_RAW_INFO(
         "\n\t>> Tiempo dormido\t: %d \t[segs]",
         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000);
@@ -231,12 +243,12 @@ bool calendar_set_datetime(void)
         NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
         NRF_LOG_FLUSH();
 
-        datetime_t now = {.year   = 2000,
-                          .month  = 2,
-                          .day    = 29,
-                          .hour   = 23,
-                          .minute = 59,
-                          .second = 50};
+        datetime_t now = {.year   = 2025,
+                          .month  = 8,
+                          .day    = 1,
+                          .hour   = 10,
+                          .minute = 55,
+                          .second = 30};
         calendar_set_time(&now);
         NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
                          now.year, now.month, now.day, now.hour, now.minute,
