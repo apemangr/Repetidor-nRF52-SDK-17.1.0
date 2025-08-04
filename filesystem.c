@@ -1003,18 +1003,16 @@ ret_code_t delete_history_record_by_id(uint16_t record_id)
         
         if (ret == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> Registro ID %u eliminado correctamente\x1b[0m", record_id);
-            
             // Ejecutar recolección de basura para liberar espacio
             nrf_delay_ms(100);
             ret_code_t gc_ret = fds_gc();
             if (gc_ret == NRF_SUCCESS)
             {
-                NRF_LOG_RAW_INFO("\n>> Recolección de basura completada");
+                NRF_LOG_RAW_INFO("\n>> Recoleccion de basura completada");
             }
             else
             {
-                NRF_LOG_RAW_INFO("\n>> Advertencia: Error en recolección de basura: 0x%X", gc_ret);
+                NRF_LOG_RAW_INFO("\n>> Advertencia: Error en recoleccion de basura: 0x%X", gc_ret);
             }
         }
         else
@@ -1024,7 +1022,7 @@ ret_code_t delete_history_record_by_id(uint16_t record_id)
     }
     else if (ret == FDS_ERR_NOT_FOUND)
     {
-        NRF_LOG_RAW_INFO("\n\x1b[1;33m>> Registro ID %u no encontrado, no se realizó ninguna acción\x1b[0m", record_id);
+        NRF_LOG_RAW_INFO("\n\x1b[1;33m>> Registro ID %u no encontrado, no se realizo ninguna accion\x1b[0m", record_id);
         // No es un error, simplemente el registro no existe
         ret = NRF_SUCCESS;
     }

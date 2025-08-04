@@ -108,30 +108,29 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
         }
         else
         {
-            NRF_LOG_ERROR("Error al escribir el registro: %d", p_evt->result);
+            NRF_LOG_RAW_INFO("\nError al escribir el registro: %d", p_evt->result);
         }
     }
     else if (p_evt->id == FDS_EVT_UPDATE)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            // NRF_LOG_RAW_INFO(
-            //     "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
+            NRF_LOG_RAW_INFO("\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
         }
         else
         {
-            NRF_LOG_ERROR("Error al actualizar el registro: %d", p_evt->result);
+            NRF_LOG_RAW_INFO("\nError al actualizar el registro: %d", p_evt->result);
         }
     }
     else if (p_evt->id == FDS_EVT_DEL_RECORD)
     {
         if (p_evt->result == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\nRegistro eliminado correctamente.");
+            NRF_LOG_RAW_INFO("\n\x1b[1;32mRegistro eliminado correctamente.\x1b[0m");
         }
         else
         {
-            NRF_LOG_ERROR("Error al eliminar el registro: %d", p_evt->result);
+            NRF_LOG_RAW_INFO("\nError al eliminar el registro: %d", p_evt->result);
         }
     }
     else if (p_evt->id == FDS_EVT_DEL_FILE)
@@ -142,7 +141,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
         }
         else
         {
-            NRF_LOG_ERROR("Error al eliminar el archivo: %d", p_evt->result);
+            NRF_LOG_RAW_INFO("\nError al eliminar el archivo: %d", p_evt->result);
         }
     }
 }
@@ -349,28 +348,28 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato YYYYMMDDHHMMSS
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora - YYYYMMDDHHMMSS\x1b[0m");
-                    
+
                     if (p_evt->params.rx_data.length >= 19) // 5 de comando + 14 de fecha/hora
                     {
                         // Crear buffer local para garantizar terminador nulo
                         char fecha_buffer[15] = {0}; // 14 caracteres + terminador nulo
-                        
+
                         // Copiar exactamente 14 caracteres de fecha/hora
                         memcpy(fecha_buffer, &message[5], 14);
                         fecha_buffer[14] = '\0'; // Garantizar terminador nulo
-                        
+
                         // Debug: mostrar cadena recibida
-                        NRF_LOG_RAW_INFO("\n> Cadena de fecha recibida: '%s' (longitud: %d)", 
+                        NRF_LOG_RAW_INFO("\n> Cadena de fecha recibida: '%s' (longitud: %d)",
                                          fecha_buffer, strlen(fecha_buffer));
-                        
+
                         // Crear estructura de fecha local
                         datetime_t dt = {0};
-                        
+
                         // Parsing con validación mejorada
-                        int parsed = sscanf(fecha_buffer, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", 
-                                           &dt.year, &dt.month, &dt.day, 
-                                           &dt.hour, &dt.minute, &dt.second);
-                        
+                        int parsed = sscanf(fecha_buffer, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu",
+                                            &dt.year, &dt.month, &dt.day,
+                                            &dt.hour, &dt.minute, &dt.second);
+
                         if (parsed == 6)
                         {
                             // Validación básica de rangos
@@ -381,12 +380,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             {
                                 NRF_LOG_RAW_INFO("\n> Fecha parseada correctamente: "
                                                  "%04u-%02u-%02u %02u:%02u:%02u",
-                                                 dt.year, dt.month, dt.day, 
+                                                 dt.year, dt.month, dt.day,
                                                  dt.hour, dt.minute, dt.second);
-                                
+
                                 // Guardar en flash
                                 err_code = write_date_to_flash(&dt);
-                                
+
                                 if (err_code == NRF_SUCCESS)
                                 {
                                     NRF_LOG_RAW_INFO("\n\x1b[1;32m> Fecha guardada exitosamente en flash\x1b[0m");
@@ -412,7 +411,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     else
                     {
-                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, esperada: 19+\x1b[0m", 
+                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, esperada: 19+\x1b[0m",
                                         p_evt->params.rx_data.length);
                         NRF_LOG_RAW_INFO("\n> Formato: 11108YYYYMMDDHHMMSS");
                     }
@@ -447,13 +446,13 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de encendido extendido excede el máximo "
-                                            "permitido (666 segundos).");
+                            NRF_LOG_RAW_INFO("\nEl tiempo de encendido extendido excede el maximo "
+                                             "permitido (666 segundos).");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Comando 10 recibido con datos insuficientes.");
+                        NRF_LOG_RAW_INFO("\nComando 10 recibido con datos insuficientes.");
                     }
                     break;
                 }
@@ -462,6 +461,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de encendido extendido\x1b[0m");
                     uint32_t encendido_extendido_ms = read_time_from_flash(
                         TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu segundos",
+                                     encendido_extendido_ms / 1000);
 
                     break;
                 }
@@ -470,7 +471,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de historial por ID\x1b[0m");
                     if (p_evt->params.rx_data.length > 5) // Verifica que haya datos suficientes
                     {
-                        // Extrae el ID del registro como string (todo lo que sigue después de "11111")
+                        // Extrae el ID del registro como string (todo lo que sigue después de "11112")
                         size_t id_len    = p_evt->params.rx_data.length - 5;
                         char   id_str[8] = {0}; // Soporta hasta 7 dígitos, ajusta si necesitas más
                         if (id_len < sizeof(id_str))
@@ -478,21 +479,92 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             memcpy(id_str, &message[5], id_len);
                             id_str[id_len]       = '\0';
                             uint16_t registro_id = (uint16_t)atoi(id_str);
+
                             // Llama a la función para solicitar el registro por ID
                             store_history registro_historial;
                             err_code = read_history_record_by_id(registro_id, &registro_historial);
                             if (err_code == NRF_SUCCESS)
                             {
-                                NRF_LOG_RAW_INFO("\nSolicitud de registro %u enviada correctamente.", registro_id);
-                                // Imprime el registro de historial
+                                NRF_LOG_RAW_INFO("\nRegistro %u leido correctamente, enviando por NUS...", registro_id);
+
+                                // Preparar array de datos en formato hex (igual que send_all_history)
+                                uint8_t  data_array[244];
+                                uint16_t position = 0;
+
+                                // Byte 0: Magic
+                                data_array[position++] = 0x08;
+
+                                // Bytes 1-7: Fecha y hora
+                                data_array[position++] = registro_historial.day;
+                                data_array[position++] = registro_historial.month;
+                                data_array[position++] = (registro_historial.year >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.year & 0xFF);
+                                data_array[position++] = registro_historial.hour;
+                                data_array[position++] = registro_historial.minute;
+                                data_array[position++] = registro_historial.second;
+
+                                // Bytes 8-11: Contador (4 bytes) - convertir a big-endian
+                                data_array[position++] = (registro_historial.contador >> 24) & 0xFF;
+                                data_array[position++] = (registro_historial.contador >> 16) & 0xFF;
+                                data_array[position++] = (registro_historial.contador >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.contador & 0xFF);
+
+                                // Bytes 12-15: V1, V2 (2 bytes cada uno) - convertir a big-endian
+                                data_array[position++] = (registro_historial.V1 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V1 & 0xFF);
+                                data_array[position++] = (registro_historial.V2 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V2 & 0xFF);
+
+                                // Byte 16: Battery
+                                data_array[position++] = registro_historial.battery;
+
+                                // Bytes 17-28: MACs (rellenar con ceros)
+                                for (int j = 0; j < 12; j++)
+                                {
+                                    data_array[position++] = 0x00;
+                                }
+
+                                // Bytes 29-40: V3-V8 (2 bytes cada uno) - convertir a big-endian
+                                data_array[position++] = (registro_historial.V3 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V3 & 0xFF);
+                                data_array[position++] = (registro_historial.V4 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V4 & 0xFF);
+                                data_array[position++] = (registro_historial.V5 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V5 & 0xFF);
+                                data_array[position++] = (registro_historial.V6 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V6 & 0xFF);
+                                data_array[position++] = (registro_historial.V7 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V7 & 0xFF);
+                                data_array[position++] = (registro_historial.V8 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V8 & 0xFF);
+
+                                // Byte 41: Temperatura
+                                data_array[position++] = registro_historial.temp;
+
+                                // Byte 42-43: ID del registro solicitado (en lugar de last_position)
+                                data_array[position++] = (registro_id >> 8) & 0xFF;
+                                data_array[position++] = (registro_id & 0xFF);
+
+                                // Enviar por NUS al celular
+                                ret_code_t send_result = app_nus_server_send_data(data_array, position);
+                                if (send_result == NRF_SUCCESS)
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Registro #%u enviado por NUS exitosamente\x1b[0m", registro_id);
+                                }
+                                else
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando registro #%u por NUS: 0x%X\x1b[0m", registro_id, send_result);
+                                }
+
+                                // También imprimir en consola para depuración
                                 char titulo[41];
-                                snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", registro_id);
+                                snprintf(titulo, sizeof(titulo), "Historial enviado \x1B[33m#%u\x1B[0m", registro_id);
                                 print_history_record(&registro_historial, titulo);
                                 NRF_LOG_FLUSH();
                             }
                             else
                             {
-                                NRF_LOG_RAW_INFO("\nError al solicitar el registro %u: 0x%X", registro_id, err_code);
+                                NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error al leer el registro %u: 0x%X\x1b[0m", registro_id, err_code);
                             }
                         }
                         else
@@ -508,19 +580,27 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     if (p_evt->params.rx_data.length > 5)
                     {
-                        size_t   id_len      = p_evt->params.rx_data.length - 5;
-                        char     id_str[8]   = {0};
-                        uint16_t registro_id = (uint16_t)atoi(id_str);
+                        size_t id_len    = p_evt->params.rx_data.length - 5;
+                        char   id_str[8] = {0};
 
-                        err_code             = delete_history_record_by_id(registro_id);
-                        if (err_code == NRF_SUCCESS)
+                        if (id_len < sizeof(id_str))
                         {
-                            NRF_LOG_RAW_INFO("\nHistorial %u borrado con exito!", registro_id);
+                            memcpy(id_str, &message[5], id_len);
+                            id_str[id_len]       = '\0';
+                            uint16_t registro_id = (uint16_t)atoi(id_str);
+
+                            NRF_LOG_RAW_INFO("\n> ID a borrar: %u (%s)", registro_id, id_str);
+
+                            err_code = delete_history_record_by_id(registro_id);
                         }
                         else
                         {
-                            NRF_LOG_RAW_INFO("\nError al borrar el historial %u.", registro_id);
+                            NRF_LOG_WARNING("ID de registro demasiado largo.");
                         }
+                    }
+                    else
+                    {
+                        NRF_LOG_WARNING("Comando 13 recibido con datos insuficientes.");
                     }
 
                     break;

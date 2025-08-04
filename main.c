@@ -282,11 +282,11 @@ static void uart_init(void)
 
     if (err_code == NRF_SUCCESS)
     {
-        NRF_LOG_RAW_INFO("\n\x1b[1;32m[UART INIT]\x1b[0m UART inicializado correctamente");
+        NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m UART inicializado correctamente");
     }
     else
     {
-        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART INIT]\x1b[0m Error al inicializar UART: 0x%X", err_code);
+        NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m Error al inicializar UART: 0x%X", err_code);
     }
 
     APP_ERROR_CHECK(err_code);
