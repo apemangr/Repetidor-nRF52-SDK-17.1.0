@@ -10,7 +10,7 @@
 #define ECHOBACK_BLE_UART_DATA 1
 // TIEMPO
 #define DEFAULT_DEVICE_ON_TIME_MS          10000
-#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 40000
+#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 80000
 #define EXTENDED_SEARCH_TIME_MS            999000  // Tiempo fijo para búsqueda extendida del emisor
 #define DEFAULT_DEVICE_SLEEP_TIME_MS       (600000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
 

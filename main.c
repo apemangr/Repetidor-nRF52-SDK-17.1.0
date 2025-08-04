@@ -144,6 +144,58 @@ static volatile bool m_rtc_sleep_flag = false;
 static uint16_t      m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
 
+// Sistema de recuperación UART
+static uint32_t uart_error_count = 0;
+static const uint32_t UART_MAX_ERRORS = 5; // Reinicializar después de 5 errores consecutivos
+static bool uart_recovery_in_progress = false;
+
+// Forward declaration del manejador de eventos UART
+void uart_event_handler(app_uart_evt_t *p_event);
+
+// Función para reinicializar el UART en caso de errores repetidos
+static void uart_recovery_reinit(void)
+{
+    if (uart_recovery_in_progress)
+    {
+        return; // Evitar reentrada
+    }
+    
+    uart_recovery_in_progress = true;
+    
+    NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART RECOVERY]\x1b[0m Reinicializando UART después de %d errores...", uart_error_count);
+    
+    // Cerrar UART actual
+    app_uart_close();
+    nrf_delay_ms(100); // Pequeña pausa para asegurar limpieza
+    
+    // Reinicializar UART
+    ret_code_t err_code;
+    app_uart_comm_params_t const comm_params = {
+        .rx_pin_no    = RX_PIN_NUMBER,
+        .tx_pin_no    = TX_PIN_NUMBER,
+        .rts_pin_no   = RTS_PIN_NUMBER,
+        .cts_pin_no   = CTS_PIN_NUMBER,
+        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+        .use_parity   = false,
+        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
+    };
+
+    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE,
+                       uart_event_handler, APP_IRQ_PRIORITY_LOWEST, err_code);
+
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;32m[UART RECOVERY]\x1b[0m UART reinicializado exitosamente");
+        uart_error_count = 0; // Reset contador de errores
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART RECOVERY]\x1b[0m Error al reinicializar UART: 0x%X", err_code);
+    }
+    
+    uart_recovery_in_progress = false;
+}
+
 void uart_event_handler(app_uart_evt_t *p_event)
 {
 
@@ -157,6 +209,9 @@ void uart_event_handler(app_uart_evt_t *p_event)
         /**@snippet [Handling data from UART] */
 
     case APP_UART_DATA_READY:
+        // Reset contador de errores en comunicación exitosa
+        uart_error_count = 0;
+        
         UNUSED_VARIABLE(app_uart_get(&data_array[index]));
         index++;
         if ((data_array[index - 1] == '\n') || (data_array[index - 1] == '\r') ||
@@ -173,15 +228,31 @@ void uart_event_handler(app_uart_evt_t *p_event)
         /**@snippet [Handling data from UART] */
 
     case APP_UART_COMMUNICATION_ERROR:
-
-        NRF_LOG_ERROR("Communication error occurred while handling UART.");
-        APP_ERROR_HANDLER(p_event->data.error_communication);
+        uart_error_count++;
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error de comunicación #%d: 0x%x", 
+                         uart_error_count, p_event->data.error_communication);
+        
+        // Si se alcanza el límite de errores, reinicializar UART
+        if (uart_error_count >= UART_MAX_ERRORS)
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), iniciando recuperación...", 
+                             UART_MAX_ERRORS);
+            uart_recovery_reinit();
+        }
         break;
 
     case APP_UART_FIFO_ERROR:
-
-        NRF_LOG_ERROR("Error occurred in FIFO module used by UART.");
-        APP_ERROR_HANDLER(p_event->data.error_code);
+        uart_error_count++;
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error en FIFO #%d: 0x%x", 
+                         uart_error_count, p_event->data.error_code);
+        
+        // También considerar errores FIFO para recuperación
+        if (uart_error_count >= UART_MAX_ERRORS)
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), iniciando recuperación...", 
+                             UART_MAX_ERRORS);
+            uart_recovery_reinit();
+        }
         break;
 
     default:
@@ -191,8 +262,11 @@ void uart_event_handler(app_uart_evt_t *p_event)
 
 static void uart_init(void)
 {
+    ret_code_t err_code;
 
-    ret_code_t                   err_code;
+    // Reset contador de errores al inicializar
+    uart_error_count = 0;
+    uart_recovery_in_progress = false;
 
     app_uart_comm_params_t const comm_params = {
         .rx_pin_no    = RX_PIN_NUMBER,
@@ -205,6 +279,15 @@ static void uart_init(void)
 
     APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE,
                        uart_event_handler, APP_IRQ_PRIORITY_LOWEST, err_code);
+
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;32m[UART INIT]\x1b[0m UART inicializado correctamente");
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART INIT]\x1b[0m Error al inicializar UART: 0x%X", err_code);
+    }
 
     APP_ERROR_CHECK(err_code);
 }
@@ -274,6 +357,9 @@ void handle_rtc_events(void)
         {
             // Reset flag de conexión para el nuevo ciclo
             sync_system_reset_connection_flag();
+            
+            // Reset contador de errores UART al despertar (nuevo ciclo limpio)
+            uart_error_count = 0;
 
             const char *mode_str = (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)", mode_str);

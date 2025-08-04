@@ -349,7 +349,7 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
                 const char* tipo_str = (valor_type == TIEMPO_ENCENDIDO) ? "encendido" :
                                       (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido" :
                                       "sleep";
-                NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
+                //NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
             }
             else
             {
@@ -517,6 +517,7 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
     else if (err_code == FDS_ERR_NOT_FOUND)
     {
         err_code = fds_record_write(NULL, &record);
+        nrf_delay_ms(100);
         if (err_code == NRF_SUCCESS)
         {
             NRF_LOG_ERROR("Error escribiendo: 0x%X", err_code);

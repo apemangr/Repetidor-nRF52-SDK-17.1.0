@@ -268,7 +268,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
+                        char     time_str[4] = {message[5], message[6], message[7], message[8], '\0'};
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
                             atoi(time_str) * 1000;
                         if (time_in_seconds <= 999000)
@@ -324,13 +324,13 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de dormido excede el máximo "
-                                            "permitido (82500 segundos).");
+                            NRF_LOG_RAW_INFO("\nEl tiempo de dormido excede el maximo "
+                                             "permitido (82500 segundos).");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Comando 06 recibido con datos insuficientes.");
+                        NRF_LOG_RAW_INFO("\nComando 06 recibido con datos insuficientes.");
                     }
                     break;
                 }
@@ -340,43 +340,81 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: Leer tiempo de dormido\x1b[0m");
                     uint32_t sleep_time_ms = read_time_from_flash(
                         TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+                    // Imprime el tiempo de dormido
+                    NRF_LOG_RAW_INFO("\n> Tiempo de dormido configurado: %lu segundos",
+                                     sleep_time_ms / 1000);
                     break;
                 }
 
                 case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato YYYYMMDDHHMMSS
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora - YYYYMMDDHHMMSS\x1b[0m");
-                    if (p_evt->params.rx_data.length >= 19)
+                    
+                    if (p_evt->params.rx_data.length >= 19) // 5 de comando + 14 de fecha/hora
                     {
-                        const char *fecha_iso = &message[5];
-
-                        datetime_t  dt;
-                        if (sscanf(fecha_iso, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", &dt.year,
-                                   &dt.month, &dt.day, &dt.hour, &dt.minute,
-                                   &dt.second) == 6)
+                        // Crear buffer local para garantizar terminador nulo
+                        char fecha_buffer[15] = {0}; // 14 caracteres + terminador nulo
+                        
+                        // Copiar exactamente 14 caracteres de fecha/hora
+                        memcpy(fecha_buffer, &message[5], 14);
+                        fecha_buffer[14] = '\0'; // Garantizar terminador nulo
+                        
+                        // Debug: mostrar cadena recibida
+                        NRF_LOG_RAW_INFO("\n> Cadena de fecha recibida: '%s' (longitud: %d)", 
+                                         fecha_buffer, strlen(fecha_buffer));
+                        
+                        // Crear estructura de fecha local
+                        datetime_t dt = {0};
+                        
+                        // Parsing con validación mejorada
+                        int parsed = sscanf(fecha_buffer, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", 
+                                           &dt.year, &dt.month, &dt.day, 
+                                           &dt.hour, &dt.minute, &dt.second);
+                        
+                        if (parsed == 6)
                         {
-                            NRF_LOG_RAW_INFO("\nFecha recibida: "
-                                             "%04u-%02u-%02u %02u:%02u:%02u",
-                                             dt.year, dt.month, dt.day, dt.hour, dt.minute,
-                                             dt.second);
-
-                            // Llamar a la función modificada
-                            err_code = write_date_to_flash(&dt);
-
-                            if (err_code != NRF_SUCCESS)
+                            // Validación básica de rangos
+                            if (dt.year >= 2000 && dt.year <= 2099 &&
+                                dt.month >= 1 && dt.month <= 12 &&
+                                dt.day >= 1 && dt.day <= 31 &&
+                                dt.hour <= 23 && dt.minute <= 59 && dt.second <= 59)
                             {
-                                NRF_LOG_ERROR("Error guardando: 0x%X", err_code);
+                                NRF_LOG_RAW_INFO("\n> Fecha parseada correctamente: "
+                                                 "%04u-%02u-%02u %02u:%02u:%02u",
+                                                 dt.year, dt.month, dt.day, 
+                                                 dt.hour, dt.minute, dt.second);
+                                
+                                // Guardar en flash
+                                err_code = write_date_to_flash(&dt);
+                                
+                                if (err_code == NRF_SUCCESS)
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Fecha guardada exitosamente en flash\x1b[0m");
+                                }
+                                else
+                                {
+                                    NRF_LOG_ERROR("\n\x1b[1;31m> Error guardando fecha: 0x%X\x1b[0m", err_code);
+                                }
+                            }
+                            else
+                            {
+                                NRF_LOG_WARNING("\n\x1b[1;33m> Valores de fecha fuera de rango\x1b[0m");
+                                NRF_LOG_RAW_INFO("\n  Ano: %u, Mes: %u, Dia: %u", dt.year, dt.month, dt.day);
+                                NRF_LOG_RAW_INFO("\n  Hora: %u, Min: %u, Seg: %u", dt.hour, dt.minute, dt.second);
                             }
                         }
                         else
                         {
-                            NRF_LOG_WARNING("Formato inválido. Se esperaba "
-                                            "YYYYMMDDHHMMSS.");
+                            NRF_LOG_WARNING("\n\x1b[1;33m> Error en parsing. Elementos parseados: %d/6\x1b[0m", parsed);
+                            NRF_LOG_RAW_INFO("\n> Formato esperado: YYYYMMDDHHMMSS");
+                            NRF_LOG_RAW_INFO("\n> Ejemplo: 20250804143025 (2025-08-04 14:30:25)");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Datos insuficientes. Se esperaban 14 dígitos");
+                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, esperada: 19+\x1b[0m", 
+                                        p_evt->params.rx_data.length);
+                        NRF_LOG_RAW_INFO("\n> Formato: 11108YYYYMMDDHHMMSS");
                     }
                     break;
                 }
@@ -470,11 +508,11 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     if (p_evt->params.rx_data.length > 5)
                     {
-                        size_t id_len    = p_evt->params.rx_data.length - 5;
-                        char   id_str[8] = {0};
+                        size_t   id_len      = p_evt->params.rx_data.length - 5;
+                        char     id_str[8]   = {0};
                         uint16_t registro_id = (uint16_t)atoi(id_str);
 
-                        err_code = delete_history_record_by_id(registro_id);
+                        err_code             = delete_history_record_by_id(registro_id);
                         if (err_code == NRF_SUCCESS)
                         {
                             NRF_LOG_RAW_INFO("\nHistorial %u borrado con exito!", registro_id);
@@ -664,14 +702,14 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
             ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
             NRF_LOG_RAW_INFO("\nCelular desconectado\n");
             m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
+            // scan_start();
         }
         else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
         {
             NRF_LOG_RAW_INFO("\nEmisor desconectado");
             NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Buscando emisor...\n");
 
-            m_emisor_conn_handle =
-                BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
+            m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
             scan_start();
         }
         break;
