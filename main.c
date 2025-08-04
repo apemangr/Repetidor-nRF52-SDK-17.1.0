@@ -32,15 +32,16 @@
 adc_values_t adc_values = {0};
 
 // Sistema de sincronización con emisor
-typedef enum {
-    SYNC_STATE_NORMAL,           // Modo normal: lee tiempos desde flash
-    SYNC_STATE_EXTENDED_SEARCH   // Modo búsqueda: usa tiempo extendido fijo
+typedef enum
+{
+    SYNC_STATE_NORMAL,         // Modo normal: lee tiempos desde flash
+    SYNC_STATE_EXTENDED_SEARCH // Modo búsqueda: usa tiempo extendido fijo
 } sync_state_t;
 
-static sync_state_t current_sync_state = SYNC_STATE_NORMAL;
-static uint32_t cycles_without_emisor = 0;
-static const uint32_t MAX_FAILED_CYCLES = 2;
-static bool emisor_connected_this_cycle = false;
+static sync_state_t   current_sync_state          = SYNC_STATE_NORMAL;
+static uint32_t       cycles_without_emisor       = 0;
+static const uint32_t MAX_FAILED_CYCLES           = 1;
+static bool           emisor_connected_this_cycle = false;
 
 // Funciones del sistema de sincronización
 void sync_system_reset_connection_flag(void)
@@ -51,31 +52,36 @@ void sync_system_reset_connection_flag(void)
 void sync_system_mark_emisor_connected(void)
 {
     emisor_connected_this_cycle = true;
-    cycles_without_emisor = 0; // Reset contador de fallos
-    
+    cycles_without_emisor       = 0; // Reset contador de fallos
+
     // Si estábamos en búsqueda extendida, volver a normal INMEDIATAMENTE
-    if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH) {
+    if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH)
+    {
         current_sync_state = SYNC_STATE_NORMAL;
-        NRF_LOG_RAW_INFO("\n[SYNC] Emisor encontrado - Cambiando INMEDIATAMENTE a tiempo normal");
-        
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Emisor encontrado - Cambiando INMEDIATAMENTE a tiempo normal");
+
         // Reprogramar usando la función existente
         restart_on_rtc();
-        NRF_LOG_RAW_INFO("\n[SYNC] RTC reprogramado con tiempo normal desde flash");
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] RTC reprogramado con tiempo normal desde flash");
     }
 }
 
 void sync_system_handle_cycle_end(void)
 {
-    if (!emisor_connected_this_cycle) {
+    if (!emisor_connected_this_cycle)
+    {
         cycles_without_emisor++;
-        NRF_LOG_RAW_INFO("\n[SYNC] Ciclo sin emisor: %d/%d", cycles_without_emisor, MAX_FAILED_CYCLES);
-        
-        if (cycles_without_emisor >= MAX_FAILED_CYCLES && current_sync_state == SYNC_STATE_NORMAL) {
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Ciclo sin emisor: %d/%d", cycles_without_emisor, MAX_FAILED_CYCLES);
+
+        if (cycles_without_emisor >= MAX_FAILED_CYCLES && current_sync_state == SYNC_STATE_NORMAL)
+        {
             current_sync_state = SYNC_STATE_EXTENDED_SEARCH;
-            NRF_LOG_RAW_INFO("\n[SYNC] Cambiando a modo BUSQUEDA EXTENDIDA");
+            NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Cambiando a modo BUSQUEDA EXTENDIDA");
         }
-    } else {
-        NRF_LOG_RAW_INFO("\n[SYNC] Emisor conectado en este ciclo");
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Emisor conectado en este ciclo");
     }
 }
 
@@ -117,18 +123,6 @@ ret_code_t fds_print_all_record_times(void)
         // Obtener puntero a los datos del historial
         const store_history *p_history = (const store_history *)flash_record.p_data;
 
-        // Imprimir la hora del registro
-        // NRF_LOG_INFO("Registro %d: %04d-%02d-%02d",
-        //              record_desc.record_id,
-        //              p_history->year,
-        //              p_history->month,
-        //              p_history->day);
-        // NRF_LOG_INFO("Hora: %02d:%02d:%02d, Contador: %d",
-        //              p_history->hour,
-        //              p_history->minute,
-        //              p_history->second,
-        //              p_history->contador);
-
         record_count++;
 
         // Cerrar el registro
@@ -141,9 +135,6 @@ ret_code_t fds_print_all_record_times(void)
     return NRF_SUCCESS;
 }
 
-// #define RTC_ON_TICKS    (100 * 8)
-// #define RTC_SLEEP_TICKS (10 * 8)
-
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
 nrfx_rtc_t           m_rtc            = NRFX_RTC_INSTANCE(2);
 bool                 m_device_active  = true;
@@ -152,7 +143,6 @@ static volatile bool m_rtc_on_flag    = false;
 static volatile bool m_rtc_sleep_flag = false;
 static uint16_t      m_ble_nus_max_data_len =
     BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
-//
 
 void uart_event_handler(app_uart_evt_t *p_event)
 {
@@ -198,8 +188,6 @@ void uart_event_handler(app_uart_evt_t *p_event)
         break;
     }
 }
-
-/**@brief Function for initializing the UART. */
 
 static void uart_init(void)
 {
@@ -252,23 +240,26 @@ void handle_rtc_events(void)
         {
             // Manejar el final del ciclo activo
             sync_system_handle_cycle_end();
-            
+
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
             disconnect_all_devices();
             advertising_stop();
             scan_stop();
             app_uart_close();
             m_device_active = false;
-            
+
             // Decidir el tiempo de sleep según el estado de sincronización
-            if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH) {
+            if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH)
+            {
                 // En búsqueda extendida: usar sleep fijo de 10 segundos
-                uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+                uint32_t current_counter  = nrfx_rtc_counter_get(&m_rtc);
                 uint32_t sleep_time_fixed = 10000; // 10 segundos fijos
-                uint32_t next_event = (current_counter + (sleep_time_fixed / 1000) * 8) & 0xFFFFFF;
+                uint32_t next_event       = (current_counter + (sleep_time_fixed / 1000) * 8) & 0xFFFFFF;
                 nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
-                NRF_LOG_RAW_INFO("\n[SYNC] Sleep extendido: 10s fijos");
-            } else {
+                NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Sleep busqueda extendida: 10s fijos");
+            }
+            else
+            {
                 // En modo normal: usar tiempo desde flash
                 restart_sleep_rtc();
             }
@@ -283,8 +274,8 @@ void handle_rtc_events(void)
         {
             // Reset flag de conexión para el nuevo ciclo
             sync_system_reset_connection_flag();
-            
-            const char* mode_str = (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
+
+            const char *mode_str = (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)", mode_str);
 
             // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
@@ -309,11 +300,14 @@ void handle_rtc_events(void)
             advertising_start();
             uart_init();
             m_device_active = true;
-            
+
             // Decidir qué función de RTC usar según el estado de sincronización
-            if (current_sync_state == SYNC_STATE_NORMAL) {
+            if (current_sync_state == SYNC_STATE_NORMAL)
+            {
                 restart_on_rtc(); // Usa tiempo desde flash
-            } else {
+            }
+            else
+            {
                 restart_on_rtc_search_mode(); // Usa tiempo fijo para búsqueda del emisor
             }
         }
@@ -626,7 +620,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
     {
         // Marcar que el emisor se conectó en este ciclo
         sync_system_mark_emisor_connected();
-        
+
         uint16_t pos  = 1;
         adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
         pos += 2;

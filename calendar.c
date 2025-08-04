@@ -34,7 +34,7 @@ void restart_on_rtc_extended(void)
     // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido extendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
-    NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo extendido: %u ms", read_time);
+    NRF_LOG_RAW_INFO("\n> Reiniciando RTC con tiempo extendido: %u ms", read_time);
 }
 
 void restart_on_rtc_search_mode(void)
@@ -43,7 +43,7 @@ void restart_on_rtc_search_mode(void)
     uint32_t search_time = EXTENDED_SEARCH_TIME_MS; // Usar tiempo fijo de variables.h
     uint32_t next_event = (current_counter + (search_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
-    NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo de BUSQUEDA: %u ms", search_time);
+    NRF_LOG_RAW_INFO("\n> Reiniciando RTC con tiempo de BUSQUEDA: %u ms", search_time);
 }
 
 
@@ -188,8 +188,8 @@ bool calendar_set_datetime(void)
         read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
 
     NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo encendido ext\t: %d \t[segs]");
-
+        "\n\t>> Tiempo encendido ext\t: %d \t[segs]",
+        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS) / 1000);
 
     NRF_LOG_RAW_INFO(
         "\n\t>> Tiempo dormido\t: %d \t[segs]",

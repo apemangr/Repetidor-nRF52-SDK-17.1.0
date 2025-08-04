@@ -20,9 +20,9 @@
 #define APP_BLE_OBSERVER_PRIO 3
 
 // Parámetros de escaneo
-#define SCAN_INTERVAL          0x00A0      // Intervalo de escaneo en unidades de 0.625 ms (0x00A0 = 160 * 0.625 = 100 ms)
-#define SCAN_WINDOW            0x0050      // Ventana de escaneo en unidades de 0.625 ms (0x0050 = 80 * 0.625 = 50 ms)
-#define SCAN_DURATION          0           // Duración del escaneo en unidades de 10 ms, 0 = sin límite de tiempo
+#define SCAN_INTERVAL 0x00A0 // Intervalo de escaneo en unidades de 0.625 ms (0x00A0 = 160 * 0.625 = 100 ms)
+#define SCAN_WINDOW   0x0050 // Ventana de escaneo en unidades de 0.625 ms (0x0050 = 80 * 0.625 = 50 ms)
+#define SCAN_DURATION 0      // Duración del escaneo en unidades de 10 ms, 0 = sin límite de tiempo
 
 BLE_NUS_C_DEF(m_ble_nus_c);
 BLE_DB_DISCOVERY_DEF(m_db_disc);
@@ -32,6 +32,7 @@ NRF_BLE_SCAN_DEF(m_scan);
 
 static app_nus_client_on_data_received_t m_on_data_received = 0;
 static ble_gap_addr_t                    m_target_periph_addr;
+static bool                              m_rssi_requested = false;
 
 static ble_uuid_t const                  m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
                                                        .type = NUS_SERVICE_UUID_TYPE};
@@ -136,41 +137,28 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
         // Dispositivo que coincide con nuestro filtro (emisor)
         break;
 
-    case NRF_BLE_SCAN_EVT_NOT_FOUND: {
-        // Mostrar RSSI de dispositivos que no coinciden con el filtro
-        ble_gap_evt_adv_report_t const * p_adv_report = p_scan_evt->params.p_not_found;
-        int8_t rssi = p_adv_report->rssi;
-        
-        // Crear una cadena con la dirección MAC
-        char addr_str[18];
-        snprintf(addr_str, sizeof(addr_str), "%02x:%02x:%02x:%02x:%02x:%02x",
-                 p_adv_report->peer_addr.addr[5], p_adv_report->peer_addr.addr[4],
-                 p_adv_report->peer_addr.addr[3], p_adv_report->peer_addr.addr[2],
-                 p_adv_report->peer_addr.addr[1], p_adv_report->peer_addr.addr[0]);
-        
-        NRF_LOG_RAW_INFO("\n[SCAN] Dispositivo encontrado: %s RSSI: %d dBm",
-                         addr_str, rssi);
+    case NRF_BLE_SCAN_EVT_NOT_FOUND:
+        // No mostrar información de dispositivos que no coinciden con el filtro
         break;
-    }
     }
 }
 
 static void scan_init(void)
 {
-    ret_code_t          err_code;
-    nrf_ble_scan_init_t init_scan;
+    ret_code_t                   err_code;
+    nrf_ble_scan_init_t          init_scan;
     static ble_gap_scan_params_t scan_params;
 
     memset(&init_scan, 0, sizeof(init_scan));
     memset(&scan_params, 0, sizeof(scan_params));
 
     // Configurar parámetros de escaneo compatibles
-    scan_params.active = 1; // Escaneo activo para mejor recepción
-    scan_params.interval = SCAN_INTERVAL;
-    scan_params.window = SCAN_WINDOW;
-    scan_params.timeout = SCAN_DURATION;
-    scan_params.scan_phys = BLE_GAP_PHY_1MBPS;
-    
+    scan_params.active         = 1; // Escaneo activo para mejor recepción
+    scan_params.interval       = SCAN_INTERVAL;
+    scan_params.window         = SCAN_WINDOW;
+    scan_params.timeout        = SCAN_DURATION;
+    scan_params.scan_phys      = BLE_GAP_PHY_1MBPS;
+
     init_scan.connect_if_match = true;
     init_scan.conn_cfg_tag     = APP_BLE_CONN_CFG_TAG;
     init_scan.p_scan_param     = &scan_params;
@@ -245,16 +233,15 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
         //
         // if (m_time.hour >= 23 || m_time.hour == 0)
         // {
-            cmd_id[0] = '0';
-            cmd_id[1] = '8';
+        cmd_id[0] = '0';
+        cmd_id[1] = '8';
 
-            err_code  = app_nus_client_send_data(cmd_id, 2);
-            if (err_code != NRF_SUCCESS)
-            {
-                NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
-            }
+        err_code  = app_nus_client_send_data(cmd_id, 2);
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
+        }
         // }
-
 
         //============================================================
         //                  AQUI TERMINAN LOS COMANDOS
@@ -312,27 +299,18 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     switch (p_ble_evt->header.evt_id)
     {
-    case BLE_GAP_EVT_ADV_REPORT:
-    {
-        // Mostrar RSSI y dirección de todos los dispositivos escaneados
-        const ble_gap_evt_adv_report_t * p_adv_report = &p_gap_evt->params.adv_report;
-        int8_t rssi = p_adv_report->rssi;
-        
-        // Crear una cadena con la dirección MAC
-        char addr_str[18];
-        snprintf(addr_str, sizeof(addr_str), "%02x:%02x:%02x:%02x:%02x:%02x",
-                 p_adv_report->peer_addr.addr[5], p_adv_report->peer_addr.addr[4],
-                 p_adv_report->peer_addr.addr[3], p_adv_report->peer_addr.addr[2],
-                 p_adv_report->peer_addr.addr[1], p_adv_report->peer_addr.addr[0]);
-        
-        NRF_LOG_RAW_INFO("\n[SCAN] Dispositivo: %s RSSI: %d dBm", 
-                         addr_str, rssi);
-        break;
-    }
-        
     case BLE_GAP_EVT_CONNECTED:
         if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
+            // Solicitar RSSI una sola vez después de establecer la conexión
+            if (!m_rssi_requested) {
+                ret_code_t rssi_err = sd_ble_gap_rssi_start(conn_handle, 0, 0);
+                if (rssi_err == NRF_SUCCESS) {
+                    m_rssi_requested = true;
+                    NRF_LOG_RAW_INFO("Solicitando RSSI...");
+                }
+            }
+            
             err_code = ble_nus_c_handles_assign(
                 &m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
             APP_ERROR_CHECK(err_code);
@@ -347,7 +325,18 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
             APP_ERROR_CHECK(err_code);
         }
         break;
+    case BLE_GAP_EVT_RSSI_CHANGED:
+        {
+            // Mostrar RSSI cuando se recibe la actualización
+            int8_t rssi = p_gap_evt->params.rssi_changed.rssi;
+            NRF_LOG_RAW_INFO("\n[RSSI] Potencia de senal del emisor: %d dBm", rssi);
+            // Detener la monitorización de RSSI después de la primera lectura
+            sd_ble_gap_rssi_stop(conn_handle);
+        }
+        break;
     case BLE_GAP_EVT_DISCONNECTED:
+        // Resetear el flag de RSSI solicitado para la próxima conexión
+        m_rssi_requested = false;
         // NRF_LOG_RAW_INFO("\nBuscando emisor...");
         // scan_start();
         break;

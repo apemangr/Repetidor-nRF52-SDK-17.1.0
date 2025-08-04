@@ -9,10 +9,10 @@
 #define UART_RX_BUF_SIZE       256
 #define ECHOBACK_BLE_UART_DATA 1
 // TIEMPO
-#define DEFAULT_DEVICE_ON_TIME_MS          100000
-#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 99000
+#define DEFAULT_DEVICE_ON_TIME_MS          10000
+#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 40000
 #define EXTENDED_SEARCH_TIME_MS            999000  // Tiempo fijo para búsqueda extendida del emisor
-#define DEFAULT_DEVICE_SLEEP_TIME_MS       (00000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
+#define DEFAULT_DEVICE_SLEEP_TIME_MS       (600000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
 
 #define MAC_FILE_ID                        0x0001 /** STORAGE	 */
 #define MAC_RECORD_KEY                     0x0002
@@ -22,6 +22,7 @@
 #define TIME_ON_EXTENDED_RECORD_KEY        0x0006
 #define DATE_AND_TIME_FILE_ID              0x0007
 #define DATE_AND_TIME_RECORD_KEY           0x0008
+
 #define HISTORY_FILE_ID                    0x0009
 #define HISTORY_COUNTER_RECORD_KEY         0x000a
 #define HISTORY_RECORD_KEY                 0x1000

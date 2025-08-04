@@ -12,18 +12,8 @@ ret_code_t save_history_record_emisor(store_history const *p_history_data,
     fds_record_desc_t desc_counter = {0};
     fds_find_token_t  token        = {0};
 
-    // CRÍTICO: Copiar los datos a un buffer estático para evitar 
-    // problemas con variables locales que se destruyen
     memcpy(&g_temp_history_buffer, p_history_data, sizeof(store_history));
     
-    // Debug: Verificar que los datos se copiaron correctamente
-    NRF_LOG_RAW_INFO("\n[DEBUG] Offset: %u, Fecha: %02d/%02d/%04d", 
-                     offset, g_temp_history_buffer.day, g_temp_history_buffer.month, 
-                     g_temp_history_buffer.year);
-    NRF_LOG_RAW_INFO("\n[DEBUG] Contador: %lu, V1: %u, V2: %u", 
-                     g_temp_history_buffer.contador, g_temp_history_buffer.V1, 
-                     g_temp_history_buffer.V2);
-
     // Preparar nuevo registro histórico
     uint16_t     record_key = HISTORY_RECORD_KEY_START + offset;
     fds_record_t new_record = {
@@ -988,4 +978,59 @@ void delete_all_history(void)
     {
         NRF_LOG_RAW_INFO("\n[\033[1;31mERROR\033[0m] Error al correr el recolector de basura: %d", ret);
     }
+}
+
+ret_code_t delete_history_record_by_id(uint16_t record_id)
+{
+    ret_code_t        ret;
+    fds_record_desc_t desc = {0};
+    fds_find_token_t  token = {0};
+    
+    // Calcular la clave del registro usando el offset del ID
+    uint16_t record_key = HISTORY_RECORD_KEY_START + record_id;
+    
+    NRF_LOG_RAW_INFO("\n\n\x1b[1;33m--- Eliminando registro de historial ID: %u ---\x1b[0m", record_id);
+    NRF_LOG_RAW_INFO("\n> Buscando registro con KEY: 0x%04X", record_key);
+    
+    // Buscar el registro en la memoria flash
+    ret = fds_record_find(HISTORY_FILE_ID, record_key, &desc, &token);
+    
+    if (ret == NRF_SUCCESS)
+    {
+        // El registro existe, proceder a eliminarlo
+        ret = fds_record_delete(&desc);
+        
+        if (ret == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> Registro ID %u eliminado correctamente\x1b[0m", record_id);
+            
+            // Ejecutar recolección de basura para liberar espacio
+            nrf_delay_ms(100);
+            ret_code_t gc_ret = fds_gc();
+            if (gc_ret == NRF_SUCCESS)
+            {
+                NRF_LOG_RAW_INFO("\n>> Recolección de basura completada");
+            }
+            else
+            {
+                NRF_LOG_RAW_INFO("\n>> Advertencia: Error en recolección de basura: 0x%X", gc_ret);
+            }
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;31m>> Error al eliminar el registro ID %u: 0x%X\x1b[0m", record_id, ret);
+        }
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;33m>> Registro ID %u no encontrado, no se realizó ninguna acción\x1b[0m", record_id);
+        // No es un error, simplemente el registro no existe
+        ret = NRF_SUCCESS;
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m>> Error al buscar el registro ID %u: 0x%X\x1b[0m", record_id, ret);
+    }
+    
+    return ret;
 }

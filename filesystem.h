@@ -65,6 +65,7 @@ void       print_history_record(store_history const *p_record, const char *p_tit
 ret_code_t read_last_history_record(store_history *p_history_data);
 
 void       delete_all_history(void);
+ret_code_t delete_history_record_by_id(uint16_t record_id);
 ret_code_t send_all_history(void);
 void       history_send_next_packet(void);
 bool       history_send_is_active(void);

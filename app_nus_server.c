@@ -214,6 +214,11 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 // Manejo de comandos con un switch-case
                 switch (atoi(command)) // Convierte el comando a entero
                 {
+
+                    //================================================================================================
+                    // COMANDOS REPETIDOR
+                    //================================================================================================
+
                 case 1: // Comando 01: Guardar MAC
                 {
                     size_t mac_length = p_evt->params.rx_data.length - 5;
@@ -242,24 +247,18 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
-                case 2: // Comando 02: Muestra la MAC custom guardada en la
-                    // memoria flash
-                    {
-                        uint8_t mac_print[6];
-                        // Carga la MAC desde la memoria flash
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando "
-                                         "MAC "
-                                         "guardada \x1b[0m");
-                        load_mac_from_flash(mac_print);
-                        // muestra la MAC
-                    }
 
-                    break;
+                case 2: // Comando 02: Muestra la MAC custom guardada en memoria
+                {
+                    uint8_t mac_print[6];
+                    // Carga la MAC desde la memoria flash
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando MAC guardada \x1b[0m");
+                    load_mac_from_flash(mac_print);
+                }
+                break;
 
                 case 3: // Comando 03: Reiniciar el dispositivo
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 03 recibido: "
-                                     "Reiniciando "
-                                     "dispositivo...\n\n\n\n");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 03 recibido: Reiniciando dispositivo...\n\n\n\n");
                     nrf_delay_ms(1000);
                     NVIC_SystemReset();
 
@@ -267,13 +266,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 4: // Guardar tiempo de encendido
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes
+                    if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
                         char     time_str[4] = {message[5], message[6], message[7], '\0'};
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
                             atoi(time_str) * 1000;
-                        if (time_in_seconds <= 666000)
+                        if (time_in_seconds <= 999000)
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 04 recibido: "
                                              "Cambiar tiempo de encendido \x1b[0m");
@@ -281,47 +279,53 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de encendido excede el máximo "
-                                            "permitido (666 segundos).");
+                            NRF_LOG_RAW_INFO("\nEl tiempo de encendido excede el maximo "
+                                             "permitido (999 segundos).");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Comando 04 recibido con datos insuficientes.");
+                        NRF_LOG_RAW_INFO("\nComando 04 recibido con datos insuficientes.");
                     }
                     break;
                 }
 
-                case 5: // Comando 05: Leer tiempo de encendido desde la
-                    // memoria flash
-                    {
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: "
-                                         "Leer tiempo de encendido \x1b[0m");
-                        uint32_t sleep_time_ms = read_time_from_flash(
-                            TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+                case 5: // Comando 05: Leer tiempo de encendido desde la memoria
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: Leer tiempo de encendido \x1b[0m");
+                    uint32_t sleep_time_ms = read_time_from_flash(
+                        TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case 6: // Comando 06: Guardar tiempo de apagado
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes
+                    if (p_evt->params.rx_data.length >= 6)
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
+                        // Calcular la longitud del número (hasta 5 caracteres máximo)
+                        size_t time_length = p_evt->params.rx_data.length - 5; // Restar "11106"
+                        if (time_length > 5)
+                            time_length = 5; // Máximo 5 caracteres
+
+                        char time_str[6] = {0}; // Buffer para hasta 5 dígitos + terminador nulo
+                        memcpy(time_str, &message[5], time_length);
+                        time_str[time_length] = '\0';
+
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
                             atoi(time_str) * 1000;
-                        if (time_in_seconds <= 6666000) // Verifica que no exceda el máximo
-                        // permitido
+                        if (time_in_seconds <= 82500000) // Máximo 82500 segundos
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 06 recibido: "
                                              "Cambiar tiempo de dormido \x1b[0m");
+                            NRF_LOG_RAW_INFO("\n> Tiempo configurado: %lu segundos (%s)",
+                                             time_in_seconds / 1000, time_str);
                             write_time_to_flash(TIEMPO_SLEEP, time_in_seconds);
                         }
                         else
                         {
                             NRF_LOG_WARNING("El tiempo de dormido excede el máximo "
-                                            "permitido (6666 segundos).");
+                                            "permitido (82500 segundos).");
                         }
                     }
                     else
@@ -331,28 +335,22 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
 
-                case 7: // Comando 07: Leer tiempo de apagado desde la memoria flash
+                case 7: // Comando 07: Leer tiempo de dormido desde la memoria flash
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: "
-                                     "Leer tiempo de dormido\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: Leer tiempo de dormido\x1b[0m");
                     uint32_t sleep_time_ms = read_time_from_flash(
                         TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
-
                     break;
                 }
 
                 case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato YYYYMMDDHHMMSS
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar "
-                                     "fecha y hora\x1b[0m");
-
-                    if (p_evt->params.rx_data.length >=
-                        19) // 5 de comando + 14 de fecha/hora
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora - YYYYMMDDHHMMSS\x1b[0m");
+                    if (p_evt->params.rx_data.length >= 19)
                     {
-                        const char *fecha_iso =
-                            &message[5]; // Apunta al inicio de la fecha/hora
+                        const char *fecha_iso = &message[5];
 
-                        datetime_t dt;
+                        datetime_t  dt;
                         if (sscanf(fecha_iso, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", &dt.year,
                                    &dt.month, &dt.day, &dt.hour, &dt.minute,
                                    &dt.second) == 6)
@@ -382,25 +380,23 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
+
                 case 9: // Comando 09: Leer fecha y hora almacenada en flash
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 09 recibido: Leer fecha "
-                                     "y hora\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 09 recibido: Leer fecha y hora\x1b[0m");
 
-                    // Leer fecha de la memoria flash
                     datetime_t dt = read_date_from_flash();
 
-                    // Mostrar fecha leída
                     NRF_LOG_RAW_INFO(
                         "\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u", dt.year,
                         dt.month, dt.day, dt.hour, dt.minute, dt.second);
 
                     break;
                 }
+
                 case 10: // Guarda en la memoria el tiempo de encendido extendido
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes 
+                    if (p_evt->params.rx_data.length >= 6)
                     {
                         char     time_str[4] = {message[5], message[6], message[7], '\0'};
                         uint32_t time_in_seconds_extended __attribute__((aligned(4))) =
@@ -413,7 +409,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de encendido excede el máximo "
+                            NRF_LOG_WARNING("El tiempo de encendido extendido excede el máximo "
                                             "permitido (666 segundos).");
                         }
                     }
@@ -468,9 +464,33 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
-                case 98: // Pide una lectura de todos los historiales
+                case 13: // Comando para borrar un historial segun el historial
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 98: Solicitud del historial completo\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Solicitar el borrado de un historial por ID\x1b[0m");
+
+                    if (p_evt->params.rx_data.length > 5)
+                    {
+                        size_t id_len    = p_evt->params.rx_data.length - 5;
+                        char   id_str[8] = {0};
+                        uint16_t registro_id = (uint16_t)atoi(id_str);
+
+                        err_code = delete_history_record_by_id(registro_id);
+                        if (err_code == NRF_SUCCESS)
+                        {
+                            NRF_LOG_RAW_INFO("\nHistorial %u borrado con exito!", registro_id);
+                        }
+                        else
+                        {
+                            NRF_LOG_RAW_INFO("\nError al borrar el historial %u.", registro_id);
+                        }
+                    }
+
+                    break;
+                }
+
+                case 14: // Pide una lectura de todos los historiales
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 14: Solicitud del historial completo\x1b[0m");
                     // Llama a la función para solicitar el historial completo
                     send_all_history();
 
@@ -483,6 +503,11 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     delete_all_history();
                     break;
                 }
+
+                    //================================================================================================
+                    // AQUI TERMINAN LOS COMANDOS REPETIDOR
+                    //================================================================================================
+
                 default: // Comando desconocido
                     NRF_LOG_WARNING("Comando desconocido: %s", command);
                     break;
