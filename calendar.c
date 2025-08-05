@@ -220,12 +220,12 @@ bool calendar_set_datetime(void)
             NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
             NRF_LOG_FLUSH();
 
-            datetime_t now = {.year   = 2000,
-                              .month  = 1,
-                              .day    = 1,
-                              .hour   = 0,
-                              .minute = 0,
-                              .second = 0};
+            datetime_t now = {.year   = 2025,
+                              .month  = 8,
+                              .day    = 4,
+                              .hour   = 17,
+                              .minute = 35,
+                              .second = 00};
             calendar_set_time(&now);
             NRF_LOG_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
                          now.year, now.month, now.day, now.hour, now.minute,
@@ -245,10 +245,10 @@ bool calendar_set_datetime(void)
 
         datetime_t now = {.year   = 2025,
                           .month  = 8,
-                          .day    = 1,
-                          .hour   = 10,
-                          .minute = 55,
-                          .second = 30};
+                          .day    = 4,
+                          .hour   = 17,
+                          .minute = 35,
+                          .second = 00};
         calendar_set_time(&now);
         NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
                          now.year, now.month, now.day, now.hour, now.minute,

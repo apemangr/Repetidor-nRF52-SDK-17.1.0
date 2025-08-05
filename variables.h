@@ -2,7 +2,6 @@
 #define VARIABLES_H
 
 #define RTC_PRESCALER          4095
-#define MAGIC_PASSWORD         0xABCD /** MAGIC */
 #define APP_BLE_CONN_CFG_TAG   1      /** NORDIC VARS */
 #define APP_BLE_OBSERVER_PRIO  3
 #define UART_TX_BUF_SIZE       256

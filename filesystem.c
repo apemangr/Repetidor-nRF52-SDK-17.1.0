@@ -517,11 +517,6 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
     else if (err_code == FDS_ERR_NOT_FOUND)
     {
         err_code = fds_record_write(NULL, &record);
-        nrf_delay_ms(100);
-        if (err_code == NRF_SUCCESS)
-        {
-            NRF_LOG_ERROR("Error escribiendo: 0x%X", err_code);
-        }
     }
     else
     {

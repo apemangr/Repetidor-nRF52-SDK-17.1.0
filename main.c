@@ -371,9 +371,7 @@ void handle_rtc_events(void)
             // los valores de los ADC
             advertising_init();
 
-            // write_date_to_flash(&m_time);
-
-            // fds_print_all_record_times(HISTORY_FILE_ID);
+            write_date_to_flash(&m_time);
 
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "
