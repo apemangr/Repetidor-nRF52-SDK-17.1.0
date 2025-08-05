@@ -1235,7 +1235,7 @@
 // <e> NRF_CRYPTO_BACKEND_MICRO_ECC_ENABLED - Enable the micro-ecc backend.
 //==========================================================
 #ifndef NRF_CRYPTO_BACKEND_MICRO_ECC_ENABLED
-#define NRF_CRYPTO_BACKEND_MICRO_ECC_ENABLED 0
+#define NRF_CRYPTO_BACKEND_MICRO_ECC_ENABLED 1
 #endif
 // <q> NRF_CRYPTO_BACKEND_MICRO_ECC_ECC_SECP192R1_ENABLED  - Enable secp192r1 (NIST 192-bit) curve
  
@@ -1441,7 +1441,7 @@
  
 
 #ifndef BLE_DFU_ENABLED
-#define BLE_DFU_ENABLED 0
+#define BLE_DFU_ENABLED 1
 #endif
 
 // <q> NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS  - Buttonless DFU supports bonds.
@@ -7396,7 +7396,7 @@
  
 
 #ifndef NRF_PWR_MGMT_CONFIG_AUTO_SHUTDOWN_RETRY
-#define NRF_PWR_MGMT_CONFIG_AUTO_SHUTDOWN_RETRY 0
+#define NRF_PWR_MGMT_CONFIG_AUTO_SHUTDOWN_RETRY 1
 #endif
 
 // <q> NRF_PWR_MGMT_CONFIG_USE_SCHEDULER  - Module will use @ref app_scheduler.
@@ -11447,7 +11447,7 @@
  
 
 #ifndef NRF_SDH_BLE_SERVICE_CHANGED
-#define NRF_SDH_BLE_SERVICE_CHANGED 0
+#define NRF_SDH_BLE_SERVICE_CHANGED 1
 #endif
 
 // </h> 

@@ -813,7 +813,7 @@ int main(void)
     NRF_LOG_RAW_INFO("\n\033[1;36m====================\033[0m "
                      "\033[1;33mINICIO DEL SISTEMA\033[0m"
                      " \033[1;36m====================\033[0m\n");
-    NRF_LOG_RAW_INFO("\t\t Firmware 0.0.1 por\033[0m "
+    NRF_LOG_RAW_INFO("\t\t Firmware 0.0.2 por\033[0m "
                      "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
 
     base_timer_init();
