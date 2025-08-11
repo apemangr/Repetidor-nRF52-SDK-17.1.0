@@ -16,4 +16,11 @@ void     app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
 void     scan_stop(void);
 void     scan_start(void);
 
+// Funciones del modo de escaneo de paquetes
+void     packet_scan_mode_start(void);
+void     packet_scan_mode_stop(void);
+bool     packet_scan_mode_is_active(void);
+uint32_t packet_scan_mode_get_count(void);
+void     packet_scan_mode_update(void);
+
 #endif

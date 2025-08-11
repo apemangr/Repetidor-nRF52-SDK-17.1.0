@@ -1,5 +1,6 @@
 #include "app_nus_server.h"
 
+#include "app_nus_client.h"
 #include "app_timer.h"
 #include "app_uart.h"
 #include "ble_advdata.h"
@@ -214,9 +215,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 switch (atoi(command)) // Convierte el comando a entero
                 {
 
-                    //================================================================================================
-                    // COMANDOS REPETIDOR
-                    //================================================================================================
+
+//================================================================================================
+// COMANDOS REPETIDOR
+//================================================================================================
 
                 case 1: // Comando 01: Guardar MAC
                 {
@@ -252,7 +254,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     uint8_t mac_print[6];
                     // Carga la MAC desde la memoria flash
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando MAC guardada \x1b[0m");
-                    load_mac_from_flash(mac_print);
+                    load_mac_from_flash(mac_print, MAC_FILTRADO);
                 }
                 break;
 
@@ -612,6 +614,139 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     // Llama a la función para solicitar el historial completo
                     send_all_history();
 
+                    break;
+                }
+                case 15: // Comando para iniciar modo de escaneo de paquetes
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 15 recibido: Iniciar modo de escaneo de paquetes\x1b[0m");
+                    
+                    if (packet_scan_mode_is_active())
+                    {
+                        NRF_LOG_RAW_INFO("\n\x1b[1;33m> Modo de escaneo ya está activo\x1b[0m");
+                        // Enviar estado actual
+                        char response[50];
+                        snprintf(response, sizeof(response), "SCAN_ACTIVE:%lu", packet_scan_mode_get_count());
+                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                    }
+                    else
+                    {
+                        packet_scan_mode_start();
+                        if (packet_scan_mode_is_active())
+                        {
+                            app_nus_server_send_data((uint8_t*)"SCAN_STARTED", 12);
+                        }k
+                        else
+                        {
+                            app_nus_server_send_data((uint8_t*)"SCAN_ERROR", 10);
+                        }
+                    }
+                    break;
+                }
+                case 16: // Comando para detener modo de escaneo y obtener resultados
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 16 recibido: Detener modo de escaneo\x1b[0m");
+                    
+                    if (packet_scan_mode_is_active())
+                    {
+                        uint32_t final_count = packet_scan_mode_get_count();
+                        packet_scan_mode_stop();
+                        
+                        // Enviar resultado final
+                        char response[50];
+                        snprintf(response, sizeof(response), "SCAN_RESULT:%lu", final_count);
+                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        
+                        NRF_LOG_RAW_INFO("\n\x1b[1;32m> Escaneo detenido. Total de paquetes: %lu\x1b[0m", final_count);
+                    }
+                    else
+                    {
+                        app_nus_server_send_data((uint8_t*)"SCAN_NOT_ACTIVE", 15);
+                        NRF_LOG_RAW_INFO("\n\x1b[1;33m> Modo de escaneo no está activo\x1b[0m");
+                    }
+                    break;
+                }
+                case 17: // Comando para consultar estado del modo de escaneo
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Consultar estado del escaneo\x1b[0m");
+                    
+                    if (packet_scan_mode_is_active())
+                    {
+                        uint32_t current_count = packet_scan_mode_get_count();
+                        char response[50];
+                        snprintf(response, sizeof(response), "SCAN_STATUS:ACTIVE:%lu", current_count);
+                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Activo, Paquetes detectados: %lu\x1b[0m", current_count);
+                    }
+                    else
+                    {
+                        app_nus_server_send_data((uint8_t*)"SCAN_STATUS:INACTIVE", 20);
+                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Inactivo\x1b[0m");
+                    }
+                    break;
+                }
+                case 18: // Comando para guardar MAC de escaneo
+                {
+                    size_t mac_length = p_evt->params.rx_data.length - 5;
+                    if (mac_length == 12) // Verifica que la longitud sea válida (12 caracteres hex = 6 bytes)
+                    {
+                        uint8_t scan_mac[6];
+                        for (size_t i = 0; i < 6; i++)
+                        {
+                            char byte_str[3] = {message[5 + i * 2], message[6 + i * 2], '\0'};
+                            scan_mac[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
+                        }
+                        
+                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 18 recibido: Guardar MAC de escaneo\x1b[0m");
+                        NRF_LOG_RAW_INFO("\n> MAC de escaneo recibida: %02X:%02X:%02X:%02X:%02X:%02X",
+                                         scan_mac[5], scan_mac[4], scan_mac[3], 
+                                         scan_mac[2], scan_mac[1], scan_mac[0]);
+
+                        // Guardar la MAC de escaneo en la memoria flash
+                        save_mac_to_flash_scan(scan_mac);
+                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_SAVED", 14);
+                    }
+                    else
+                    {
+                        NRF_LOG_WARNING("Longitud de MAC de escaneo inválida: %d", mac_length);
+                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_ERROR", 14);
+                    }
+                    break;
+                }
+                case 19: // Comando para leer MAC de escaneo guardada
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 19 recibido: Leer MAC de escaneo\x1b[0m");
+                    
+                    uint8_t scan_mac[6];
+                    load_mac_from_flash(scan_mac, MAC_SCANEO);
+                    
+                    // Verificar si hay una MAC válida guardada
+                    bool mac_is_zero = true;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (scan_mac[i] != 0)
+                        {
+                            mac_is_zero = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!mac_is_zero)
+                    {
+                        NRF_LOG_RAW_INFO("\n> MAC de escaneo: %02X:%02X:%02X:%02X:%02X:%02X",
+                                         scan_mac[5], scan_mac[4], scan_mac[3], 
+                                         scan_mac[2], scan_mac[1], scan_mac[0]);
+                        
+                        char response[20];
+                        snprintf(response, sizeof(response), "SCAN_MAC:%02X%02X%02X%02X%02X%02X",
+                                scan_mac[5], scan_mac[4], scan_mac[3], 
+                                scan_mac[2], scan_mac[1], scan_mac[0]);
+                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                    }
+                    else
+                    {
+                        NRF_LOG_RAW_INFO("\n> No hay MAC de escaneo configurada");
+                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_NONE", 13);
+                    }
                     break;
                 }
                 case 99: // Comando para borrar todos los historiales

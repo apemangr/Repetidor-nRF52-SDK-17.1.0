@@ -2,10 +2,12 @@
 
 #include "app_error.h"
 #include "app_nus_server.h"
+#include "app_timer.h"
 #include "ble_db_discovery.h"
 #include "ble_nus_c.h"
 #include "bsp_btn_ble.h"
 #include "fds.h"
+#include "filesystem.h"
 #include "nordic_common.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_scan.h"
@@ -37,6 +39,18 @@ static bool                              m_rssi_requested = false;
 static ble_uuid_t const                  m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
                                                        .type = NUS_SERVICE_UUID_TYPE};
 
+// Variables del modo de escaneo de paquetes
+static bool     m_packet_scan_mode_active = false;
+static uint32_t m_packet_scan_count = 0;
+static uint8_t  m_scan_target_mac[6] = {0};
+static bool     m_first_packet_detected = false;
+static uint32_t m_packet_scan_start_time = 0;
+static uint32_t m_packet_scan_last_packet_time = 0;
+
+// Declaraciones de funciones para el modo de escaneo
+static uint32_t get_rtc_time_ms(void);
+static bool is_target_mac_packet(const ble_gap_evt_adv_report_t *p_adv_report);
+
 // Función para inicializar `m_target_periph_addr` con la MAC leída
 static void target_periph_addr_init(void)
 {
@@ -44,7 +58,7 @@ static void target_periph_addr_init(void)
     // 80 --
     NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Configurando filtrado...");
     nrf_delay_ms(20);
-    load_mac_from_flash(m_target_periph_addr.addr);
+    load_mac_from_flash(m_target_periph_addr.addr, MAC_FILTRADO);
 
     // Verifica si la MAC se ha cargado correctamente
     if (m_target_periph_addr.addr[0] == 0 && m_target_periph_addr.addr[1] == 0 &&
@@ -299,6 +313,30 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     switch (p_ble_evt->header.evt_id)
     {
+    case BLE_GAP_EVT_ADV_REPORT:
+        // Procesar paquetes advertising en modo de escaneo
+        if (m_packet_scan_mode_active)
+        {
+            const ble_gap_evt_adv_report_t *p_adv_report = &p_gap_evt->params.adv_report;
+            
+            // Verificar si el paquete es del emisor objetivo
+            if (is_target_mac_packet(p_adv_report))
+            {
+                m_packet_scan_count++;
+                m_packet_scan_last_packet_time = get_rtc_time_ms();
+                
+                if (!m_first_packet_detected)
+                {
+                    m_first_packet_detected = true;
+                    NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Primer paquete detectado!");
+                }
+                
+                NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m Paquete #%lu detectado (RSSI: %d dBm)", 
+                                 m_packet_scan_count, p_adv_report->rssi);
+            }
+        }
+        break;
+        
     case BLE_GAP_EVT_CONNECTED:
         if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
@@ -346,6 +384,137 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 void scan_stop(void)
 {
     nrf_ble_scan_stop();
+}
+
+// Función para obtener el tiempo actual del RTC en milisegundos
+static uint32_t get_rtc_time_ms(void)
+{
+    // El RTC cuenta a 8Hz (cada tick = 125ms)
+    // nrfx_rtc_counter_get devuelve el contador actual
+    extern nrfx_rtc_t m_rtc;
+    uint32_t rtc_ticks = nrfx_rtc_counter_get(&m_rtc);
+    return rtc_ticks * 125; // Convertir a milisegundos
+}
+
+// Función para verificar timeouts del modo de escaneo
+static void packet_scan_check_timeouts(void)
+{
+    if (!m_packet_scan_mode_active)
+    {
+        return;
+    }
+    
+    uint32_t current_time = get_rtc_time_ms();
+    
+    // Verificar timeout de tiempo máximo (5 minutos)
+    if ((current_time - m_packet_scan_start_time) >= MAX_DETECTION_TIME_MS)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN MODE]\x1b[0m Tiempo máximo alcanzado - Terminando escaneo");
+        NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m Total de paquetes detectados: %lu", m_packet_scan_count);
+        packet_scan_mode_stop();
+        return;
+    }
+    
+    // Verificar timeout de inactividad (30 segundos) solo después del primer paquete
+    if (m_first_packet_detected && 
+        (current_time - m_packet_scan_last_packet_time) >= INACTIVITY_TIMEOUT_MS)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN MODE]\x1b[0m Timeout por inactividad - Terminando escaneo");
+        NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m Total de paquetes detectados: %lu", m_packet_scan_count);
+        packet_scan_mode_stop();
+    }
+}
+
+// Función para verificar si un paquete advertising coincide con la MAC objetivo
+static bool is_target_mac_packet(const ble_gap_evt_adv_report_t *p_adv_report)
+{
+    // Comparar la dirección MAC del paquete con la MAC objetivo
+    return (memcmp(p_adv_report->peer_addr.addr, m_scan_target_mac, 6) == 0);
+}
+
+// Funciones públicas del modo de escaneo
+void packet_scan_mode_start(void)
+{
+    ret_code_t err_code;
+    
+    if (m_packet_scan_mode_active)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN MODE]\x1b[0m Modo de escaneo ya está activo");
+        return;
+    }
+    
+    // Cargar MAC objetivo desde la memoria flash
+    load_mac_from_flash(m_scan_target_mac, MAC_SCANEO);
+    
+    // Verificar si la MAC se cargó correctamente
+    bool mac_is_zero = true;
+    for (int i = 0; i < 6; i++)
+    {
+        if (m_scan_target_mac[i] != 0)
+        {
+            mac_is_zero = false;
+            break;
+        }
+    }
+    
+    if (mac_is_zero)
+    {
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[SCAN MODE]\x1b[0m Error: MAC objetivo no configurada");
+        return;
+    }
+    
+    // Inicializar variables
+    m_packet_scan_mode_active = true;
+    m_packet_scan_count = 0;
+    m_first_packet_detected = false;
+    m_packet_scan_start_time = get_rtc_time_ms();
+    m_packet_scan_last_packet_time = m_packet_scan_start_time;
+    
+    NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Iniciando modo de escaneo de paquetes");
+    NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m MAC objetivo: %02X:%02X:%02X:%02X:%02X:%02X",
+                     m_scan_target_mac[5], m_scan_target_mac[4], m_scan_target_mac[3],
+                     m_scan_target_mac[2], m_scan_target_mac[1], m_scan_target_mac[0]);
+    
+    // Iniciar escaneo sin filtros para capturar todos los paquetes
+    err_code = nrf_ble_scan_filters_disable(&m_scan);
+    APP_ERROR_CHECK(err_code);
+    
+    scan_start();
+    
+    NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Esperando primer paquete del emisor...");
+}
+
+void packet_scan_mode_stop(void)
+{
+    if (!m_packet_scan_mode_active)
+    {
+        return;
+    }
+    
+    m_packet_scan_mode_active = false;
+    
+    // Restaurar filtros de escaneo normales
+    ret_code_t err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
+    APP_ERROR_CHECK(err_code);
+    
+    NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Modo de escaneo terminado");
+    NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m Resultado final: %lu paquetes detectados", m_packet_scan_count);
+}
+
+bool packet_scan_mode_is_active(void)
+{
+    return m_packet_scan_mode_active;
+}
+
+uint32_t packet_scan_mode_get_count(void)
+{
+    return m_packet_scan_count;
+}
+
+// Función para ser llamada periódicamente desde el main loop o RTC handler
+void packet_scan_mode_update(void)
+{
+    packet_scan_check_timeouts();
 }
 
 void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)

@@ -323,6 +323,13 @@ void handle_rtc_events(void)
         {
             // Manejar el final del ciclo activo
             sync_system_handle_cycle_end();
+            
+            // Si hay un escaneo de paquetes activo, detenerlo antes del sleep
+            if (packet_scan_mode_is_active())
+            {
+                NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN MODE]\x1b[0m Deteniendo escaneo por transición a sleep");
+                packet_scan_mode_stop();
+            }
 
             NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
             disconnect_all_devices();
@@ -794,6 +801,9 @@ static void idle_state_handle(void)
 {
     if (NRF_LOG_PROCESS() == false)
     {
+        // Actualizar el modo de escaneo de paquetes si está activo
+        packet_scan_mode_update();
+        
         if (!m_device_active)
         {
             nrf_pwr_mgmt_run();
