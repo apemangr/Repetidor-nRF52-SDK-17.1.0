@@ -625,7 +625,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         NRF_LOG_RAW_INFO("\n\x1b[1;33m> Modo de escaneo ya está activo\x1b[0m");
                         // Enviar estado actual
                         char response[50];
-                        snprintf(response, sizeof(response), "SCAN_ACTIVE:%lu", packet_scan_mode_get_count());
+                        snprintf(response, sizeof(response), "SCAN_ACTIVE");
                         app_nus_server_send_data((uint8_t*)response, strlen(response));
                     }
                     else
@@ -634,7 +634,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         if (packet_scan_mode_is_active())
                         {
                             app_nus_server_send_data((uint8_t*)"SCAN_STARTED", 12);
-                        }k
+                        }
                         else
                         {
                             app_nus_server_send_data((uint8_t*)"SCAN_ERROR", 10);
@@ -674,13 +674,37 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         uint32_t current_count = packet_scan_mode_get_count();
                         char response[50];
                         snprintf(response, sizeof(response), "SCAN_STATUS:ACTIVE:%lu", current_count);
-                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        ret_code_t send_result = app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        
+                        if (send_result != NRF_SUCCESS)
+                        {
+                            NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m", send_result);
+                        }
+                        else
+                        {
+                            NRF_LOG_RAW_INFO("\n\x1b[1;32m> SCAN_STATUS:ACTIVE:%lu enviado correctamente\x1b[0m", current_count);
+                        }
+                        
                         NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Activo, Paquetes detectados: %lu\x1b[0m", current_count);
                     }
                     else
                     {
-                        app_nus_server_send_data((uint8_t*)"SCAN_STATUS:INACTIVE", 20);
-                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Inactivo\x1b[0m");
+                        // Cuando está inactivo, también incluir el último conteo disponible
+                        uint32_t last_count = packet_scan_mode_get_count();
+                        char response[50];
+                        snprintf(response, sizeof(response), "SCAN_STATUS:INACTIVE:%lu", last_count);
+                        ret_code_t send_result = app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        
+                        if (send_result != NRF_SUCCESS)
+                        {
+                            NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m", send_result);
+                        }
+                        else
+                        {
+                            NRF_LOG_RAW_INFO("\n\x1b[1;32m> SCAN_STATUS:INACTIVE:%lu enviado correctamente\x1b[0m", last_count);
+                        }
+                        
+                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Inactivo, Último conteo: %lu\x1b[0m", last_count);
                     }
                     break;
                 }

@@ -8,10 +8,10 @@
 #define UART_RX_BUF_SIZE       256
 #define ECHOBACK_BLE_UART_DATA 1
 // TIEMPO
-#define DEFAULT_DEVICE_ON_TIME_MS          10000
+#define DEFAULT_DEVICE_ON_TIME_MS          110000
 #define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 80000
 #define EXTENDED_SEARCH_TIME_MS            999000  // Tiempo fijo para búsqueda extendida del emisor
-#define DEFAULT_DEVICE_SLEEP_TIME_MS       (600000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
+#define DEFAULT_DEVICE_SLEEP_TIME_MS       (660000 + 5000) // Agregar siempre los 5 segundos de procesamiento del emisor
 
 #define MAC_FILE_ID                        0x0001 /** STORAGE	 */
 #define MAC_RECORD_KEY                     0x0002
@@ -34,7 +34,7 @@
 #define LSB_16(a)                          ((a) & 0x00FF)
 
 // Parámetros del modo de escaneo de paquetes
-#define INACTIVITY_TIMEOUT_MS              10000  // 30 segundos sin paquetes → terminar
+#define INACTIVITY_TIMEOUT_MS              10000  // 10 segundos sin paquetes → terminar
 #define MAX_DETECTION_TIME_MS              300000 // Máximo 5 minutos total (seguridad)
 
 extern bool m_device_active;

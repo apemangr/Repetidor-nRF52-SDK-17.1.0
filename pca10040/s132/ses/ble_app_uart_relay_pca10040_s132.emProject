@@ -110,7 +110,7 @@
       <file file_name="../../../calendar.c" />
       <file file_name="../../../calendar.h" />
       <file file_name="../../../variables.h" />
-      <file file_name="../../../../../../../../dfu_files/micro_ecc_lib_nrf52.a" />
+      <file file_name="../../../../../../external/micro-ecc/nrf52hf_armgcc/armgcc/micro_ecc_lib_nrf52.a" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../../../../external/segger_rtt/SEGGER_RTT.c" />

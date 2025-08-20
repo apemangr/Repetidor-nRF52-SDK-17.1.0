@@ -637,8 +637,6 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
         }
     }
 
-    NRF_LOG_RAW_INFO("\n\n[ERROR] No se pudo cargar ninguna MAC desde la memoria")
-
     return;
 }
 
