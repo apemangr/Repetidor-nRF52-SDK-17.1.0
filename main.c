@@ -58,11 +58,13 @@ void sync_system_mark_emisor_connected(void)
     if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH)
     {
         current_sync_state = SYNC_STATE_NORMAL;
-        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Emisor encontrado - Cambiando INMEDIATAMENTE a tiempo normal");
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Emisor encontrado - Cambiando INMEDIATAMENTE a "
+                         "tiempo normal");
 
         // Reprogramar usando la función existente
         restart_on_rtc();
-        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] RTC reprogramado con tiempo normal desde flash");
+        NRF_LOG_RAW_INFO(
+            "\n[\033[1;32mSYNC\033[0m] RTC reprogramado con tiempo normal desde flash");
     }
 }
 
@@ -71,7 +73,8 @@ void sync_system_handle_cycle_end(void)
     if (!emisor_connected_this_cycle)
     {
         cycles_without_emisor++;
-        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Ciclo sin emisor: %d/%d", cycles_without_emisor, MAX_FAILED_CYCLES);
+        NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Ciclo sin emisor: %d/%d", cycles_without_emisor,
+                         MAX_FAILED_CYCLES);
 
         if (cycles_without_emisor >= MAX_FAILED_CYCLES && current_sync_state == SYNC_STATE_NORMAL)
         {
@@ -114,8 +117,8 @@ ret_code_t fds_print_all_record_times(void)
         // Verificar que el tamaño sea correcto
         if (flash_record.p_header->length_words != expected_words)
         {
-            NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)",
-                            record_desc.record_id, flash_record.p_header->length_words);
+            NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)", record_desc.record_id,
+                            flash_record.p_header->length_words);
             fds_record_close(&record_desc);
             continue;
         }
@@ -136,18 +139,17 @@ ret_code_t fds_print_all_record_times(void)
 }
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
-nrfx_rtc_t           m_rtc            = NRFX_RTC_INSTANCE(2);
-bool                 m_device_active  = true;
-static uint16_t      m_conn_handle    = BLE_CONN_HANDLE_INVALID;
-static volatile bool m_rtc_on_flag    = false;
-static volatile bool m_rtc_sleep_flag = false;
-static uint16_t      m_ble_nus_max_data_len =
-    BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
+nrfx_rtc_t           m_rtc             = NRFX_RTC_INSTANCE(2);
+bool                 m_device_active   = true;
+static uint16_t      m_conn_handle     = BLE_CONN_HANDLE_INVALID;
+static volatile bool m_rtc_on_flag     = false;
+static volatile bool m_rtc_sleep_flag  = false;
+static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
 
 // Sistema de recuperación UART
-static uint32_t uart_error_count = 0;
-static const uint32_t UART_MAX_ERRORS = 5; // Reinicializar después de 5 errores consecutivos
-static bool uart_recovery_in_progress = false;
+static uint32_t       uart_error_count = 0;
+static const uint32_t UART_MAX_ERRORS  = 5; // Reinicializar después de 5 errores consecutivos
+static bool           uart_recovery_in_progress = false;
 
 // Forward declaration del manejador de eventos UART
 void uart_event_handler(app_uart_evt_t *p_event);
@@ -159,29 +161,29 @@ static void uart_recovery_reinit(void)
     {
         return; // Evitar reentrada
     }
-    
+
     uart_recovery_in_progress = true;
-    
-    NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART RECOVERY]\x1b[0m Reinicializando UART después de %d errores...", uart_error_count);
-    
+
+    NRF_LOG_RAW_INFO(
+        "\n\x1b[1;33m[UART RECOVERY]\x1b[0m Reinicializando UART después de %d errores...",
+        uart_error_count);
+
     // Cerrar UART actual
     app_uart_close();
     nrf_delay_ms(100); // Pequeña pausa para asegurar limpieza
-    
-    // Reinicializar UART
-    ret_code_t err_code;
-    app_uart_comm_params_t const comm_params = {
-        .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
-        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-        .use_parity   = false,
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
-    };
 
-    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE,
-                       uart_event_handler, APP_IRQ_PRIORITY_LOWEST, err_code);
+    // Reinicializar UART
+    ret_code_t                   err_code;
+    app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
+                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                                                .use_parity   = false,
+                                                .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
+
+    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE, uart_event_handler,
+                       APP_IRQ_PRIORITY_LOWEST, err_code);
 
     if (err_code == NRF_SUCCESS)
     {
@@ -190,9 +192,10 @@ static void uart_recovery_reinit(void)
     }
     else
     {
-        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART RECOVERY]\x1b[0m Error al reinicializar UART: 0x%X", err_code);
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART RECOVERY]\x1b[0m Error al reinicializar UART: 0x%X",
+                         err_code);
     }
-    
+
     uart_recovery_in_progress = false;
 }
 
@@ -211,7 +214,7 @@ void uart_event_handler(app_uart_evt_t *p_event)
     case APP_UART_DATA_READY:
         // Reset contador de errores en comunicación exitosa
         uart_error_count = 0;
-        
+
         UNUSED_VARIABLE(app_uart_get(&data_array[index]));
         index++;
         if ((data_array[index - 1] == '\n') || (data_array[index - 1] == '\r') ||
@@ -229,13 +232,14 @@ void uart_event_handler(app_uart_evt_t *p_event)
 
     case APP_UART_COMMUNICATION_ERROR:
         uart_error_count++;
-        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error de comunicación #%d: 0x%x", 
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error de comunicación #%d: 0x%x",
                          uart_error_count, p_event->data.error_communication);
-        
+
         // Si se alcanza el límite de errores, reinicializar UART
         if (uart_error_count >= UART_MAX_ERRORS)
         {
-            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), iniciando recuperación...", 
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), "
+                             "iniciando recuperación...",
                              UART_MAX_ERRORS);
             uart_recovery_reinit();
         }
@@ -243,13 +247,14 @@ void uart_event_handler(app_uart_evt_t *p_event)
 
     case APP_UART_FIFO_ERROR:
         uart_error_count++;
-        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error en FIFO #%d: 0x%x", 
+        NRF_LOG_RAW_INFO("\n\x1b[1;31m[UART ERROR]\x1b[0m Error en FIFO #%d: 0x%x",
                          uart_error_count, p_event->data.error_code);
-        
+
         // También considerar errores FIFO para recuperación
         if (uart_error_count >= UART_MAX_ERRORS)
         {
-            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), iniciando recuperación...", 
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[UART ERROR]\x1b[0m Límite de errores alcanzado (%d), "
+                             "iniciando recuperación...",
                              UART_MAX_ERRORS);
             uart_recovery_reinit();
         }
@@ -265,20 +270,19 @@ static void uart_init(void)
     ret_code_t err_code;
 
     // Reset contador de errores al inicializar
-    uart_error_count = 0;
-    uart_recovery_in_progress = false;
+    uart_error_count                         = 0;
+    uart_recovery_in_progress                = false;
 
-    app_uart_comm_params_t const comm_params = {
-        .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
-        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-        .use_parity   = false,
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
+    app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
+                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                                                .use_parity   = false,
+                                                .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
 
-    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE,
-                       uart_event_handler, APP_IRQ_PRIORITY_LOWEST, err_code);
+    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE, uart_event_handler,
+                       APP_IRQ_PRIORITY_LOWEST, err_code);
 
     if (err_code == NRF_SUCCESS)
     {
@@ -323,15 +327,17 @@ void handle_rtc_events(void)
         {
             // Manejar el final del ciclo activo
             sync_system_handle_cycle_end();
-            
+
             // Si hay un escaneo de paquetes activo, detenerlo antes del sleep
             if (packet_scan_mode_is_active())
             {
-                NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN MODE]\x1b[0m Deteniendo escaneo por transición a sleep");
+                NRF_LOG_RAW_INFO(
+                    "\n\x1b[1;33m[SCAN MODE]\x1b[0m Deteniendo escaneo por transición a sleep");
                 packet_scan_mode_stop();
             }
 
-            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
+            NRF_LOG_RAW_INFO(
+                "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
             disconnect_all_devices();
             advertising_stop();
             scan_stop();
@@ -344,7 +350,7 @@ void handle_rtc_events(void)
                 // En búsqueda extendida: usar sleep fijo de 10 segundos
                 uint32_t current_counter  = nrfx_rtc_counter_get(&m_rtc);
                 uint32_t sleep_time_fixed = 10000; // 10 segundos fijos
-                uint32_t next_event       = (current_counter + (sleep_time_fixed / 1000) * 8) & 0xFFFFFF;
+                uint32_t next_event = (current_counter + (sleep_time_fixed / 1000) * 8) & 0xFFFFFF;
                 nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
                 NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Sleep busqueda extendida: 10s fijos");
             }
@@ -364,12 +370,15 @@ void handle_rtc_events(void)
         {
             // Reset flag de conexión para el nuevo ciclo
             sync_system_reset_connection_flag();
-            
+
             // Reset contador de errores UART al despertar (nuevo ciclo limpio)
             uart_error_count = 0;
 
-            const char *mode_str = (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
-            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)", mode_str);
+            const char *mode_str =
+                (current_sync_state == SYNC_STATE_NORMAL) ? "NORMAL" : "BUSQUEDA EXTENDIDA";
+            NRF_LOG_RAW_INFO(
+                "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)",
+                mode_str);
 
             // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
             // INICIAR EL ADVERTISING Y EL SCANEO
@@ -383,8 +392,8 @@ void handle_rtc_events(void)
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "
                              "%02u:%02u:%02u",
-                             m_time.year, m_time.month, m_time.day,
-                             m_time.hour, m_time.minute, m_time.second);
+                             m_time.year, m_time.month, m_time.day, m_time.hour, m_time.minute,
+                             m_time.second);
 
             // Actualizar el payload para mostrar los adc_values
             scan_start();
@@ -428,14 +437,15 @@ void rtc_init(void)
     // Configurar comparadores iniciales
 
     // Solo programar el primer evento de 15s
-    nrfx_rtc_cc_set(&m_rtc, 0, (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8, true);
+    nrfx_rtc_cc_set(&m_rtc, 0,
+                    (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8,
+                    true);
 
     // Deshabilitar el evento de 20s inicialmente
     nrfx_rtc_cc_disable(&m_rtc, 1);
 
     // Habilitar interrupciones
-    nrfx_rtc_int_enable(&m_rtc, NRF_RTC_INT_COMPARE0_MASK |
-                                    NRF_RTC_INT_COMPARE1_MASK |
+    nrfx_rtc_int_enable(&m_rtc, NRF_RTC_INT_COMPARE0_MASK | NRF_RTC_INT_COMPARE1_MASK |
                                     NRF_RTC_INT_COMPARE2_MASK);
     nrfx_rtc_enable(&m_rtc);
 }
@@ -451,8 +461,7 @@ static void base_timer_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-static void ble_nus_chars_received_uart_print(uint8_t *p_data,
-                                              uint16_t data_len)
+static void ble_nus_chars_received_uart_print(uint8_t *p_data, uint16_t data_len)
 {
     ret_code_t ret_val;
 
@@ -533,16 +542,14 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
     case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
         // Pairing not supported.
         err_code = sd_ble_gap_sec_params_reply(p_ble_evt->evt.gap_evt.conn_handle,
-                                               BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
-                                               NULL, NULL);
+                                               BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP, NULL, NULL);
         APP_ERROR_CHECK(err_code);
         break;
 
     case BLE_GAP_EVT_CONN_PARAM_UPDATE_REQUEST:
         // Accepting parameters requested by peer.
         err_code = sd_ble_gap_conn_param_update(
-            p_gap_evt->conn_handle,
-            &p_gap_evt->params.conn_param_update_request.conn_params);
+            p_gap_evt->conn_handle, &p_gap_evt->params.conn_param_update_request.conn_params);
         APP_ERROR_CHECK(err_code);
         break;
 
@@ -602,8 +609,7 @@ static void ble_stack_init(void)
     APP_ERROR_CHECK(err_code);
 
     // Register a handler for BLE events.
-    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler,
-                         NULL);
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
 
 void gatt_evt_handler(nrf_ble_gatt_t *p_gatt, nrf_ble_gatt_evt_t const *p_evt)
@@ -612,8 +618,7 @@ void gatt_evt_handler(nrf_ble_gatt_t *p_gatt, nrf_ble_gatt_evt_t const *p_evt)
     {
         // NRF_LOG_INFO("ATT MTU exchange completed.");
 
-        m_ble_nus_max_data_len =
-            p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
+        m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
         // NRF_LOG_INFO("Ble NUS max data length set to 0x%X(%d)",
         // m_ble_nus_max_data_len, m_ble_nus_max_data_len);
     }
@@ -627,12 +632,10 @@ void gatt_init(void)
     err_code = nrf_ble_gatt_init(&m_gatt, gatt_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code =
-        nrf_ble_gatt_att_mtu_periph_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
+    err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
     APP_ERROR_CHECK(err_code);
 
-    err_code =
-        nrf_ble_gatt_att_mtu_central_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
+    err_code = nrf_ble_gatt_att_mtu_central_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -687,8 +690,7 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-void app_nus_server_on_data_received(const uint8_t *data_ptr,
-                                     uint16_t       data_length)
+void app_nus_server_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
     // // Output the data to the UART
     // NRF_LOG_RAW_INFO("\nServer data received: ");
@@ -701,8 +703,7 @@ void app_nus_server_on_data_received(const uint8_t *data_ptr,
 }
 
 // Procesa la información recibida desde el emisor
-void app_nus_client_on_data_received(const uint8_t *data_ptr,
-                                     uint16_t       data_length)
+void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
     uint16_t position = 0;
 
@@ -739,8 +740,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         uint8_t  hour     = data_ptr[position++];
         uint8_t  minute   = data_ptr[position++];
         uint8_t  second   = data_ptr[position++];
-        uint32_t contador = (data_ptr[position++] << 24) |
-                            (data_ptr[position++] << 16) |
+        uint32_t contador = (data_ptr[position++] << 24) | (data_ptr[position++] << 16) |
                             (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V1      = (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V2      = (data_ptr[position++] << 8) | data_ptr[position++];
@@ -776,20 +776,17 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
                                          .battery  = battery};
 
         // Guardar el historial recibido en la posición indicada
-        ret_code_t ret =
-            save_history_record_emisor(&nuevo_historial, last_position);
+        ret_code_t ret = save_history_record_emisor(&nuevo_historial, last_position);
         if (ret != NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO(
-                "\nError al guardar historial en posicion: %u (ret=%d)\n",
-                last_position, ret);
+            NRF_LOG_RAW_INFO("\nError al guardar historial en posicion: %u (ret=%d)\n",
+                             last_position, ret);
         }
 
         // Imprimir usando print_history_record con el número de historial en el
         // título
         char titulo[41];
-        snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m",
-                 last_position);
+        snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", last_position);
         print_history_record(&nuevo_historial, titulo);
         // fds_print_all_record_times();
         NRF_LOG_FLUSH();
@@ -803,7 +800,7 @@ static void idle_state_handle(void)
     {
         // Actualizar el modo de escaneo de paquetes si está activo
         packet_scan_mode_update();
-        
+
         if (!m_device_active)
         {
             nrf_pwr_mgmt_run();
@@ -823,7 +820,7 @@ int main(void)
     NRF_LOG_RAW_INFO("\n\033[1;36m====================\033[0m "
                      "\033[1;33mINICIO DEL SISTEMA\033[0m"
                      " \033[1;36m====================\033[0m\n");
-    NRF_LOG_RAW_INFO("\t\t Firmware 0.0.2 por\033[0m "
+    NRF_LOG_RAW_INFO("\t\t Firmware 0.0.1 por\033[0m "
                      "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
 
     base_timer_init();

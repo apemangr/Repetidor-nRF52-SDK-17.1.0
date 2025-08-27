@@ -1,20 +1,23 @@
+BasedOnStyle: Microsoft
+
+IndentWidth: 4
+ColumnLimit: 100   # Usa 80 si quieres estilo clásico o 0 para desactivar
+
 AlignConsecutiveAssignments:
   Enabled: true
   AcrossEmptyLines: true
   AcrossComments: false
-  PadBeforeAssignments: false   # Opcional: evita espacios adicionales antes del `=`
-ColumnLimit: 0                     # Desactiva límite de columnas (para no romper líneas)
-BasedOnStyle: Microsoft
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: true
-  AcrossComments: false
-  AlignOnOperator: true   # Fuerza alineación en '=' (o otros operadores)
+  PadOperators: false
+
 AlignConsecutiveDeclarations:
   Enabled: true
   AcrossEmptyLines: true
   AcrossComments: false
-  Align: InlineInitializer   # Enfocado en inicializadores
+
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: false
+
 AllowAllArgumentsOnNextLine: false
-# Add 4 spaces to indent
-IndentWidth: 4
+

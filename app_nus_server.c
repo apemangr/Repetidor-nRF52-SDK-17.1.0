@@ -938,10 +938,11 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
     case BLE_GAP_EVT_DISCONNECTED:
         if (p_gap_evt->conn_handle == m_conn_handle)
         {
-            ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+            //ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
             NRF_LOG_RAW_INFO("\nCelular desconectado\n");
             m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
-            // scan_start();
+            advertising_start();
+                
         }
         else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
         {
@@ -1060,7 +1061,7 @@ void advertising_start(void)
         NRF_LOG_RAW_INFO("\n\nble_advertising_start error: 0x%08X\n", err_code);
     }
     // Posible crash
-    APP_ERROR_CHECK(err_code);
+    //APP_ERROR_CHECK(err_code);
 }
 
 void advertising_stop(void)
