@@ -32,6 +32,3 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 | 18      | Guarda MAC de scaneo               | Guarda en la memoria FLASH la MAC que debe ser scaneada                               | 11118A566CE57FF66                                        |
 | 19      | Carga MAC de scaneo                | Lee desde la memoria FLASH la MAC que debe ser scaneada                               | 11119                                                    |
 | 99      | Borra todos los historiales        | Limpia de la memoria flash todos los registros almacenados                            | 11199                                                    |
-
-# Roadmap
-- [X] Sincronizar hora y fecha con el emisor al conectarse

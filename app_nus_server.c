@@ -1,5 +1,4 @@
 #include "app_nus_server.h"
-
 #include "app_nus_client.h"
 #include "app_timer.h"
 #include "app_uart.h"
@@ -22,6 +21,10 @@
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
 #include "variables.h"
+
+#define LED1_PIN                       NRF_GPIO_PIN_MAP(0, 18)
+#define LED2_PIN                       NRF_GPIO_PIN_MAP(0, 13)
+#define LED3_PIN                       NRF_GPIO_PIN_MAP(0, 11)
 
 #define APP_BLE_CONN_CFG_TAG           1
 #define DEVICE_NAME                    "Repetidor"
@@ -55,8 +58,7 @@ static uint16_t                          m_emisor_conn_handle   = BLE_CONN_HANDL
 static uint8_t                           custom_mac_addr_[6]    = {0};
 static ble_gap_addr_t                    m_target_periph_addr;
 
-static ble_uuid_t                        m_adv_uuids[] = {
-    {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
+static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
 // Función para realizar la recolección de basura
 static void perform_garbage_collection(void)
@@ -82,10 +84,8 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
 
             fds_stat_t stat = {0};
             fds_stat(&stat);
-            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros validos.\n",
-                             stat.valid_records);
-            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros no validos.",
-                             stat.dirty_records);
+            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros validos.\n", stat.valid_records);
+            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros no validos.", stat.dirty_records);
 
             if (stat.dirty_records > 0)
             {
@@ -93,8 +93,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
                 NRF_LOG_RAW_INFO("\n\t>> Limpiando registros no validos...");
                 perform_garbage_collection();
             }
-            NRF_LOG_RAW_INFO(
-                "\n\t>> \033[0;32mModulo inicializado correctamente.\033[0m");
+            NRF_LOG_RAW_INFO("\n\t>> \033[0;32mModulo inicializado correctamente.\033[0m");
         }
         else
         {
@@ -187,38 +186,33 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
         uint32_t err_code;
 
         NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data,
-                              p_evt->params.rx_data.length);
+        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
         // Asegúrate de que el mensaje sea tratado como una cadena de texto
         char message[BLE_NUS_MAX_DATA_LEN]; // +1 para el carácter nulo
         if (p_evt->params.rx_data.length < sizeof(message))
         {
-            memcpy(message, p_evt->params.rx_data.p_data,
-                   p_evt->params.rx_data.length);
+            memcpy(message, p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
             message[p_evt->params.rx_data.length] = '\0'; // Agregar terminador nulo
 
             // Imprime el mensaje recibido
-            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s",
-                             message);
+            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s", message);
 
             // Verifica si el mensaje comienza con "111" par interpretar el comando
-            if (p_evt->params.rx_data.length >= 5 && message[0] == '1' &&
-                message[1] == '1' && message[2] == '1')
+            if (p_evt->params.rx_data.length >= 5 && message[0] == '1' && message[1] == '1' &&
+                message[2] == '1')
             {
                 // Extrae el comando (los dos caracteres después de "111")
-                char command[3] = {message[3], message[4],
-                                   '\0'}; // Comando de 2 caracteres
+                char command[3] = {message[3], message[4], '\0'}; // Comando de 2 caracteres
 
                 // Manejo de comandos con un switch-case
                 switch (atoi(command)) // Convierte el comando a entero
                 {
 
-
-//================================================================================================
-// COMANDOS REPETIDOR
-//================================================================================================
+                    //================================================================================================
+                    // COMANDOS REPETIDOR
+                    //================================================================================================
 
                 case 1: // Comando 01: Guardar MAC
                 {
@@ -227,7 +221,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         for (size_t i = 0; i < 6; i++)
                         {
-                            char byte_str[3]        = {message[5 + i * 2], message[6 + i * 2], '\0'};
+                            char byte_str[3] = {message[5 + i * 2], message[6 + i * 2], '\0'};
                             custom_mac_addr_[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
                         }
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 01 recibido: "
@@ -253,13 +247,15 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     uint8_t mac_print[6];
                     // Carga la MAC desde la memoria flash
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando MAC guardada \x1b[0m");
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando MAC guardada \x1b[0m");
                     load_mac_from_flash(mac_print, MAC_FILTRADO);
                 }
                 break;
 
                 case 3: // Comando 03: Reiniciar el dispositivo
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 03 recibido: Reiniciando dispositivo...\n\n\n\n");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 03 recibido: Reiniciando "
+                                     "dispositivo...\n\n\n\n");
                     nrf_delay_ms(1000);
                     NVIC_SystemReset();
 
@@ -269,7 +265,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], message[8], '\0'};
+                        char time_str[5] = {message[5], message[6], message[7], message[8], '\0'};
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
                             atoi(time_str) * 1000;
                         if (time_in_seconds <= 999000)
@@ -293,9 +289,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 5: // Comando 05: Leer tiempo de encendido desde la memoria
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: Leer tiempo de encendido \x1b[0m");
-                    uint32_t sleep_time_ms = read_time_from_flash(
-                        TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 05 recibido: Leer tiempo de encendido \x1b[0m");
+                    uint32_t sleep_time_ms =
+                        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
                     break;
                 }
@@ -338,18 +335,21 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 7: // Comando 07: Leer tiempo de dormido desde la memoria flash
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: Leer tiempo de dormido\x1b[0m");
-                    uint32_t sleep_time_ms = read_time_from_flash(
-                        TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 07 recibido: Leer tiempo de dormido\x1b[0m");
+                    uint32_t sleep_time_ms =
+                        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
                     // Imprime el tiempo de dormido
                     NRF_LOG_RAW_INFO("\n> Tiempo de dormido configurado: %lu segundos",
                                      sleep_time_ms / 1000);
                     break;
                 }
 
-                case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato YYYYMMDDHHMMSS
+                case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato
+                        // YYYYMMDDHHMMSS
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora - YYYYMMDDHHMMSS\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora "
+                                     "- YYYYMMDDHHMMSS\x1b[0m");
 
                     if (p_evt->params.rx_data.length >= 19) // 5 de comando + 14 de fecha/hora
                     {
@@ -368,52 +368,59 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         datetime_t dt = {0};
 
                         // Parsing con validación mejorada
-                        int parsed = sscanf(fecha_buffer, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu",
-                                            &dt.year, &dt.month, &dt.day,
-                                            &dt.hour, &dt.minute, &dt.second);
+                        int parsed = sscanf(fecha_buffer, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", &dt.year,
+                                            &dt.month, &dt.day, &dt.hour, &dt.minute, &dt.second);
 
                         if (parsed == 6)
                         {
                             // Validación básica de rangos
-                            if (dt.year >= 2000 && dt.year <= 2099 &&
-                                dt.month >= 1 && dt.month <= 12 &&
-                                dt.day >= 1 && dt.day <= 31 &&
-                                dt.hour <= 23 && dt.minute <= 59 && dt.second <= 59)
+                            if (dt.year >= 2000 && dt.year <= 2099 && dt.month >= 1 &&
+                                dt.month <= 12 && dt.day >= 1 && dt.day <= 31 && dt.hour <= 23 &&
+                                dt.minute <= 59 && dt.second <= 59)
                             {
                                 NRF_LOG_RAW_INFO("\n> Fecha parseada correctamente: "
                                                  "%04u-%02u-%02u %02u:%02u:%02u",
-                                                 dt.year, dt.month, dt.day,
-                                                 dt.hour, dt.minute, dt.second);
+                                                 dt.year, dt.month, dt.day, dt.hour, dt.minute,
+                                                 dt.second);
 
                                 // Guardar en flash
                                 err_code = write_date_to_flash(&dt);
 
                                 if (err_code == NRF_SUCCESS)
                                 {
-                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Fecha guardada exitosamente en flash\x1b[0m");
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Fecha guardada exitosamente en "
+                                                     "flash\x1b[0m");
                                 }
                                 else
                                 {
-                                    NRF_LOG_ERROR("\n\x1b[1;31m> Error guardando fecha: 0x%X\x1b[0m", err_code);
+                                    NRF_LOG_ERROR(
+                                        "\n\x1b[1;31m> Error guardando fecha: 0x%X\x1b[0m",
+                                        err_code);
                                 }
                             }
                             else
                             {
-                                NRF_LOG_WARNING("\n\x1b[1;33m> Valores de fecha fuera de rango\x1b[0m");
-                                NRF_LOG_RAW_INFO("\n  Ano: %u, Mes: %u, Dia: %u", dt.year, dt.month, dt.day);
-                                NRF_LOG_RAW_INFO("\n  Hora: %u, Min: %u, Seg: %u", dt.hour, dt.minute, dt.second);
+                                NRF_LOG_WARNING(
+                                    "\n\x1b[1;33m> Valores de fecha fuera de rango\x1b[0m");
+                                NRF_LOG_RAW_INFO("\n  Ano: %u, Mes: %u, Dia: %u", dt.year, dt.month,
+                                                 dt.day);
+                                NRF_LOG_RAW_INFO("\n  Hora: %u, Min: %u, Seg: %u", dt.hour,
+                                                 dt.minute, dt.second);
                             }
                         }
                         else
                         {
-                            NRF_LOG_WARNING("\n\x1b[1;33m> Error en parsing. Elementos parseados: %d/6\x1b[0m", parsed);
+                            NRF_LOG_WARNING(
+                                "\n\x1b[1;33m> Error en parsing. Elementos parseados: %d/6\x1b[0m",
+                                parsed);
                             NRF_LOG_RAW_INFO("\n> Formato esperado: YYYYMMDDHHMMSS");
                             NRF_LOG_RAW_INFO("\n> Ejemplo: 20250804143025 (2025-08-04 14:30:25)");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, esperada: 19+\x1b[0m",
+                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, "
+                                        "esperada: 19+\x1b[0m",
                                         p_evt->params.rx_data.length);
                         NRF_LOG_RAW_INFO("\n> Formato: 11108YYYYMMDDHHMMSS");
                     }
@@ -422,13 +429,13 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 9: // Comando 09: Leer fecha y hora almacenada en flash
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 09 recibido: Leer fecha y hora\x1b[0m");
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 09 recibido: Leer fecha y hora\x1b[0m");
 
                     datetime_t dt = read_date_from_flash();
 
-                    NRF_LOG_RAW_INFO(
-                        "\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u", dt.year,
-                        dt.month, dt.day, dt.hour, dt.minute, dt.second);
+                    NRF_LOG_RAW_INFO("\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u",
+                                     dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
 
                     break;
                 }
@@ -444,7 +451,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
                                              "Cambiar tiempo de encendido extendido\x1b[0m");
-                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED, time_in_seconds_extended);
+                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED,
+                                                time_in_seconds_extended);
                         }
                         else
                         {
@@ -460,7 +468,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 11: // Solicitar tiempo de encendido extendido
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de encendido extendido\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de "
+                                     "encendido extendido\x1b[0m");
                     uint32_t encendido_extendido_ms = read_time_from_flash(
                         TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
                     NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu segundos",
@@ -470,10 +479,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 12: // Solicitar un registro de historial por ID
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de historial por ID\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de "
+                                     "historial por ID\x1b[0m");
                     if (p_evt->params.rx_data.length > 5) // Verifica que haya datos suficientes
                     {
-                        // Extrae el ID del registro como string (todo lo que sigue después de "11112")
+                        // Extrae el ID del registro como string (todo lo que sigue después de
+                        // "11112")
                         size_t id_len    = p_evt->params.rx_data.length - 5;
                         char   id_str[8] = {0}; // Soporta hasta 7 dígitos, ajusta si necesitas más
                         if (id_len < sizeof(id_str))
@@ -487,9 +498,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             err_code = read_history_record_by_id(registro_id, &registro_historial);
                             if (err_code == NRF_SUCCESS)
                             {
-                                NRF_LOG_RAW_INFO("\nRegistro %u leido correctamente, enviando por NUS...", registro_id);
+                                NRF_LOG_RAW_INFO(
+                                    "\nRegistro %u leido correctamente, enviando por NUS...",
+                                    registro_id);
 
-                                // Preparar array de datos en formato hex (igual que send_all_history)
+                                // Preparar array de datos en formato hex (igual que
+                                // send_all_history)
                                 uint8_t  data_array[244];
                                 uint16_t position = 0;
 
@@ -543,30 +557,39 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                                 // Byte 41: Temperatura
                                 data_array[position++] = registro_historial.temp;
 
-                                // Byte 42-43: ID del registro solicitado (en lugar de last_position)
+                                // Byte 42-43: ID del registro solicitado (en lugar de
+                                // last_position)
                                 data_array[position++] = (registro_id >> 8) & 0xFF;
                                 data_array[position++] = (registro_id & 0xFF);
 
                                 // Enviar por NUS al celular
-                                ret_code_t send_result = app_nus_server_send_data(data_array, position);
+                                ret_code_t send_result =
+                                    app_nus_server_send_data(data_array, position);
                                 if (send_result == NRF_SUCCESS)
                                 {
-                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Registro #%u enviado por NUS exitosamente\x1b[0m", registro_id);
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Registro #%u enviado por NUS "
+                                                     "exitosamente\x1b[0m",
+                                                     registro_id);
                                 }
                                 else
                                 {
-                                    NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando registro #%u por NUS: 0x%X\x1b[0m", registro_id, send_result);
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando registro #%u "
+                                                     "por NUS: 0x%X\x1b[0m",
+                                                     registro_id, send_result);
                                 }
 
                                 // También imprimir en consola para depuración
                                 char titulo[41];
-                                snprintf(titulo, sizeof(titulo), "Historial enviado \x1B[33m#%u\x1B[0m", registro_id);
+                                snprintf(titulo, sizeof(titulo),
+                                         "Historial enviado \x1B[33m#%u\x1B[0m", registro_id);
                                 print_history_record(&registro_historial, titulo);
                                 NRF_LOG_FLUSH();
                             }
                             else
                             {
-                                NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error al leer el registro %u: 0x%X\x1b[0m", registro_id, err_code);
+                                NRF_LOG_RAW_INFO(
+                                    "\n\x1b[1;31m> Error al leer el registro %u: 0x%X\x1b[0m",
+                                    registro_id, err_code);
                             }
                         }
                         else
@@ -578,7 +601,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 13: // Comando para borrar un historial segun el historial
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Solicitar el borrado de un historial por ID\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Solicitar el borrado "
+                                     "de un historial por ID\x1b[0m");
 
                     if (p_evt->params.rx_data.length > 5)
                     {
@@ -610,7 +634,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 14: // Pide una lectura de todos los historiales
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 14: Solicitud del historial completo\x1b[0m");
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 14: Solicitud del historial completo\x1b[0m");
                     // Llama a la función para solicitar el historial completo
                     send_all_history();
 
@@ -618,131 +643,156 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 15: // Comando para iniciar modo de escaneo de paquetes
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 15 recibido: Iniciar modo de escaneo de paquetes\x1b[0m");
-                    
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 15 recibido: Iniciar modo de "
+                                     "escaneo de paquetes\x1b[0m");
+
                     if (packet_scan_mode_is_active())
                     {
                         NRF_LOG_RAW_INFO("\n\x1b[1;33m> Modo de escaneo ya está activo\x1b[0m");
                         // Enviar estado actual
                         char response[50];
                         snprintf(response, sizeof(response), "SCAN_ACTIVE");
-                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                        app_nus_server_send_data((uint8_t *)response, strlen(response));
                     }
                     else
                     {
                         packet_scan_mode_start();
                         if (packet_scan_mode_is_active())
                         {
-                            app_nus_server_send_data((uint8_t*)"SCAN_STARTED", 12);
+                            app_nus_server_send_data((uint8_t *)"SCAN_STARTED", 12);
                         }
                         else
                         {
-                            app_nus_server_send_data((uint8_t*)"SCAN_ERROR", 10);
+                            app_nus_server_send_data((uint8_t *)"SCAN_ERROR", 10);
                         }
                     }
                     break;
                 }
                 case 16: // Comando para detener modo de escaneo y obtener resultados
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 16 recibido: Detener modo de escaneo\x1b[0m");
-                    
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 16 recibido: Detener modo de escaneo\x1b[0m");
+
                     if (packet_scan_mode_is_active())
                     {
                         uint32_t final_count = packet_scan_mode_get_count();
                         packet_scan_mode_stop();
-                        
+
                         // Enviar resultado final
                         char response[50];
                         snprintf(response, sizeof(response), "SCAN_RESULT:%lu", final_count);
-                        app_nus_server_send_data((uint8_t*)response, strlen(response));
-                        
-                        NRF_LOG_RAW_INFO("\n\x1b[1;32m> Escaneo detenido. Total de paquetes: %lu\x1b[0m", final_count);
+                        app_nus_server_send_data((uint8_t *)response, strlen(response));
+
+                        NRF_LOG_RAW_INFO(
+                            "\n\x1b[1;32m> Escaneo detenido. Total de paquetes: %lu\x1b[0m",
+                            final_count);
                     }
                     else
                     {
-                        app_nus_server_send_data((uint8_t*)"SCAN_NOT_ACTIVE", 15);
+                        app_nus_server_send_data((uint8_t *)"SCAN_NOT_ACTIVE", 15);
                         NRF_LOG_RAW_INFO("\n\x1b[1;33m> Modo de escaneo no está activo\x1b[0m");
                     }
                     break;
                 }
                 case 17: // Comando para consultar estado del modo de escaneo
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Consultar estado del escaneo\x1b[0m");
-                    
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Consultar estado del "
+                                     "escaneo\x1b[0m");
+
                     if (packet_scan_mode_is_active())
                     {
                         uint32_t current_count = packet_scan_mode_get_count();
-                        char response[50];
-                        snprintf(response, sizeof(response), "SCAN_STATUS:ACTIVE:%lu", current_count);
-                        ret_code_t send_result = app_nus_server_send_data((uint8_t*)response, strlen(response));
-                        
+                        char     response[50];
+                        snprintf(response, sizeof(response), "SCAN_STATUS:ACTIVE:%lu",
+                                 current_count);
+                        ret_code_t send_result =
+                            app_nus_server_send_data((uint8_t *)response, strlen(response));
+
                         if (send_result != NRF_SUCCESS)
                         {
-                            NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m", send_result);
+                            NRF_LOG_RAW_INFO(
+                                "\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m",
+                                send_result);
                         }
                         else
                         {
-                            NRF_LOG_RAW_INFO("\n\x1b[1;32m> SCAN_STATUS:ACTIVE:%lu enviado correctamente\x1b[0m", current_count);
+                            NRF_LOG_RAW_INFO(
+                                "\n\x1b[1;32m> SCAN_STATUS:ACTIVE:%lu enviado correctamente\x1b[0m",
+                                current_count);
                         }
-                        
-                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Activo, Paquetes detectados: %lu\x1b[0m", current_count);
+
+                        NRF_LOG_RAW_INFO(
+                            "\n\x1b[1;36m> Estado: Activo, Paquetes detectados: %lu\x1b[0m",
+                            current_count);
                     }
                     else
                     {
                         // Cuando está inactivo, también incluir el último conteo disponible
                         uint32_t last_count = packet_scan_mode_get_count();
-                        char response[50];
-                        snprintf(response, sizeof(response), "SCAN_STATUS:INACTIVE:%lu", last_count);
-                        ret_code_t send_result = app_nus_server_send_data((uint8_t*)response, strlen(response));
-                        
+                        char     response[50];
+                        snprintf(response, sizeof(response), "SCAN_STATUS:INACTIVE:%lu",
+                                 last_count);
+                        ret_code_t send_result =
+                            app_nus_server_send_data((uint8_t *)response, strlen(response));
+
                         if (send_result != NRF_SUCCESS)
                         {
-                            NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m", send_result);
+                            NRF_LOG_RAW_INFO(
+                                "\n\x1b[1;31m> Error enviando SCAN_STATUS: 0x%X\x1b[0m",
+                                send_result);
                         }
                         else
                         {
-                            NRF_LOG_RAW_INFO("\n\x1b[1;32m> SCAN_STATUS:INACTIVE:%lu enviado correctamente\x1b[0m", last_count);
+                            NRF_LOG_RAW_INFO("\n\x1b[1;32m> SCAN_STATUS:INACTIVE:%lu enviado "
+                                             "correctamente\x1b[0m",
+                                             last_count);
                         }
-                        
-                        NRF_LOG_RAW_INFO("\n\x1b[1;36m> Estado: Inactivo, Último conteo: %lu\x1b[0m", last_count);
+
+                        NRF_LOG_RAW_INFO(
+                            "\n\x1b[1;36m> Estado: Inactivo, Último conteo: %lu\x1b[0m",
+                            last_count);
                     }
                     break;
                 }
                 case 18: // Comando para guardar MAC de escaneo
                 {
                     size_t mac_length = p_evt->params.rx_data.length - 5;
-                    if (mac_length == 12) // Verifica que la longitud sea válida (12 caracteres hex = 6 bytes)
+                    if (mac_length ==
+                        12) // Verifica que la longitud sea válida (12 caracteres hex = 6 bytes)
                     {
                         uint8_t scan_mac[6];
                         for (size_t i = 0; i < 6; i++)
                         {
                             char byte_str[3] = {message[5 + i * 2], message[6 + i * 2], '\0'};
-                            scan_mac[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
+                            scan_mac[5 - i]  = (uint8_t)strtol(byte_str, NULL, 16);
                         }
-                        
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 18 recibido: Guardar MAC de escaneo\x1b[0m");
-                        NRF_LOG_RAW_INFO("\n> MAC de escaneo recibida: %02X:%02X:%02X:%02X:%02X:%02X",
-                                         scan_mac[5], scan_mac[4], scan_mac[3], 
-                                         scan_mac[2], scan_mac[1], scan_mac[0]);
+
+                        NRF_LOG_RAW_INFO(
+                            "\n\n\x1b[1;36m--- Comando 18 recibido: Guardar MAC de escaneo\x1b[0m");
+                        NRF_LOG_RAW_INFO(
+                            "\n> MAC de escaneo recibida: %02X:%02X:%02X:%02X:%02X:%02X",
+                            scan_mac[5], scan_mac[4], scan_mac[3], scan_mac[2], scan_mac[1],
+                            scan_mac[0]);
 
                         // Guardar la MAC de escaneo en la memoria flash
                         save_mac_to_flash_scan(scan_mac);
-                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_SAVED", 14);
+                        app_nus_server_send_data((uint8_t *)"SCAN_MAC_SAVED", 14);
                     }
                     else
                     {
                         NRF_LOG_WARNING("Longitud de MAC de escaneo inválida: %d", mac_length);
-                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_ERROR", 14);
+                        app_nus_server_send_data((uint8_t *)"SCAN_MAC_ERROR", 14);
                     }
                     break;
                 }
                 case 19: // Comando para leer MAC de escaneo guardada
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 19 recibido: Leer MAC de escaneo\x1b[0m");
-                    
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 19 recibido: Leer MAC de escaneo\x1b[0m");
+
                     uint8_t scan_mac[6];
                     load_mac_from_flash(scan_mac, MAC_SCANEO);
-                    
+
                     // Verificar si hay una MAC válida guardada
                     bool mac_is_zero = true;
                     for (int i = 0; i < 6; i++)
@@ -753,29 +803,30 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             break;
                         }
                     }
-                    
+
                     if (!mac_is_zero)
                     {
                         NRF_LOG_RAW_INFO("\n> MAC de escaneo: %02X:%02X:%02X:%02X:%02X:%02X",
-                                         scan_mac[5], scan_mac[4], scan_mac[3], 
-                                         scan_mac[2], scan_mac[1], scan_mac[0]);
-                        
+                                         scan_mac[5], scan_mac[4], scan_mac[3], scan_mac[2],
+                                         scan_mac[1], scan_mac[0]);
+
                         char response[20];
                         snprintf(response, sizeof(response), "SCAN_MAC:%02X%02X%02X%02X%02X%02X",
-                                scan_mac[5], scan_mac[4], scan_mac[3], 
-                                scan_mac[2], scan_mac[1], scan_mac[0]);
-                        app_nus_server_send_data((uint8_t*)response, strlen(response));
+                                 scan_mac[5], scan_mac[4], scan_mac[3], scan_mac[2], scan_mac[1],
+                                 scan_mac[0]);
+                        app_nus_server_send_data((uint8_t *)response, strlen(response));
                     }
                     else
                     {
                         NRF_LOG_RAW_INFO("\n> No hay MAC de escaneo configurada");
-                        app_nus_server_send_data((uint8_t*)"SCAN_MAC_NONE", 13);
+                        app_nus_server_send_data((uint8_t *)"SCAN_MAC_NONE", 13);
                     }
                     break;
                 }
                 case 99: // Comando para borrar todos los historiales
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 99 recibido: Borrar todos los historiales\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 99 recibido: Borrar todos los "
+                                     "historiales\x1b[0m");
 
                     delete_all_history();
                     break;
@@ -806,8 +857,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
     }
     else if (p_evt->type == BLE_NUS_EVT_TX_RDY)
     {
-        // El buffer de transmisión está listo - enviar siguiente paquete del comando 15/16 si está activo
-        // También manejar el envío asíncrono de historial
+        // El buffer de transmisión está listo - enviar siguiente paquete del comando 15/16 si está
+        // activo También manejar el envío asíncrono de historial
         history_send_next_packet();
     }
 }
@@ -820,8 +871,8 @@ static void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
-    err_code = sd_ble_gap_device_name_set(&sec_mode, (const uint8_t *)DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
+    err_code =
+        sd_ble_gap_device_name_set(&sec_mode, (const uint8_t *)DEVICE_NAME, strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
@@ -865,8 +916,7 @@ static void on_conn_params_evt(ble_conn_params_evt_t *p_evt)
 
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
-        err_code = sd_ble_gap_disconnect(m_conn_handle,
-                                         BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
     }
 }
@@ -927,9 +977,13 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
             NRF_LOG_RAW_INFO("\nCelular conectado");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             restart_on_rtc_extended();
+
+            nrf_gpio_pin_set(LED3_PIN);
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
+
+            nrf_gpio_pin_set(LED1_PIN);
             NRF_LOG_RAW_INFO("\nEmisor conectado\n");
             m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
         }
@@ -938,19 +992,19 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
     case BLE_GAP_EVT_DISCONNECTED:
         if (p_gap_evt->conn_handle == m_conn_handle)
         {
-            //ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+            // ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
             NRF_LOG_RAW_INFO("\nCelular desconectado\n");
             m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
             advertising_start();
-                
+            nrf_gpio_pin_clear(LED3_PIN);
         }
         else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
         {
             NRF_LOG_RAW_INFO("\nEmisor desconectado");
             NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Buscando emisor...\n");
-
             m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
             scan_start();
+            nrf_gpio_pin_clear(LED1_PIN);
         }
         break;
 
@@ -967,8 +1021,8 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
         // Pairing not supported
-        err_code = sd_ble_gap_sec_params_reply(
-            m_conn_handle, BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP, NULL, NULL);
+        err_code = sd_ble_gap_sec_params_reply(m_conn_handle, BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
+                                               NULL, NULL);
         APP_ERROR_CHECK(err_code);
         break;
 
@@ -1000,8 +1054,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
 uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
 {
-    return ble_nus_data_send(&m_nus, (uint8_t *)data_array, &length,
-                             m_conn_handle);
+    return ble_nus_data_send(&m_nus, (uint8_t *)data_array, &length, m_conn_handle);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -1016,6 +1069,9 @@ void advertising_init(void)
     memset(&m_beacon_info, 0, sizeof(m_beacon_info));
     // Se modifica para tener un numero de advertising mayor a 0
     // y poder ser procesado por la app
+    if (adc_values.contador < 1)
+        adc_values.contador = 1;
+
     m_beacon_info[1] = MSB_16(adc_values.contador);
     m_beacon_info[2] = LSB_16(adc_values.contador);
     m_beacon_info[3] = MSB_16(adc_values.V1);
@@ -1036,16 +1092,15 @@ void advertising_init(void)
     init.config.ble_adv_on_disconnect_disabled = true;
     init.advdata.p_manuf_specific_data         = &manuf_specific_data;
 
-    init.srdata.uuids_complete.uuid_cnt =
-        sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.srdata.uuids_complete.p_uuids = m_adv_uuids;
+    init.srdata.uuids_complete.uuid_cnt        = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.srdata.uuids_complete.p_uuids         = m_adv_uuids;
 
-    init.config.ble_adv_fast_enabled   = true;
-    init.config.ble_adv_fast_interval  = APP_ADV_INTERVAL;
-    init.config.ble_adv_fast_timeout   = APP_ADV_DURATION;
-    init.evt_handler                   = on_adv_evt;
+    init.config.ble_adv_fast_enabled           = true;
+    init.config.ble_adv_fast_interval          = APP_ADV_INTERVAL;
+    init.config.ble_adv_fast_timeout           = APP_ADV_DURATION;
+    init.evt_handler                           = on_adv_evt;
 
-    err_code                           = ble_advertising_init(&m_advertising, &init);
+    err_code                                   = ble_advertising_init(&m_advertising, &init);
     APP_ERROR_CHECK(err_code);
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
@@ -1061,7 +1116,7 @@ void advertising_start(void)
         NRF_LOG_RAW_INFO("\n\nble_advertising_start error: 0x%08X\n", err_code);
     }
     // Posible crash
-    //APP_ERROR_CHECK(err_code);
+    // APP_ERROR_CHECK(err_code);
 }
 
 void advertising_stop(void)
@@ -1075,8 +1130,7 @@ void disconnect_all_devices(void)
 
     if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
-        err_code = sd_ble_gap_disconnect(m_conn_handle,
-                                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nCelular desconectado.");
@@ -1084,8 +1138,8 @@ void disconnect_all_devices(void)
 
     if (m_emisor_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
-        err_code = sd_ble_gap_disconnect(m_emisor_conn_handle,
-                                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        err_code =
+            sd_ble_gap_disconnect(m_emisor_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nEmisor desconectado.");

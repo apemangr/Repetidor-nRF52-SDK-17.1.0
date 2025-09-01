@@ -73,14 +73,15 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="656" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="634" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="812" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="793" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="190" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="174" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="499" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="467" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="67" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/delay/nrf_delay.h" selected="0" top="31" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="77" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="96" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="77" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="27" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../variables.h" selected="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="399" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_client.c" selected="0" top="373" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="25" y="636" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="604" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="968" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="950" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="34" y="32" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../leds.h" selected="0" top="21" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="ble_app_uart_relay_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/external/micro-ecc/nrf52hf_armgcc/armgcc" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

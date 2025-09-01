@@ -13,6 +13,7 @@
 #include "ble_hci.h"
 #include "ble_nus.h"
 #include "bsp_btn_ble.h"
+#include "bsp.h"
 #include "calendar.h"
 #include "filesystem.h"
 #include "leds.h"
@@ -663,6 +664,9 @@ static void buttons_leds_init(void)
     bsp_event_t startup_event;
 
     err_code = bsp_init(BSP_INIT_LEDS, bsp_event_handler);
+    nrf_gpio_cfg_output(LED1_PIN);
+    nrf_gpio_cfg_output(LED2_PIN);
+    nrf_gpio_cfg_output(LED3_PIN);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
@@ -827,6 +831,10 @@ int main(void)
     rtc_init();
     uart_init();
     buttons_leds_init();
+
+    Led_intro();
+
+    NRF_LOG_RAW_INFO("\n\n\nYa hice la intro");
     power_management_init();
 
     ble_stack_init();
