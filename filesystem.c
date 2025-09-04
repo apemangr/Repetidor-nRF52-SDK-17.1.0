@@ -1,8 +1,33 @@
 #include "filesystem.h"
+#include "variables.h"
+#include <stdint.h>
 
 // Buffer estático para evitar problemas con variables locales en el stack
 static store_history g_temp_history_buffer;
 extern void          app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length);
+
+void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3)
+{
+    // MAC's 
+    load_mac_from_flash(config_out->mac_repetidor_config, MAC_REPEATER);
+    load_mac_from_flash(config_out->mac_emisor_config, MAC_FILTRADO);
+    load_mac_from_flash(config_out->mac_escaneo_config, MAC_ESCANEO);
+
+    // Tiempos 
+    config_out->tiempo_encendido_config =
+        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+
+    config_out->tiempo_dormido_config =
+        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+
+    config_out->tiempo_busqueda_config =
+        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+
+    // Version del repetidor
+    config_out->version[0] = d1;
+    config_out->version[1] = d2;
+    config_out->version[2] = d3;
+}
 
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset)
 {
@@ -119,7 +144,7 @@ ret_code_t save_history_record(store_history const *p_history_data)
     fds_record_desc_t desc_history   = {0};
     fds_record_desc_t desc_counter   = {0};
     fds_find_token_t  token          = {0};
-    uint32_t          history_count  = 0; // Inicializado a 0
+    uint32_t          history_count  = 0;
 
     bool              counter_exists = (fds_record_find(HISTORY_FILE_ID, HISTORY_COUNTER_RECORD_KEY,
                                                         &desc_counter, &token) == NRF_SUCCESS);
@@ -310,6 +335,7 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
     uint32_t          *data;
     uint16_t           record_key;
     ret_code_t         err_code;
+
     // Determinar el Record Key según el tipo de valor
     if (valor_type == TIEMPO_ENCENDIDO)
     {
@@ -516,10 +542,26 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
     uint16_t           record_key_tipo;
     ret_code_t         err_code;
 
-    record_key_tipo = (tipo == MAC_FILTRADO) ? MAC_RECORD_KEY : MAC_SCAN_RECORD_KEY;
-    err_code        = fds_record_find(MAC_FILE_ID, record_key_tipo, &record_desc, &ftok);
+    switch (tipo)
+    {
+    case MAC_FILTRADO:
+        record_key_tipo = MAC_RECORD_KEY;
+        break;
+
+    case MAC_REPEATER:
+        record_key_tipo = MAC_REPEATER_RECORD_KEY;
+        break;
+
+    case MAC_ESCANEO:
+        record_key_tipo = MAC_SCAN_RECORD_KEY;
+        break;
+    }
+
+    // Busca el registro en la memeria
+    err_code = fds_record_find(MAC_FILE_ID, record_key_tipo, &record_desc, &ftok);
     if (err_code == NRF_SUCCESS)
     {
+        // Si existe trata de abrirlo
         err_code = fds_record_open(&record_desc, &flash_record);
         if (err_code == NRF_SUCCESS && flash_record.p_header->length_words * 4 >= 6)
         {
@@ -539,16 +581,11 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
                              "%02X:%02X:%02X:%02X:%02X:%02X",
                              mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
                              mac_out[0]);
-        }
-        else
-        {
-            NRF_LOG_RAW_INFO("\n\t>> ERROR: Se encontro MAC pero estaba defectuosa");
+            return;
         }
     }
     else
     {
-        NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC. Usando valor "
-                         "predeterminado.");
         if (tipo == MAC_FILTRADO)
         {
             // Si no se encuentra una MAC, usa una dirección predeterminada
@@ -573,14 +610,33 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
             // mac_out[4] = 0x4C;
             // mac_out[5] = 0xD2;
 
-            NRF_LOG_RAW_INFO("\n\t>> MAC de filtrado cargada desde memoria: "
+            NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC de filtrado. Usando valor predeterminado.");
+
+            NRF_LOG_RAW_INFO("\n\t>> MAC de filtrado default: "
                              "%02X:%02X:%02X:%02X:%02X:%02X",
                              mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
                              mac_out[0]);
             return;
         }
 
-        if (tipo == MAC_SCANEO)
+        if (tipo == MAC_REPEATER)
+        {
+            mac_out[5] = 0xC3;
+            mac_out[4] = 0xAB;
+            mac_out[3] = 0x00;
+            mac_out[2] = 0x00;
+            mac_out[1] = 0x11;
+            mac_out[0] = 0x22;
+
+            NRF_LOG_RAW_INFO("\n\t>> MAC del repetidor default: "
+                             "%02X:%02X:%02X:%02X:%02X:%02X",
+                             mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
+                             mac_out[0]);
+
+            return;
+        }
+
+        if (tipo == MAC_ESCANEO)
         {
             // mac_out[5] = 0x6A;
             // mac_out[4] = 0x0C;
@@ -603,10 +659,10 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
             mac_out[4] = 0x4C;
             mac_out[5] = 0xD2;
 
-            NRF_LOG_RAW_INFO("\n\t>> MAC de scaneo cargada desde memoria: "
-                             "%02X:%02X:%02X:%02X:%02X:%02X",
-                             mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
-                             mac_out[0]);
+            // NRF_LOG_RAW_INFO("\n\t>> MAC de escaneo default: "
+            //                  "%02X:%02X:%02X:%02X:%02X:%02X",
+            //                  mac_out[5], mac_out[4], mac_out[3], mac_out[2], mac_out[1],
+            //                  mac_out[0]);
             return;
         }
     }
@@ -619,8 +675,11 @@ void save_mac_to_flash(uint8_t *mac_addr)
     fds_record_t      record;
     fds_record_desc_t record_desc;
     fds_find_token_t  ftok = {0};
-    uint32_t          aligned_data_buffer[2]; // 2 * 4 = 8 bytes
+    uint32_t          aligned_data_buffer[2] = {0}; // 2 * 4 = 8 bytes, INICIALIZADO A CERO
     ret_code_t        ret;
+    
+    // Limpiar el buffer completamente antes de copiar los datos
+    memset(aligned_data_buffer, 0, sizeof(aligned_data_buffer));
     memcpy(aligned_data_buffer, mac_addr, 6);
 
     // Configura el registro con la MAC
@@ -644,7 +703,7 @@ void save_mac_to_flash(uint8_t *mac_addr)
         }
         else
         {
-            NRF_LOG_ERROR("Error al actualizar la MAC en memoria flash. Con registro "
+            NRF_LOG_RAW_INFO("\nError al actualizar la MAC en memoria flash. Con registro "
                           "existente.");
         }
     }
@@ -659,7 +718,7 @@ void save_mac_to_flash(uint8_t *mac_addr)
         }
         else
         {
-            NRF_LOG_ERROR("Error al crear el registro: %d", ret);
+            NRF_LOG_RAW_INFO("\nError al crear el registro: %d", ret);
         }
     }
 }
@@ -1071,8 +1130,11 @@ void save_mac_to_flash_scan(uint8_t *mac_addr)
     fds_record_t      record;
     fds_record_desc_t record_desc;
     fds_find_token_t  ftok = {0};
-    uint32_t          aligned_data_buffer[2]; // 2 * 4 = 8 bytes
+    uint32_t          aligned_data_buffer[2] = {0}; // 2 * 4 = 8 bytes, INICIALIZADO A CERO
     ret_code_t        ret;
+    
+    // Limpiar el buffer completamente antes de copiar los datos
+    memset(aligned_data_buffer, 0, sizeof(aligned_data_buffer));
     memcpy(aligned_data_buffer, mac_addr, 6);
 
     // Configura el registro con la MAC de escaneo
@@ -1118,4 +1180,134 @@ void save_mac_to_flash_scan(uint8_t *mac_addr)
     // Reiniciar después de 3 segundos
     nrf_delay_ms(3000);
     NVIC_SystemReset();
+}
+
+void save_mac_to_flash_repeater(uint8_t *mac_addr)
+{
+    fds_record_t      record;
+    fds_record_desc_t record_desc;
+    fds_find_token_t  ftok = {0};
+    // Crear un buffer exacto de 8 bytes (2 words) completamente limpio
+    uint8_t           clean_buffer[8] = {0};
+    ret_code_t        ret;
+    
+    // Debug: Mostrar MAC recibida
+    NRF_LOG_RAW_INFO("\n[DEBUG] MAC recibida para guardar (parte 1): %02X:%02X:%02X",
+                     mac_addr[5], mac_addr[4], mac_addr[3]);
+    NRF_LOG_RAW_INFO("\n[DEBUG] MAC recibida para guardar (parte 2): %02X:%02X:%02X",
+                     mac_addr[2], mac_addr[1], mac_addr[0]);
+    
+    // Copiar solo los 6 bytes de la MAC, el resto queda en 0
+    memcpy(clean_buffer, mac_addr, 6);
+    
+    // Debug: Mostrar buffer completo antes de guardar
+    NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (primeros 4 bytes): %02X %02X %02X %02X",
+                     clean_buffer[0], clean_buffer[1], clean_buffer[2], clean_buffer[3]);
+    NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (últimos 4 bytes): %02X %02X %02X %02X",
+                     clean_buffer[4], clean_buffer[5], clean_buffer[6], clean_buffer[7]);
+
+    // Configura el registro con la MAC del repetidor
+    record.file_id           = MAC_FILE_ID;
+    record.key               = MAC_REPEATER_RECORD_KEY;
+    record.data.p_data       = clean_buffer; // Apunta al buffer limpio
+    record.data.length_words = 2; // Exactamente 2 words (8 bytes)
+
+    ret = fds_record_find(MAC_FILE_ID, MAC_REPEATER_RECORD_KEY, &record_desc, &ftok);
+
+    if (ret == NRF_SUCCESS)
+    {
+        // El registro existe, actualízalo
+        ret = fds_record_update(&record_desc, &record);
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nError al actualizar la MAC del repetidor: %d", ret);
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> MAC del repetidor actualizada correctamente.\x1b[0m");
+        }
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        // El registro no existe, créalo
+        ret = fds_record_write(&record_desc, &record);
+        if (ret != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nError al escribir la MAC del repetidor: %d", ret);
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> MAC del repetidor guardada correctamente.\x1b[0m");
+        }
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\nError al buscar la MAC del repetidor: %d", ret);
+    }
+
+    // // Reiniciar después de 3 segundos
+    // nrf_delay_ms(3000);
+    // NVIC_SystemReset();
+}
+
+/**@brief Function for diagnosing MAC storage and retrieval
+ */
+void diagnose_mac_repeater_storage(void)
+{
+    NRF_LOG_RAW_INFO("\n\x1b[1;36m=== Diagnóstico de MAC del Repetidor ===\x1b[0m");
+    
+    // 1. Verificar qué hay guardado actualmente en flash
+    uint8_t mac_from_flash[6] = {0};
+    load_mac_from_flash(mac_from_flash, MAC_REPEATER);
+    
+    NRF_LOG_RAW_INFO("\n📖 MAC cargada desde flash (parte 1): %02X:%02X:%02X",
+                     mac_from_flash[5], mac_from_flash[4], mac_from_flash[3]);
+    NRF_LOG_RAW_INFO("\n📖 MAC cargada desde flash (parte 2): %02X:%02X:%02X", 
+                     mac_from_flash[2], mac_from_flash[1], mac_from_flash[0]);
+    
+    // 2. Verificar si el registro existe en flash
+    fds_record_desc_t record_desc;
+    fds_find_token_t  ftok = {0};
+    ret_code_t ret = fds_record_find(MAC_FILE_ID, MAC_REPEATER_RECORD_KEY, &record_desc, &ftok);
+    
+    if (ret == NRF_SUCCESS) 
+    {
+        NRF_LOG_RAW_INFO("\n✅ Registro encontrado en flash con KEY: 0x%04X", MAC_REPEATER_RECORD_KEY);
+        
+        // Abrir el registro para obtener más información
+        fds_flash_record_t flash_record;
+        ret = fds_record_open(&record_desc, &flash_record);
+        if (ret == NRF_SUCCESS) 
+        {
+            NRF_LOG_RAW_INFO("\n📏 Tamaño del registro: %d words (%d bytes)", 
+                           flash_record.p_header->length_words,
+                           flash_record.p_header->length_words * 4);
+            
+            // Mostrar los datos raw
+            uint8_t* raw_data = (uint8_t*)flash_record.p_data;
+            NRF_LOG_RAW_INFO("\n🔍 Datos raw en flash (primeros 4 bytes): %02X %02X %02X %02X",
+                           raw_data[0], raw_data[1], raw_data[2], raw_data[3]);
+            NRF_LOG_RAW_INFO("\n🔍 Datos raw en flash (últimos 4 bytes): %02X %02X %02X %02X",
+                           raw_data[4], raw_data[5], raw_data[6], raw_data[7]);
+            
+            fds_record_close(&record_desc);
+        }
+        else 
+        {
+            NRF_LOG_RAW_INFO("\n❌ Error abriendo registro: 0x%X", ret);
+        }
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        NRF_LOG_RAW_INFO("\n⚠️  No se encontró registro en flash - usando MAC por defecto");
+    }
+    else 
+    {
+        NRF_LOG_RAW_INFO("\n❌ Error buscando registro: 0x%X", ret);
+    }
+    
+    // 3. Mostrar MAC por defecto para comparación
+    NRF_LOG_RAW_INFO("\n🏠 MAC por defecto: C3:AB:00:00:11:22");
+    
+    NRF_LOG_RAW_INFO("\n\x1b[1;36m================================\x1b[0m");
 }

@@ -14,7 +14,7 @@
 #include "variables.h"
 
 // Macro para convertir bytes a words (32-bit words)
-#define BYTES_TO_WORDS(bytes) (((bytes) + 3) / 4)
+// #define BYTES_TO_WORDS(bytes) (((bytes) + 3) / 4)
 
 // Estructura de guardado de historiales
 typedef struct
@@ -41,6 +41,17 @@ typedef struct
 
 typedef struct
 {
+    uint8_t  mac_repetidor_config[6];
+    uint8_t  mac_emisor_config[6];
+    uint8_t  mac_escaneo_config[6];
+    uint32_t tiempo_encendido_config;
+    uint32_t tiempo_dormido_config;
+    uint32_t tiempo_busqueda_config;
+    uint8_t  version[3];
+} config_t;
+
+typedef struct
+{
     uint16_t V1;       // Voltaje 1
     uint16_t V2;       // Voltaje 2
     uint32_t contador; // Contador de advertisings
@@ -57,19 +68,28 @@ typedef enum
 
 typedef enum
 {
+    MAC_REPEATER,
     MAC_FILTRADO,
-    MAC_SCANEO
+    MAC_ESCANEO
 } tipo_mac_t;
 
+// MAC a cargar como filtrado
 static uint8_t mac_address_from_flash[6] = {0};
+
+// Variables globales
+extern config_t config_repetidor;
+
+// Configuration functions
+void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
 
 // History functions
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset);
 ret_code_t save_history_record(store_history const *p_history_data);
 ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_history_data);
-void       print_history_record(store_history const *p_record, const char *p_title);
 ret_code_t read_last_history_record(store_history *p_history_data);
+void       print_history_record(store_history const *p_record, const char *p_title);
 
+// History new system to send all the data through NUS
 void       delete_all_history(void);
 ret_code_t delete_history_record_by_id(uint16_t record_id);
 ret_code_t send_all_history(void);
@@ -85,6 +105,8 @@ uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 void       load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo);
 void       save_mac_to_flash(uint8_t *mac_addr);
 void       save_mac_to_flash_scan(uint8_t *mac_addr);
+void       save_mac_to_flash_repeater(uint8_t *mac_addr);
+void       diagnose_mac_repeater_storage(void);
 
 // typedef struct
 // {

@@ -31,7 +31,6 @@ void restart_on_rtc_extended(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t read_time =
         read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
-    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido extendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
     NRF_LOG_RAW_INFO("\n> Reiniciando RTC con tiempo extendido: %u ms", read_time);
@@ -43,7 +42,8 @@ void restart_on_rtc_search_mode(void)
     uint32_t search_time = EXTENDED_SEARCH_TIME_MS; // Usar tiempo fijo de variables.h
     uint32_t next_event = (current_counter + (search_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
-    NRF_LOG_RAW_INFO("\n> Reiniciando RTC con tiempo de BUSQUEDA: %u ms", search_time);
+    NRF_LOG_RAW_INFO("\n\x1b[1;35m[RTC BUSQUEDA]\x1b[0m RTC programado para búsqueda: %u ms (%u seg)", 
+                     search_time, search_time/1000);
 }
 
 

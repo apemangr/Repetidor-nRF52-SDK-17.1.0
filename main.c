@@ -30,7 +30,8 @@
 #include "variables.h"
 
 // store_flash Flash_array = {0};
-adc_values_t adc_values = {0};
+adc_values_t adc_values       = {0};
+config_t     config_repetidor = {0};
 
 // Sistema de sincronización con emisor
 typedef enum
@@ -81,6 +82,7 @@ void sync_system_handle_cycle_end(void)
         {
             current_sync_state = SYNC_STATE_EXTENDED_SEARCH;
             NRF_LOG_RAW_INFO("\n[\033[1;32mSYNC\033[0m] Cambiando a modo BUSQUEDA EXTENDIDA");
+            NRF_LOG_RAW_INFO("\n\x1b[1;35m[MODO BUSQUEDA]\x1b[0m Emisor no encontrado por %d ciclos, iniciando búsqueda extendida", cycles_without_emisor);
         }
     }
     else
@@ -339,10 +341,24 @@ void handle_rtc_events(void)
 
             NRF_LOG_RAW_INFO(
                 "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
+            
+            // Secuencia ordenada de desconexión para evitar problemas
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[SLEEP SEQUENCE]\x1b[0m 1. Desconectando dispositivos BLE...");
             disconnect_all_devices();
+            nrf_delay_ms(100); // Pequeña pausa para completar desconexiones
+            
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[SLEEP SEQUENCE]\x1b[0m 2. Deteniendo advertising...");
             advertising_stop();
+            nrf_delay_ms(50); // Pausa para completar el stop del advertising
+            
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[SLEEP SEQUENCE]\x1b[0m 3. Deteniendo scan...");
             scan_stop();
+            nrf_delay_ms(50); // Pausa para completar el stop del scan
+            
+            NRF_LOG_RAW_INFO("\n\x1b[1;33m[SLEEP SEQUENCE]\x1b[0m 4. Cerrando UART...");
             app_uart_close();
+            
+            NRF_LOG_RAW_INFO("\n\x1b[1;32m[SLEEP SEQUENCE]\x1b[0m Secuencia de desconexión completada");
             m_device_active = false;
 
             // Decidir el tiempo de sleep según el estado de sincronización
@@ -381,12 +397,19 @@ void handle_rtc_events(void)
                 "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m (%s)",
                 mode_str);
 
+            if (current_sync_state == SYNC_STATE_EXTENDED_SEARCH)
+            {
+                NRF_LOG_RAW_INFO("\n\x1b[1;35m[MODO BUSQUEDA]\x1b[0m Dispositivo en búsqueda extendida del emisor");
+                NRF_LOG_RAW_INFO("\n\x1b[1;35m[MODO BUSQUEDA]\x1b[0m Tiempo activo: %d ms (%d segundos)", 
+                                 EXTENDED_SEARCH_TIME_MS, EXTENDED_SEARCH_TIME_MS/1000);
+            }
+
             // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
             // INICIAR EL ADVERTISING Y EL SCANEO
 
             // Modificar el advertising payload para mostrar
             // los valores de los ADC
-            advertising_init();
+            advertising_update_data();
 
             write_date_to_flash(&m_time);
 
@@ -820,6 +843,7 @@ int main(void)
 {
 
     ret_code_t err_code;
+
     log_init();
     NRF_LOG_RAW_INFO("\n\033[1;36m====================\033[0m "
                      "\033[1;33mINICIO DEL SISTEMA\033[0m"
@@ -827,36 +851,75 @@ int main(void)
     NRF_LOG_RAW_INFO("\t\t Firmware 0.0.1 por\033[0m "
                      "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
 
+
     base_timer_init();
     rtc_init();
     uart_init();
     buttons_leds_init();
 
-    Led_intro();
+    // Led_intro();
 
-    NRF_LOG_RAW_INFO("\n\n\nYa hice la intro");
     power_management_init();
 
     ble_stack_init();
     gatt_init();
 
+    // change_mac_repeater();
+
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
 
+
+    load_repeater_configuration(&config_repetidor, 0, 0, 1);
+
     calendar_init();
 
-    NRF_LOG_FLUSH();
+//    NRF_LOG_FLUSH();
     calendar_set_datetime();
 
     NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m Buscando emisor...\n");
-    NRF_LOG_FLUSH();
 
+    NRF_LOG_RAW_INFO("\n\nImprimiendo configuracion: \nTiempo busqueda %d\nTiempo dormido: "
+                     "%d\nTiempo encendido:%d",
+                     config_repetidor.tiempo_busqueda_config,
+                     config_repetidor.tiempo_dormido_config,
+                     config_repetidor.tiempo_encendido_config);
+    NRF_LOG_RAW_INFO(
+        "\nMAC Repetidor: %02X:%02X:%02X:%02X:%02X:%02X", config_repetidor.mac_repetidor_config[5],
+        config_repetidor.mac_repetidor_config[4], config_repetidor.mac_repetidor_config[3],
+        config_repetidor.mac_repetidor_config[2], config_repetidor.mac_repetidor_config[1],
+        config_repetidor.mac_repetidor_config[0]);
+
+    NRF_LOG_RAW_INFO("\nMAC Emisor: %02X:%02X:%02X:%02X:%02X:%02X",
+                     config_repetidor.mac_emisor_config[5], config_repetidor.mac_emisor_config[4],
+                     config_repetidor.mac_emisor_config[3], config_repetidor.mac_emisor_config[2],
+                     config_repetidor.mac_emisor_config[1], config_repetidor.mac_emisor_config[0]);
+
+    NRF_LOG_RAW_INFO("\nMAC Escaneo: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                     config_repetidor.mac_escaneo_config[5], config_repetidor.mac_escaneo_config[4],
+                     config_repetidor.mac_escaneo_config[3], config_repetidor.mac_escaneo_config[2],
+                     config_repetidor.mac_escaneo_config[1],
+                     config_repetidor.mac_escaneo_config[0]);
+
+    nrf_delay_ms(100);
+    NRF_LOG_FLUSH();
     // Enter main loop.
+    //
+    static uint32_t adv_check_counter = 0;
     for (;;)
     {
         calendar_update();
         handle_rtc_events();
+        
+        // Verificar advertising cada 1000 ciclos (~cada pocos segundos)
+        adv_check_counter++;
+        if (adv_check_counter >= 1000)
+        {
+            adv_check_counter = 0;
+            check_and_restart_advertising();
+        }
+        
         idle_state_handle();
     }
 }

@@ -11,7 +11,7 @@ Extraer en `${NORDIC_SDK}/examples/ble_central_and_peripheral`.
 Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`.
 
 | Comando | Función                            | Descripción                                                                           | Ejemplo                                                  |
-| :------ | :--------------------------------- | :-----------------------------------------------------------------------------------  | :------------------------------------------------------- |
+| :------ | :--------------------------------- | :------------------------------------------------------------------------------------ | :------------------------------------------------------- |
 | 01      | Guardar MAC                        | Escribe en la memoria la MAC a conectarse                                             | 11101A566CE57FF66                                        |
 | 02      | Leer MAC                           | Lee la MAC guardada en la memoria flash                                               | 11102                                                    |
 | 03      | Reiniciar                          | Reinicia el repetidor                                                                 | 11103                                                    |
@@ -29,6 +29,9 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 | 15      | Comienza prueba de señal           | Espera a recibir el primer advertising del objetivo para comenzar a registrar         | 11115                                                    |
 | 16      | Detiene prueba de señal            | Verifica si se esta ejecutando la prueba para detenerla                               | 11116                                                    |
 | 17      | Estado prueba de señal             | Comprueba si se esta ejecutando la prueba de señal y entrega la cantdidad de paquetes | 11117                                                    |
-| 18      | Guarda MAC de scaneo               | Guarda en la memoria FLASH la MAC que debe ser scaneada                               | 11118A566CE57FF66                                        |
-| 19      | Carga MAC de scaneo                | Lee desde la memoria FLASH la MAC que debe ser scaneada                               | 11119                                                    |
+| 18      | Guarda MAC de escaneo              | Guarda en la memoria FLASH la MAC que debe ser escaneada                              | 11118A566CE57FF66                                        |
+| 19      | Lee MAC de escaneo                 | Lee desde la memoria FLASH la MAC que debe ser escaneada                              | 11119                                                    |
+| 20      | Guarda MAC del repetidor           | Guarda en la memoria FLASH la MAC custom del repetidor                                | 11120A566CE57FF66                                        |
+| 21      | Lee MAC del repetidor              | Lee desde la memoria FLASH la MAC custom del repetidor                                | 11121                                                    |
+| 22      | Enviar configuración repetidor     | Envía por NUS la configuración del repetidor como MAC's y tiempos de algunos timers   | 11122                                                    |
 | 99      | Borra todos los historiales        | Limpia de la memoria flash todos los registros almacenados                            | 11199                                                    |

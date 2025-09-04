@@ -1,0 +1,161 @@
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/thumb_crt0.o does not exist.
+2>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_log_backend_rtt.o does not exist.
+3>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_log_backend_serial.o does not exist.
+4>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_log_default_backends.o does not exist.
+5>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_log_frontend.o does not exist.
+6>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_log_str_formatter.o does not exist.
+7>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_button.o does not exist.
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_error.o does not exist.
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_error_handler_gcc.o does not exist.
+10>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_error_weak.o does not exist.
+11>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_fifo.o does not exist.
+12>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_scheduler.o does not exist.
+13>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_timer2.o does not exist.
+14>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_uart_fifo.o does not exist.
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_util_platform.o does not exist.
+16>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/drv_rtc.o does not exist.
+1>Assembling 'thumb_crt0.s'
+2>Compiling 'nrf_log_backend_rtt.c'
+3>Compiling 'nrf_log_backend_serial.c'
+4>Compiling 'nrf_log_default_backends.c'
+5>Compiling 'nrf_log_frontend.c'
+6>Compiling 'nrf_log_str_formatter.c'
+7>Compiling 'app_button.c'
+8>Compiling 'app_error.c'
+9>Compiling 'app_error_handler_gcc.c'
+10>Compiling 'app_error_weak.c'
+11>Compiling 'app_fifo.c'
+12>Compiling 'app_scheduler.c'
+13>Compiling 'app_timer2.c'
+14>Compiling 'app_uart_fifo.c'
+15>Compiling 'app_util_platform.c'
+16>Compiling 'drv_rtc.c'
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/hardfault_implementation.o does not exist.
+1>Compiling 'hardfault_implementation.c'
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_assert.o does not exist.
+8>Compiling 'nrf_assert.c'
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_atfifo.o does not exist.
+9>Compiling 'nrf_atfifo.c'
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_atomic.o does not exist.
+15>Compiling 'nrf_atomic.c'
+11>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_balloc.o does not exist.
+11>Compiling 'nrf_balloc.c'
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_fprintf.o does not exist.
+1>Compiling 'nrf_fprintf.c'
+3>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_fprintf_format.o does not exist.
+3>Compiling 'nrf_fprintf_format.c'
+4>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_memobj.o does not exist.
+10>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_pwr_mgmt.o does not exist.
+12>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_queue.o does not exist.
+4>Compiling 'nrf_memobj.c'
+10>Compiling 'nrf_pwr_mgmt.c'
+12>Compiling 'nrf_queue.c'
+6>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_ringbuf.o does not exist.
+6>Compiling 'nrf_ringbuf.c'
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_section_iter.o does not exist.
+8>Compiling 'nrf_section_iter.c'
+5>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_sortlist.o does not exist.
+5>Compiling 'nrf_sortlist.c'
+2>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_strerror.o does not exist.
+2>Compiling 'nrf_strerror.c'
+14>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/retarget.o does not exist.
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_atflags.o does not exist.
+14>Compiling 'retarget.c'
+15>Compiling 'nrf_atflags.c'
+7>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/fds.o does not exist.
+13>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_fstorage.o does not exist.
+7>Compiling 'fds.c'
+13>Compiling 'nrf_fstorage.c'
+16>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_fstorage_sd.o does not exist.
+16>Compiling 'nrf_fstorage_sd.c'
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ses_startup_nrf52.o does not exist.
+9>Assembling 'ses_startup_nrf52.s'
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ses_startup_nrf_common.o does not exist.
+1>Assembling 'ses_startup_nrf_common.s'
+11>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/system_nrf52.o does not exist.
+11>Compiling 'system_nrf52.c'
+3>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/boards.o does not exist.
+3>Compiling 'boards.c'
+6>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_drv_clock.o does not exist.
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_drv_uart.o does not exist.
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_atomic.o does not exist.
+6>Compiling 'nrf_drv_clock.c'
+8>Compiling 'nrf_drv_uart.c'
+9>Compiling 'nrfx_atomic.c'
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_clock.o does not exist.
+4>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_gpiote.o does not exist.
+1>Compiling 'nrfx_clock.c'
+4>Compiling 'nrfx_gpiote.c'
+12>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_prs.o does not exist.
+12>Compiling 'nrfx_prs.c'
+2>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_uart.o does not exist.
+2>Compiling 'nrfx_uart.c'
+5>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_uarte.o does not exist.
+5>Compiling 'nrfx_uarte.c'
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrfx_rtc.o does not exist.
+15>Compiling 'nrfx_rtc.c'
+14>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/bsp.o does not exist.
+14>Compiling 'bsp.c'
+10>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/bsp_btn_ble.o does not exist.
+10>Compiling 'bsp_btn_ble.c'
+11>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/main.o does not exist.
+11>Compiling 'main.c'
+13>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_nus_client.o does not exist.
+13>Compiling 'app_nus_client.c'
+16>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/app_nus_server.o does not exist.
+16>Compiling 'app_nus_server.c'
+7>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/filesystem.o does not exist.
+7>Compiling 'filesystem.c'
+3>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/calendar.o does not exist.
+3>Compiling 'calendar.c'
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/SEGGER_RTT.o does not exist.
+9>Compiling 'SEGGER_RTT.c'
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/SEGGER_RTT_Syscalls_SES.o does not exist.
+8>Compiling 'SEGGER_RTT_Syscalls_SES.c'
+12>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/SEGGER_RTT_printf.o does not exist.
+12>Compiling 'SEGGER_RTT_printf.c'
+6>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_advdata.o does not exist.
+6>Compiling 'ble_advdata.c'
+1>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_db_discovery.o does not exist.
+1>Compiling 'ble_db_discovery.c'
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_srv_common.o does not exist.
+8>Compiling 'ble_srv_common.c'
+14>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_ble_gatt.o does not exist.
+14>Compiling 'nrf_ble_gatt.c'
+2>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_ble_gq.o does not exist.
+2>Compiling 'nrf_ble_gq.c'
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_ble_scan.o does not exist.
+15>Compiling 'nrf_ble_scan.c'
+4>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_advertising.o does not exist.
+4>Compiling 'ble_advertising.c'
+5>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_link_ctx_manager.o does not exist.
+5>Compiling 'ble_link_ctx_manager.c'
+10>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_conn_state.o does not exist.
+10>Compiling 'ble_conn_state.c'
+9>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_ble_qwr.o does not exist.
+9>Compiling 'nrf_ble_qwr.c'
+12>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_conn_params.o does not exist.
+12>Compiling 'ble_conn_params.c'
+8>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_dfu_bonded.o does not exist.
+13>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_dfu_unbonded.o does not exist.
+8>Compiling 'ble_dfu_bonded.c'
+13>Compiling 'ble_dfu_unbonded.c'
+5>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_dfu.o does not exist.
+5>Compiling 'ble_dfu.c'
+6>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_dfu_svci.o does not exist.
+6>Compiling 'nrf_dfu_svci.c'
+3>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/utf.o does not exist.
+3>Compiling 'utf.c'
+14>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_nus_c.o does not exist.
+14>Compiling 'ble_nus_c.c'
+7>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/ble_nus.o does not exist.
+7>Compiling 'ble_nus.c'
+11>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_sdh.o does not exist.
+11>Compiling 'nrf_sdh.c'
+10>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_sdh_ble.o does not exist.
+10>Compiling 'nrf_sdh_ble.c'
+15>Output/Release/Obj/ble_app_uart_relay_pca10040_s132/nrf_sdh_soc.o does not exist.
+15>Compiling 'nrf_sdh_soc.c'
+1>Output/Release/Exe/ble_app_uart_relay_pca10040_s132.elf does not exist.
+1>Generating linker script 'ble_app_uart_relay_pca10040_s132.ld'
+1>Linking ble_app_uart_relay_pca10040_s132.elf
