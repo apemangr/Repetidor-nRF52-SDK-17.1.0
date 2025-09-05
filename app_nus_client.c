@@ -52,7 +52,8 @@ static uint32_t get_rtc_time_ms(void);
 static bool     is_target_mac_packet(const ble_gap_evt_adv_report_t *p_adv_report);
 
 // Función para inicializar `m_target_periph_addr` con la MAC leída
-static void target_periph_addr_init(void)
+static void
+target_periph_addr_init(void)
 {
     // Carga la MAC desde la memoria flash
     // 80 --
@@ -77,18 +78,21 @@ static void target_periph_addr_init(void)
     NRF_LOG_RAW_INFO("\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
 }
 
-static void nus_error_handler(uint32_t nrf_error)
+static void
+nus_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
-static void db_disc_handler(ble_db_discovery_evt_t *p_evt)
+static void
+db_disc_handler(ble_db_discovery_evt_t *p_evt)
 {
     ble_nus_c_on_db_disc_evt(&m_ble_nus_c, p_evt);
 }
 
 /** @brief Function for initializing the database discovery module. */
-static void db_discovery_init(void)
+static void
+db_discovery_init(void)
 {
     ble_db_discovery_init_t db_init;
 
@@ -102,7 +106,8 @@ static void db_discovery_init(void)
 }
 
 /**@brief Function to start scanning. */
-void scan_start(void)
+void
+scan_start(void)
 {
     ret_code_t ret;
 
@@ -115,7 +120,8 @@ void scan_start(void)
 
 /**@brief Function for handling Scanning Module events.
  */
-static void scan_evt_handler(scan_evt_t const *p_scan_evt)
+static void
+scan_evt_handler(scan_evt_t const *p_scan_evt)
 {
     ret_code_t err_code;
 
@@ -132,9 +138,12 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
 
         NRF_LOG_RAW_INFO("\n\n\033[1;32mConectado a dispositivo autorizado:\033[0m "
                          "\033[1;36m%02x:%02x:%02x:%02x:%02x:%02x\033[0m",
-                         p_connected->peer_addr.addr[5], p_connected->peer_addr.addr[4],
-                         p_connected->peer_addr.addr[3], p_connected->peer_addr.addr[2],
-                         p_connected->peer_addr.addr[1], p_connected->peer_addr.addr[0]);
+                         p_connected->peer_addr.addr[5],
+                         p_connected->peer_addr.addr[4],
+                         p_connected->peer_addr.addr[3],
+                         p_connected->peer_addr.addr[2],
+                         p_connected->peer_addr.addr[1],
+                         p_connected->peer_addr.addr[0]);
     }
     break;
 
@@ -154,7 +163,8 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
     }
 }
 
-static void scan_init(void)
+static void
+scan_init(void)
 {
     ret_code_t                   err_code;
     nrf_ble_scan_init_t          init_scan;
@@ -184,7 +194,8 @@ static void scan_init(void)
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
     APP_ERROR_CHECK(err_code);
 }
-void string_to_command(const char *input, uint8_t *output, uint16_t output_size)
+void
+string_to_command(const char *input, uint8_t *output, uint16_t output_size)
 {
     uint16_t input_len = strlen(input);
     if (input_len > output_size)
@@ -194,7 +205,8 @@ void string_to_command(const char *input, uint8_t *output, uint16_t output_size)
     memcpy(output, input, input_len);
 }
 
-static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t const *p_ble_nus_evt)
+static void
+ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t const *p_ble_nus_evt)
 {
     ret_code_t err_code;
 
@@ -202,7 +214,8 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
     {
     case BLE_NUS_C_EVT_DISCOVERY_COMPLETE:
         // NRF_LOG_INFO("Discovery complete.");
-        err_code = ble_nus_c_handles_assign(p_ble_nus_c, p_ble_nus_evt->conn_handle,
+        err_code = ble_nus_c_handles_assign(p_ble_nus_c,
+                                            p_ble_nus_evt->conn_handle,
                                             &p_ble_nus_evt->handles);
         APP_ERROR_CHECK(err_code);
 
@@ -218,12 +231,24 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
         //
         // Enviar la hora actual del repetidor al emisor
         //
-        char cmd_enviar_hora_a_emisor[24] = {0};
-        snprintf(cmd_enviar_hora_a_emisor, sizeof(cmd_enviar_hora_a_emisor),
-                 "060%04u.%02u.%02u %02u.%02u.%02u", m_time.year, m_time.month, m_time.day,
-                 m_time.hour, m_time.minute, m_time.second);
-        app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor,
-                                 strlen((const char *)cmd_enviar_hora_a_emisor));
+        char cmd_enviar_hora[24] = {0};
+        snprintf(cmd_enviar_hora,
+                 sizeof(cmd_enviar_hora),
+                 "060%04u.%02u.%02u %02u.%02u.%02u",
+                 m_time.year,
+                 m_time.month,
+                 m_time.day,
+                 m_time.hour,
+                 m_time.minute,
+                 m_time.second);
+
+        err_code = app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor,
+                                            strlen((const char *)cmd_enviar_hora_a_emisor));
+
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nFallo el envio de la hora al emisor: %d", err_code);
+        }
 
         //
         // Solicitar los valores de los ADC y contador
@@ -240,21 +265,21 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
         //
         // Solicitar el ultimo historial del emisor entre las 23:00 y 00:00
         //
-        // if (m_time.hour >= 23 || m_time.hour == 0)
-        // {
-        cmd_id[0] = '0';
-        cmd_id[1] = '8';
-
-        err_code  = app_nus_client_send_data(cmd_id, 2);
-        if (err_code != NRF_SUCCESS)
+        if (m_time.hour >= 23 || m_time.hour == 0)
         {
-            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
-        }
-        // }
+            cmd_id[0] = '0';
+            cmd_id[1] = '8';
 
-        //============================================================
+            err_code  = app_nus_client_send_data(cmd_id, 2);
+            if (err_code != NRF_SUCCESS)
+            {
+                NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
+            }
+        }
+
+        //=========================================================================================
         //                  AQUI TERMINAN LOS COMANDOS
-        //============================================================
+        //=========================================================================================
 
         break;
 
@@ -282,7 +307,8 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
 /**@snippet [Handling events from the ble_nus_c module] */
 
 /**@brief Function for initializing the Nordic UART Service (NUS) client. */
-static void nus_c_init(void)
+static void
+nus_c_init(void)
 {
     ret_code_t       err_code;
     ble_nus_c_init_t init;
@@ -295,12 +321,14 @@ static void nus_c_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-uint32_t app_nus_client_send_data(const uint8_t *data_array, uint16_t length)
+uint32_t
+app_nus_client_send_data(const uint8_t *data_array, uint16_t length)
 {
     return ble_nus_c_string_send(&m_ble_nus_c, (uint8_t *)data_array, length);
 }
 
-void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
+void
+app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 {
     ret_code_t           err_code;
     ble_gap_evt_t const *p_gap_evt   = &p_ble_evt->evt.gap_evt;
@@ -328,7 +356,8 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
                 NRF_LOG_RAW_INFO(
                     "\n\x1b[1;36m[SCAN MODE]\x1b[0m Paquete #%lu detectado (RSSI: %d dBm)",
-                    m_packet_scan_count, p_adv_report->rssi);
+                    m_packet_scan_count,
+                    p_adv_report->rssi);
             }
         }
         break;
@@ -377,14 +406,16 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
     }
 }
 
-void scan_stop(void)
+void
+scan_stop(void)
 {
     nrf_ble_scan_stop();
     NRF_LOG_RAW_INFO("\n\x1b[1;33m[SCAN]\x1b[0m Scan detenido");
 }
 
 // Función para obtener el tiempo actual del RTC en milisegundos
-static uint32_t get_rtc_time_ms(void)
+static uint32_t
+get_rtc_time_ms(void)
 {
     // El RTC cuenta a 8Hz (cada tick = 125ms)
     // nrfx_rtc_counter_get devuelve el contador actual
@@ -394,7 +425,8 @@ static uint32_t get_rtc_time_ms(void)
 }
 
 // Función para verificar timeouts del modo de escaneo
-static void packet_scan_check_timeouts(void)
+static void
+packet_scan_check_timeouts(void)
 {
     if (!m_packet_scan_mode_active)
     {
@@ -427,14 +459,16 @@ static void packet_scan_check_timeouts(void)
 }
 
 // Función para verificar si un paquete advertising coincide con la MAC objetivo
-static bool is_target_mac_packet(const ble_gap_evt_adv_report_t *p_adv_report)
+static bool
+is_target_mac_packet(const ble_gap_evt_adv_report_t *p_adv_report)
 {
     // Comparar la dirección MAC del paquete con la MAC objetivo
     return (memcmp(p_adv_report->peer_addr.addr, m_scan_target_mac, 6) == 0);
 }
 
 // Funciones públicas del modo de escaneo
-void packet_scan_mode_start(void)
+void
+packet_scan_mode_start(void)
 {
     ret_code_t err_code;
 
@@ -473,8 +507,12 @@ void packet_scan_mode_start(void)
 
     NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Iniciando modo de escaneo de paquetes");
     NRF_LOG_RAW_INFO("\n\x1b[1;36m[SCAN MODE]\x1b[0m MAC objetivo: %02X:%02X:%02X:%02X:%02X:%02X",
-                     m_scan_target_mac[5], m_scan_target_mac[4], m_scan_target_mac[3],
-                     m_scan_target_mac[2], m_scan_target_mac[1], m_scan_target_mac[0]);
+                     m_scan_target_mac[5],
+                     m_scan_target_mac[4],
+                     m_scan_target_mac[3],
+                     m_scan_target_mac[2],
+                     m_scan_target_mac[1],
+                     m_scan_target_mac[0]);
 
     // Iniciar escaneo sin filtros para capturar todos los paquetes
     err_code = nrf_ble_scan_filters_disable(&m_scan);
@@ -485,7 +523,8 @@ void packet_scan_mode_start(void)
     NRF_LOG_RAW_INFO("\n\x1b[1;32m[SCAN MODE]\x1b[0m Esperando primer paquete del emisor...");
 }
 
-void packet_scan_mode_stop(void)
+void
+packet_scan_mode_stop(void)
 {
     if (!m_packet_scan_mode_active)
     {
@@ -503,23 +542,27 @@ void packet_scan_mode_stop(void)
                      m_packet_scan_count);
 }
 
-bool packet_scan_mode_is_active(void)
+bool
+packet_scan_mode_is_active(void)
 {
     return m_packet_scan_mode_active;
 }
 
-uint32_t packet_scan_mode_get_count(void)
+uint32_t
+packet_scan_mode_get_count(void)
 {
     return m_packet_scan_count;
 }
 
 // Función para ser llamada periódicamente desde el main loop o RTC handler
-void packet_scan_mode_update(void)
+void
+packet_scan_mode_update(void)
 {
     packet_scan_check_timeouts();
 }
 
-void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
+void
+app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
 {
     m_on_data_received = on_data_received;
     target_periph_addr_init();

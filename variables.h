@@ -17,7 +17,7 @@
 #define DEFAULT_DEVICE_SLEEP_TIME_MS       (10000 + 1000) // Agregar tiempo de medicion
 
 // MACS
-#define MAC_FILE_ID             0x0001
+#define MAC_FILE_ID             0x0001 // File de los MAC records
 #define MAC_RECORD_KEY          0x0002 // MAC Emisor
 #define MAC_SCAN_RECORD_KEY     0x0003 // MAC Escaneo
 #define MAC_REPEATER_RECORD_KEY 0x0004 // MAC Custom Repetidor

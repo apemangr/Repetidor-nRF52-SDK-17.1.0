@@ -103,9 +103,7 @@ datetime_t read_date_from_flash(void);
 void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
 uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
 void       load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo);
-void       save_mac_to_flash(uint8_t *mac_addr);
-void       save_mac_to_flash_scan(uint8_t *mac_addr);
-void       save_mac_to_flash_repeater(uint8_t *mac_addr);
+void       save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo);
 void       diagnose_mac_repeater_storage(void);
 
 // typedef struct
