@@ -21,15 +21,15 @@
 
 BLE_NUS_C_DEF(m_ble_nus_c);
 BLE_DB_DISCOVERY_DEF(m_db_disc);
-NRF_BLE_GQ_DEF(m_ble_gatt_queue, NRF_SDH_BLE_CENTRAL_LINK_COUNT,
-               NRF_BLE_GQ_QUEUE_SIZE);
+NRF_BLE_GQ_DEF(m_ble_gatt_queue, NRF_SDH_BLE_CENTRAL_LINK_COUNT, NRF_BLE_GQ_QUEUE_SIZE);
 NRF_BLE_SCAN_DEF(m_scan);
 
 static app_nus_client_on_data_received_t m_on_data_received = 0;
 static ble_gap_addr_t                    m_target_periph_addr;
 
-static ble_uuid_t const                  m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE,
-                                                       .type = NUS_SERVICE_UUID_TYPE};
+static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE, .type = NUS_SERVICE_UUID_TYPE};
+
+static bool             m_rssi_requested = false;
 
 // Función para inicializar `m_target_periph_addr` con la MAC leída
 static void target_periph_addr_init(void)
@@ -38,7 +38,7 @@ static void target_periph_addr_init(void)
     // 80 --
     NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Configurando filtrado...");
     nrf_delay_ms(20);
-    load_mac_from_flash(m_target_periph_addr.addr);
+    load_mac_from_flash(m_target_periph_addr.addr, MAC_FILTRADO);
 
     // Verifica si la MAC se ha cargado correctamente
     if (m_target_periph_addr.addr[0] == 0 && m_target_periph_addr.addr[1] == 0 &&
@@ -54,8 +54,7 @@ static void target_periph_addr_init(void)
     // memcpy(m_target_periph_addr.addr, m_target_periph_addr.addr,
     // sizeof(m_target_periph_addr.addr));
 
-    NRF_LOG_RAW_INFO(
-        "\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
+    NRF_LOG_RAW_INFO("\n\t>> \033[0;32mFiltrado configurado correctamente.\033[0m\n");
 }
 
 static void nus_error_handler(uint32_t nrf_error)
@@ -109,15 +108,16 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
     break;
 
     case NRF_BLE_SCAN_EVT_CONNECTED: {
-        ble_gap_evt_connected_t const *p_connected =
-            p_scan_evt->params.connected.p_connected;
+        ble_gap_evt_connected_t const *p_connected = p_scan_evt->params.connected.p_connected;
 
-        NRF_LOG_RAW_INFO(
-            "\n\n\033[1;32mConectado a dispositivo autorizado:\033[0m "
-            "\033[1;36m%02x:%02x:%02x:%02x:%02x:%02x\033[0m",
-            p_connected->peer_addr.addr[5], p_connected->peer_addr.addr[4],
-            p_connected->peer_addr.addr[3], p_connected->peer_addr.addr[2],
-            p_connected->peer_addr.addr[1], p_connected->peer_addr.addr[0]);
+        NRF_LOG_RAW_INFO("\n\n\033[1;32mConectado a dispositivo autorizado:\033[0m "
+                         "\033[1;36m%02x:%02x:%02x:%02x:%02x:%02x\033[0m",
+                         p_connected->peer_addr.addr[5],
+                         p_connected->peer_addr.addr[4],
+                         p_connected->peer_addr.addr[3],
+                         p_connected->peer_addr.addr[2],
+                         p_connected->peer_addr.addr[1],
+                         p_connected->peer_addr.addr[0]);
     }
     break;
 
@@ -148,16 +148,14 @@ static void scan_init(void)
     err_code                   = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_ble_scan_filter_set(&m_scan, NRF_BLE_SCAN_ADDR_FILTER,
-                                       m_target_periph_addr.addr);
+    err_code =
+        nrf_ble_scan_filter_set(&m_scan, NRF_BLE_SCAN_ADDR_FILTER, m_target_periph_addr.addr);
     APP_ERROR_CHECK(err_code);
 
-    err_code =
-        nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
+    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
     APP_ERROR_CHECK(err_code);
 }
-void string_to_command(const char *input, uint8_t *output,
-                       uint16_t output_size)
+void string_to_command(const char *input, uint8_t *output, uint16_t output_size)
 {
     uint16_t input_len = strlen(input);
     if (input_len > output_size)
@@ -167,8 +165,7 @@ void string_to_command(const char *input, uint8_t *output,
     memcpy(output, input, input_len);
 }
 
-static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
-                                  ble_nus_c_evt_t const *p_ble_nus_evt)
+static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t const *p_ble_nus_evt)
 {
     ret_code_t err_code;
 
@@ -176,7 +173,8 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
     {
     case BLE_NUS_C_EVT_DISCOVERY_COMPLETE:
         // NRF_LOG_INFO("Discovery complete.");
-        err_code = ble_nus_c_handles_assign(p_ble_nus_c, p_ble_nus_evt->conn_handle,
+        err_code = ble_nus_c_handles_assign(p_ble_nus_c,
+                                            p_ble_nus_evt->conn_handle,
                                             &p_ble_nus_evt->handles);
         APP_ERROR_CHECK(err_code);
 
@@ -193,10 +191,17 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
         // Enviar la hora actual del repetidor al emisor
         //
         char cmd_enviar_hora_a_emisor[24] = {0};
-        snprintf(cmd_enviar_hora_a_emisor, sizeof(cmd_enviar_hora_a_emisor),
-                 "060%04u.%02u.%02u %02u.%02u.%02u", m_time.year, m_time.month, m_time.day,
-                 m_time.hour, m_time.minute, m_time.second);
-        app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor, strlen((const char *)cmd_enviar_hora_a_emisor));
+        snprintf(cmd_enviar_hora_a_emisor,
+                 sizeof(cmd_enviar_hora_a_emisor),
+                 "060%04u.%02u.%02u %02u.%02u.%02u",
+                 m_time.year,
+                 m_time.month,
+                 m_time.day,
+                 m_time.hour,
+                 m_time.minute,
+                 m_time.second);
+        app_nus_client_send_data((uint8_t *)cmd_enviar_hora_a_emisor,
+                                 strlen((const char *)cmd_enviar_hora_a_emisor));
 
         //
         // Solicitar los valores de los ADC y contador
@@ -224,7 +229,6 @@ static void ble_nus_c_evt_handler(ble_nus_c_t           *p_ble_nus_c,
                 NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
             }
         }
-
 
         //============================================================
         //                  AQUI TERMINAN LOS COMANDOS
@@ -285,8 +289,17 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
     case BLE_GAP_EVT_CONNECTED:
         if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
-            err_code = ble_nus_c_handles_assign(
-                &m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
+            if (!m_rssi_requested)
+            {
+                ret_code_t err_code = sd_ble_gap_rssi_start(conn_handle, 0, 0);
+                if (err_code == NRF_SUCCESS)
+                {
+                    m_rssi_requested = true;
+                    NRF_LOG_RAW_INFO("\nSolicitando RSSI...");
+                }
+            }
+            err_code =
+                ble_nus_c_handles_assign(&m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
             APP_ERROR_CHECK(err_code);
 
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
@@ -294,12 +307,20 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
             // start discovery of services. The NUS Client waits for a
             // discovery result
-            err_code = ble_db_discovery_start(&m_db_disc,
-                                              p_ble_evt->evt.gap_evt.conn_handle);
+            err_code = ble_db_discovery_start(&m_db_disc, p_ble_evt->evt.gap_evt.conn_handle);
             APP_ERROR_CHECK(err_code);
         }
         break;
+
+    case BLE_GAP_EVT_RSSI_CHANGED: {
+        int8_t rssi = p_gap_evt->params.rssi_changed.rssi;
+        NRF_LOG_RAW_INFO("\nRSSI Emisor: %d dbm", rssi);
+        sd_ble_gap_rssi_stop(conn_handle);
+        break;
+    }
     case BLE_GAP_EVT_DISCONNECTED:
+
+        m_rssi_requested = false;
         // NRF_LOG_RAW_INFO("\nBuscando emisor...");
         // scan_start();
         break;

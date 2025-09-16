@@ -13,9 +13,6 @@
 #include "nrf_log_ctrl.h"
 #include "variables.h"
 
-// Macro para convertir bytes a words (32-bit words)
-#define BYTES_TO_WORDS(bytes) (((bytes) + 3) / 4)
-
 // Estructura de guardado de historiales
 typedef struct
 {
@@ -41,12 +38,23 @@ typedef struct
 
 typedef struct
 {
+    uint8_t  mac_emisor_config[6];
+    uint8_t  mac_repetidor_config[6];
+    uint32_t tiempo_encendido_config;
+    uint32_t tiempo_dormido_config;
+    uint32_t tiempo_busqueda_config;
+    uint8_t  version[3];
+} config_t;
+
+typedef struct
+{
     uint16_t V1;       // Voltaje 1
     uint16_t V2;       // Voltaje 2
     uint32_t contador; // Contador de advertisings
 } adc_values_t;
 
 extern adc_values_t adc_values;
+extern config_t config_repetidor;
 
 typedef enum
 {
@@ -55,7 +63,15 @@ typedef enum
     TIEMPO_SLEEP
 } valor_type_t;
 
-static uint8_t mac_address_from_flash[6] = {0};
+typedef enum
+{
+    MAC_REPEATER,
+    MAC_FILTRADO
+} tipo_mac_t;
+
+static uint8_t  mac_address_from_flash[6] = {0};
+
+void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
 
 // History functions
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset);
@@ -65,6 +81,7 @@ void       print_history_record(store_history const *p_record, const char *p_tit
 ret_code_t read_last_history_record(store_history *p_history_data);
 
 void       delete_all_history(void);
+ret_code_t delete_history_record_by_id(uint16_t record_id);
 ret_code_t send_all_history(void);
 void       history_send_next_packet(void);
 bool       history_send_is_active(void);
@@ -75,9 +92,8 @@ ret_code_t write_date_to_flash(const datetime_t *p_date);
 datetime_t read_date_from_flash(void);
 void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
 uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
-void       load_mac_from_flash(uint8_t *mac_out);
-void       save_mac_to_flash(uint8_t *mac_addr);
-
+void       load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo);
+void       save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo);
 // typedef struct
 // {
 //   uint8_t company[2];

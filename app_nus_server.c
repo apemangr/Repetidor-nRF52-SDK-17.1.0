@@ -1,5 +1,5 @@
 #include "app_nus_server.h"
-
+#include "app_nus_client.h"
 #include "app_timer.h"
 #include "app_uart.h"
 #include "ble_advdata.h"
@@ -36,11 +36,9 @@
 #define NEXT_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(30000)
 #define MAX_CONN_PARAMS_UPDATE_COUNT   3
 #define DEAD_BEEF                      0xDEADBEEF
+#define LARGO_ADVERTISING              0x18 // Largo_Advertising  10 son 16 y 18 son 24
 
-#define Largo_Advertising              0x18 // Largo_Advertising  10 son 16 y 18 son 24
-
-uint8_t m_beacon_info[Largo_Advertising];
-uint8_t adv_buffer[BLE_GAP_ADV_SET_DATA_SIZE_MAX];
+uint8_t m_beacon_info[LARGO_ADVERTISING];
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 NRF_BLE_QWR_DEF(m_qwr);
@@ -54,8 +52,7 @@ static uint16_t                          m_emisor_conn_handle   = BLE_CONN_HANDL
 static uint8_t                           custom_mac_addr_[6]    = {0};
 static ble_gap_addr_t                    m_target_periph_addr;
 
-static ble_uuid_t                        m_adv_uuids[] = {
-    {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
+static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
 // Función para realizar la recolección de basura
 static void perform_garbage_collection(void)
@@ -71,6 +68,142 @@ static void perform_garbage_collection(void)
     }
 }
 
+ret_code_t send_configuration_nus(config_t const *config_repetidor)
+{
+    if (config_repetidor == NULL)
+    {
+        NRF_LOG_ERROR("send_configuration_nus: config_repetidor is NULL");
+        return NRF_ERROR_NULL;
+    }
+
+    // Verificar que hay conexión NUS activa
+    if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
+    {
+        NRF_LOG_WARNING("send_configuration_nus: No hay conexión NUS activa");
+        return NRF_ERROR_INVALID_STATE;
+    }
+
+    // Buffer binario para los datos
+    // 2 bytes identificador + 33 bytes datos = 35 bytes total
+    uint8_t  binary_data[35];
+    uint8_t *ptr = binary_data;
+
+    NRF_LOG_RAW_INFO(
+        "\n\n\x1b[1;36m=== Enviando configuracion en formato binario optimizado ===\x1b[0m");
+
+    // Añadir bytes identificadores 0xCC, 0xAA al inicio
+    *ptr++ = 0xCC;
+    *ptr++ = 0xAA;
+
+    // 1. MAC del repetidor (6 bytes) - en orden inverso para formato little endian
+    for (int i = 5; i >= 0; i--)
+    {
+        *ptr++ = config_repetidor->mac_repetidor_config[i];
+    }
+
+    // 2. MAC del emisor (6 bytes) - en orden inverso para formato little endian
+    for (int i = 5; i >= 0; i--)
+    {
+        *ptr++ = config_repetidor->mac_emisor_config[i];
+    }
+
+    // 3. Tiempo de encendido (4 bytes, little endian)
+    uint32_t tiempo_on = config_repetidor->tiempo_encendido_config;
+    *ptr++             = (uint8_t)(tiempo_on & 0xFF);
+    *ptr++             = (uint8_t)((tiempo_on >> 8) & 0xFF);
+    *ptr++             = (uint8_t)((tiempo_on >> 16) & 0xFF);
+    *ptr++             = (uint8_t)((tiempo_on >> 24) & 0xFF);
+
+    // 4. Tiempo de dormido (4 bytes, little endian)
+    uint32_t tiempo_sleep = config_repetidor->tiempo_dormido_config;
+    *ptr++                = (uint8_t)(tiempo_sleep & 0xFF);
+    *ptr++                = (uint8_t)((tiempo_sleep >> 8) & 0xFF);
+    *ptr++                = (uint8_t)((tiempo_sleep >> 16) & 0xFF);
+    *ptr++                = (uint8_t)((tiempo_sleep >> 24) & 0xFF);
+
+    // 5. Tiempo de búsqueda (4 bytes, little endian)
+    uint32_t tiempo_search = config_repetidor->tiempo_busqueda_config;
+    *ptr++                 = (uint8_t)(tiempo_search & 0xFF);
+    *ptr++                 = (uint8_t)((tiempo_search >> 8) & 0xFF);
+    *ptr++                 = (uint8_t)((tiempo_search >> 16) & 0xFF);
+    *ptr++                 = (uint8_t)((tiempo_search >> 24) & 0xFF);
+
+    // 6. Versión del firmware (3 bytes)
+    *ptr++ = config_repetidor->version[0];
+    *ptr++ = config_repetidor->version[1];
+    *ptr++ = config_repetidor->version[2];
+
+    // Enviar los datos binarios
+    ret_code_t err_code = app_nus_server_send_data(binary_data, sizeof(binary_data));
+    if (err_code != NRF_SUCCESS)
+    {
+        const char *error_msg;
+        switch (err_code)
+        {
+        case NRF_ERROR_INVALID_STATE:
+            error_msg = "Estado inválido (sin conexión o notificaciones deshabilitadas)";
+            break;
+        case NRF_ERROR_RESOURCES:
+            error_msg = "Buffer de transmisión lleno";
+            break;
+        case NRF_ERROR_INVALID_PARAM:
+            error_msg = "Parámetros inválidos";
+            break;
+        case NRF_ERROR_BUSY:
+            error_msg = "Servicio ocupado";
+            break;
+        default:
+            error_msg = "Error desconocido";
+            break;
+        }
+
+        NRF_LOG_ERROR("Error enviando configuración binaria: 0x%X (%s)", err_code, error_msg);
+        NRF_LOG_RAW_INFO("\n> Estado conexión: handle=0x%04X, activa=%s",
+                         m_conn_handle,
+                         (m_conn_handle != BLE_CONN_HANDLE_INVALID) ? "SI" : "NO");
+
+        // Ejecutar diagnóstico completo cuando hay error
+
+        return err_code;
+    }
+
+    // Log de información enviada (mostrar en hexadecimal para debugging)
+    NRF_LOG_RAW_INFO("\n> Configuración binaria enviada (%d bytes):", sizeof(binary_data));
+    NRF_LOG_RAW_INFO("\n> Datos hex: ");
+    for (int i = 0; i < sizeof(binary_data); i++)
+    {
+        NRF_LOG_RAW_INFO("%02X", binary_data[i]);
+    }
+
+    NRF_LOG_RAW_INFO("\n> Decodificación:");
+    NRF_LOG_RAW_INFO("\n  - Identificador: 0x%02X 0x%02X", binary_data[0], binary_data[1]);
+    NRF_LOG_RAW_INFO("\n  - MAC Repetidor: %02X:%02X:%02X:%02X:%02X:%02X",
+                     config_repetidor->mac_repetidor_config[5],
+                     config_repetidor->mac_repetidor_config[4],
+                     config_repetidor->mac_repetidor_config[3],
+                     config_repetidor->mac_repetidor_config[2],
+                     config_repetidor->mac_repetidor_config[1],
+                     config_repetidor->mac_repetidor_config[0]);
+    NRF_LOG_RAW_INFO("\n  - MAC Emisor: %02X:%02X:%02X:%02X:%02X:%02X",
+                     config_repetidor->mac_emisor_config[5],
+                     config_repetidor->mac_emisor_config[4],
+                     config_repetidor->mac_emisor_config[3],
+                     config_repetidor->mac_emisor_config[2],
+                     config_repetidor->mac_emisor_config[1],
+                     config_repetidor->mac_emisor_config[0]);
+
+    NRF_LOG_RAW_INFO("\n  - Tiempo ON: %lu ms", config_repetidor->tiempo_encendido_config);
+    NRF_LOG_RAW_INFO("\n  - Tiempo SLEEP: %lu ms", config_repetidor->tiempo_dormido_config);
+    NRF_LOG_RAW_INFO("\n  - Tiempo SEARCH: %lu ms", config_repetidor->tiempo_busqueda_config);
+    NRF_LOG_RAW_INFO("\n  - Versión FW: %u.%u.%u",
+                     config_repetidor->version[0],
+                     config_repetidor->version[1],
+                     config_repetidor->version[2]);
+
+    NRF_LOG_RAW_INFO("\n\x1b[1;32m=== Configuración binaria enviada exitosamente ===\x1b[0m");
+    return NRF_SUCCESS;
+}
+
 static void fds_evt_handler(fds_evt_t const *p_evt)
 {
     if (p_evt->id == FDS_EVT_INIT)
@@ -81,10 +214,8 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
 
             fds_stat_t stat = {0};
             fds_stat(&stat);
-            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros validos.\n",
-                             stat.valid_records);
-            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros no validos.",
-                             stat.dirty_records);
+            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros validos.\n", stat.valid_records);
+            NRF_LOG_RAW_INFO("\t>> Se encontraron %d registros no validos.", stat.dirty_records);
 
             if (stat.dirty_records > 0)
             {
@@ -92,8 +223,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
                 NRF_LOG_RAW_INFO("\n\t>> Limpiando registros no validos...");
                 perform_garbage_collection();
             }
-            NRF_LOG_RAW_INFO(
-                "\n\t>> \033[0;32mModulo inicializado correctamente.\033[0m");
+            NRF_LOG_RAW_INFO("\n\t>> \033[0;32mModulo inicializado correctamente.\033[0m");
         }
         else
         {
@@ -187,29 +317,25 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
         uint32_t err_code;
 
         NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data,
-                              p_evt->params.rx_data.length);
+        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
         // Asegúrate de que el mensaje sea tratado como una cadena de texto
         char message[BLE_NUS_MAX_DATA_LEN]; // +1 para el carácter nulo
         if (p_evt->params.rx_data.length < sizeof(message))
         {
-            memcpy(message, p_evt->params.rx_data.p_data,
-                   p_evt->params.rx_data.length);
+            memcpy(message, p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
             message[p_evt->params.rx_data.length] = '\0'; // Agregar terminador nulo
 
             // Imprime el mensaje recibido
-            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s",
-                             message);
+            NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Mensaje recibido: \x1b[0m%s", message);
 
             // Verifica si el mensaje comienza con "111" par interpretar el comando
-            if (p_evt->params.rx_data.length >= 5 && message[0] == '1' &&
-                message[1] == '1' && message[2] == '1')
+            if (p_evt->params.rx_data.length >= 5 && message[0] == '1' && message[1] == '1' &&
+                message[2] == '1')
             {
                 // Extrae el comando (los dos caracteres después de "111")
-                char command[3] = {message[3], message[4],
-                                   '\0'}; // Comando de 2 caracteres
+                char command[3] = {message[3], message[4], '\0'}; // Comando de 2 caracteres
 
                 // Manejo de comandos con un switch-case
                 switch (atoi(command)) // Convierte el comando a entero
@@ -221,20 +347,23 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         for (size_t i = 0; i < 6; i++)
                         {
-                            char byte_str[3]        = {message[5 + i * 2], message[6 + i * 2], '\0'};
+                            char byte_str[3] = {message[5 + i * 2], message[6 + i * 2], '\0'};
                             custom_mac_addr_[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
                         }
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 01 recibido: "
                                          "Cambiar MAC \x1b[0m");
                         NRF_LOG_RAW_INFO("\n> MAC recibida: "
                                          "%02X:%02X:%02X:%02X:%02X:%02X",
-                                         custom_mac_addr_[5], custom_mac_addr_[4],
-                                         custom_mac_addr_[3], custom_mac_addr_[2],
-                                         custom_mac_addr_[1], custom_mac_addr_[0]);
+                                         custom_mac_addr_[5],
+                                         custom_mac_addr_[4],
+                                         custom_mac_addr_[3],
+                                         custom_mac_addr_[2],
+                                         custom_mac_addr_[1],
+                                         custom_mac_addr_[0]);
 
                         // Guarda la MAC en la memoria flash y reinicia el
                         // dispositivo
-                        save_mac_to_flash(custom_mac_addr_);
+                        save_mac_to_flash(custom_mac_addr_, MAC_FILTRADO);
                     }
                     else
                     {
@@ -250,7 +379,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando "
                                          "MAC "
                                          "guardada \x1b[0m");
-                        load_mac_from_flash(mac_print);
+                        load_mac_from_flash(mac_print, MAC_FILTRADO);
                         // muestra la MAC
                     }
 
@@ -267,8 +396,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                 case 4: // Guardar tiempo de encendido
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes
+                    if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
                         char     time_str[4] = {message[5], message[6], message[7], '\0'};
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
@@ -297,36 +425,46 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: "
                                          "Leer tiempo de encendido \x1b[0m");
-                        uint32_t sleep_time_ms = read_time_from_flash(
-                            TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+                        uint32_t sleep_time_ms =
+                            read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
                         break;
                     }
 
                 case 6: // Comando 06: Guardar tiempo de apagado
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes
+
+                    if (p_evt->params.rx_data.length >= 6)
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
+                        // Calcular la longitud del número (hasta 5 caracteres máximo)
+                        size_t time_length = p_evt->params.rx_data.length - 5; // Restar "11106"
+                        if (time_length > 5)
+                            time_length = 5; // Máximo 5 caracteres
+
+                        char time_str[6] = {0}; // Buffer para hasta 5 dígitos + terminador nulo
+                        memcpy(time_str, &message[5], time_length);
+                        time_str[time_length] = '\0';
+
                         uint32_t time_in_seconds __attribute__((aligned(4))) =
                             atoi(time_str) * 1000;
-                        if (time_in_seconds <= 6666000) // Verifica que no exceda el máximo
-                        // permitido
+                        if (time_in_seconds <= 82500000) // Máximo 82500 segundos
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 06 recibido: "
                                              "Cambiar tiempo de dormido \x1b[0m");
+                            NRF_LOG_RAW_INFO("\n> Tiempo configurado: %lu segundos (%s)",
+                                             time_in_seconds / 1000,
+                                             time_str);
                             write_time_to_flash(TIEMPO_SLEEP, time_in_seconds);
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de dormido excede el máximo "
-                                            "permitido (6666 segundos).");
+                            NRF_LOG_RAW_INFO("\nEl tiempo de dormido excede el maximo "
+                                             "permitido (82500 segundos).");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Comando 06 recibido con datos insuficientes.");
+                        NRF_LOG_RAW_INFO("\nComando 06 recibido con datos insuficientes.");
                     }
                     break;
                 }
@@ -335,50 +473,109 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 07 recibido: "
                                      "Leer tiempo de dormido\x1b[0m");
-                    uint32_t sleep_time_ms = read_time_from_flash(
-                        TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+                    uint32_t sleep_time_ms =
+                        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
 
+                    NRF_LOG_RAW_INFO("\n> Tiempo de dormido configurado: %lu segundos",
+                                     sleep_time_ms / 1000);
+                    NRF_LOG_FLUSH();
                     break;
                 }
 
-                case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato YYYYMMDDHHMMSS
+                case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato
+                        // YYYYMMDDHHMMSS
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar "
-                                     "fecha y hora\x1b[0m");
 
-                    if (p_evt->params.rx_data.length >=
-                        19) // 5 de comando + 14 de fecha/hora
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 08 recibido: Guardar fecha y hora "
+                                     "- YYYYMMDDHHMMSS\x1b[0m");
+
+                    if (p_evt->params.rx_data.length >= 19) // 5 de comando + 14 de fecha/hora
                     {
-                        const char *fecha_iso =
-                            &message[5]; // Apunta al inicio de la fecha/hora
+                        // Crear buffer local para garantizar terminador nulo
+                        char fecha_buffer[15] = {0}; // 14 caracteres + terminador nulo
 
-                        datetime_t dt;
-                        if (sscanf(fecha_iso, "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu", &dt.year,
-                                   &dt.month, &dt.day, &dt.hour, &dt.minute,
-                                   &dt.second) == 6)
+                        // Copiar exactamente 14 caracteres de fecha/hora
+                        memcpy(fecha_buffer, &message[5], 14);
+                        fecha_buffer[14] = '\0'; // Garantizar terminador nulo
+
+                        // Debug: mostrar cadena recibida
+                        NRF_LOG_RAW_INFO("\n> Cadena de fecha recibida: '%s' (longitud: %d)",
+                                         fecha_buffer,
+                                         strlen(fecha_buffer));
+
+                        // Crear estructura de fecha local
+                        datetime_t dt = {0};
+
+                        // Parsing con validación mejorada
+                        int parsed = sscanf(fecha_buffer,
+                                            "%4hu%2hhu%2hhu%2hhu%2hhu%2hhu",
+                                            &dt.year,
+                                            &dt.month,
+                                            &dt.day,
+                                            &dt.hour,
+                                            &dt.minute,
+                                            &dt.second);
+
+                        if (parsed == 6)
                         {
-                            NRF_LOG_RAW_INFO("\nFecha recibida: "
-                                             "%04u-%02u-%02u %02u:%02u:%02u",
-                                             dt.year, dt.month, dt.day, dt.hour, dt.minute,
-                                             dt.second);
-
-                            // Llamar a la función modificada
-                            err_code = write_date_to_flash(&dt);
-
-                            if (err_code != NRF_SUCCESS)
+                            // Validación básica de rangos
+                            if (dt.year >= 2000 && dt.year <= 2099 && dt.month >= 1 &&
+                                dt.month <= 12 && dt.day >= 1 && dt.day <= 31 && dt.hour <= 23 &&
+                                dt.minute <= 59 && dt.second <= 59)
                             {
-                                NRF_LOG_ERROR("Error guardando: 0x%X", err_code);
+                                NRF_LOG_RAW_INFO("\n> Fecha parseada correctamente: "
+                                                 "%04u-%02u-%02u %02u:%02u:%02u",
+                                                 dt.year,
+                                                 dt.month,
+                                                 dt.day,
+                                                 dt.hour,
+                                                 dt.minute,
+                                                 dt.second);
+
+                                // Guardar en flash
+                                err_code = write_date_to_flash(&dt);
+
+                                if (err_code == NRF_SUCCESS)
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Fecha guardada exitosamente en "
+                                                     "flash\x1b[0m");
+                                }
+                                else
+                                {
+                                    NRF_LOG_ERROR(
+                                        "\n\x1b[1;31m> Error guardando fecha: 0x%X\x1b[0m",
+                                        err_code);
+                                }
+                            }
+                            else
+                            {
+                                NRF_LOG_WARNING(
+                                    "\n\x1b[1;33m> Valores de fecha fuera de rango\x1b[0m");
+                                NRF_LOG_RAW_INFO("\n  Ano: %u, Mes: %u, Dia: %u",
+                                                 dt.year,
+                                                 dt.month,
+                                                 dt.day);
+                                NRF_LOG_RAW_INFO("\n  Hora: %u, Min: %u, Seg: %u",
+                                                 dt.hour,
+                                                 dt.minute,
+                                                 dt.second);
                             }
                         }
                         else
                         {
-                            NRF_LOG_WARNING("Formato inválido. Se esperaba "
-                                            "YYYYMMDDHHMMSS.");
+                            NRF_LOG_WARNING(
+                                "\n\x1b[1;33m> Error en parsing. Elementos parseados: %d/6\x1b[0m",
+                                parsed);
+                            NRF_LOG_RAW_INFO("\n> Formato esperado: YYYYMMDDHHMMSS");
+                            NRF_LOG_RAW_INFO("\n> Ejemplo: 20250804143025 (2025-08-04 14:30:25)");
                         }
                     }
                     else
                     {
-                        NRF_LOG_WARNING("Datos insuficientes. Se esperaban 14 dígitos");
+                        NRF_LOG_WARNING("\n\x1b[1;33m> Datos insuficientes. Longitud recibida: %d, "
+                                        "esperada: 19+\x1b[0m",
+                                        p_evt->params.rx_data.length);
+                        NRF_LOG_RAW_INFO("\n> Formato: 11108YYYYMMDDHHMMSS");
                     }
                     break;
                 }
@@ -391,16 +588,19 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     datetime_t dt = read_date_from_flash();
 
                     // Mostrar fecha leída
-                    NRF_LOG_RAW_INFO(
-                        "\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u", dt.year,
-                        dt.month, dt.day, dt.hour, dt.minute, dt.second);
+                    NRF_LOG_RAW_INFO("\n>> Fecha almacenada: %04u-%02u-%02u %02u:%02u:%02u",
+                                     dt.year,
+                                     dt.month,
+                                     dt.day,
+                                     dt.hour,
+                                     dt.minute,
+                                     dt.second);
 
                     break;
                 }
                 case 10: // Guarda en la memoria el tiempo de encendido extendido
                 {
-                    if (p_evt->params.rx_data.length >=
-                        6) // Verifica que haya datos suficientes 
+                    if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
                         char     time_str[4] = {message[5], message[6], message[7], '\0'};
                         uint32_t time_in_seconds_extended __attribute__((aligned(4))) =
@@ -409,7 +609,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
                                              "Cambiar tiempo de encendido extendido\x1b[0m");
-                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED, time_in_seconds_extended);
+                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED,
+                                                time_in_seconds_extended);
                         }
                         else
                         {
@@ -425,40 +626,136 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 }
                 case 11: // Solicitar tiempo de encendido extendido
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de encendido extendido\x1b[0m");
-                    uint32_t encendido_extendido_ms = read_time_from_flash(
-                        TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de "
+                                     "encendido extendido\x1b[0m");
+                    uint32_t encendido_extendido_ms =
+                        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED,
+                                             DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+
+                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu segundos",
+                                     encendido_extendido_ms / 1000);
 
                     break;
                 }
                 case 12: // Solicitar un registro de historial por ID
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de historial por ID\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de "
+                                     "historial por ID\x1b[0m");
                     if (p_evt->params.rx_data.length > 5) // Verifica que haya datos suficientes
                     {
-                        // Extrae el ID del registro como string (todo lo que sigue después de "11111")
+                        // Extrae el ID del registro como string (todo lo que sigue después de
+                        // "11111")
                         size_t id_len    = p_evt->params.rx_data.length - 5;
-                        char   id_str[8] = {0}; // Soporta hasta 7 dígitos, ajusta si necesitas más
+                        char   id_str[8] = {0}; // Soporta hasta 7 dígitos
+                                                //
                         if (id_len < sizeof(id_str))
                         {
+
                             memcpy(id_str, &message[5], id_len);
                             id_str[id_len]       = '\0';
                             uint16_t registro_id = (uint16_t)atoi(id_str);
+
                             // Llama a la función para solicitar el registro por ID
                             store_history registro_historial;
                             err_code = read_history_record_by_id(registro_id, &registro_historial);
                             if (err_code == NRF_SUCCESS)
                             {
-                                NRF_LOG_RAW_INFO("\nSolicitud de registro %u enviada correctamente.", registro_id);
-                                // Imprime el registro de historial
+                                NRF_LOG_RAW_INFO(
+                                    "\nRegistro %u leido correctamente, enviando por NUS...",
+                                    registro_id);
+
+                                // Preparar array de datos en formato hex (igual que
+                                // send_all_history)
+                                uint8_t  data_array[244];
+                                uint16_t position = 0;
+
+                                // Byte 0: Magic
+                                data_array[position++] = 0x08;
+
+                                // Bytes 1-7: Fecha y hora
+                                data_array[position++] = registro_historial.day;
+                                data_array[position++] = registro_historial.month;
+                                data_array[position++] = (registro_historial.year >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.year & 0xFF);
+                                data_array[position++] = registro_historial.hour;
+                                data_array[position++] = registro_historial.minute;
+                                data_array[position++] = registro_historial.second;
+
+                                // Bytes 8-11: Contador (4 bytes) - convertir a big-endian
+                                data_array[position++] = (registro_historial.contador >> 24) & 0xFF;
+                                data_array[position++] = (registro_historial.contador >> 16) & 0xFF;
+                                data_array[position++] = (registro_historial.contador >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.contador & 0xFF);
+
+                                // Bytes 12-15: V1, V2 (2 bytes cada uno) - convertir a big-endian
+                                data_array[position++] = (registro_historial.V1 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V1 & 0xFF);
+                                data_array[position++] = (registro_historial.V2 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V2 & 0xFF);
+
+                                // Byte 16: Battery
+                                data_array[position++] = registro_historial.battery;
+
+                                // Bytes 17-28: MACs (rellenar con ceros)
+                                for (int j = 0; j < 12; j++)
+                                {
+                                    data_array[position++] = 0x00;
+                                }
+
+                                // Bytes 29-40: V3-V8 (2 bytes cada uno) - convertir a big-endian
+                                data_array[position++] = (registro_historial.V3 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V3 & 0xFF);
+                                data_array[position++] = (registro_historial.V4 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V4 & 0xFF);
+                                data_array[position++] = (registro_historial.V5 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V5 & 0xFF);
+                                data_array[position++] = (registro_historial.V6 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V6 & 0xFF);
+                                data_array[position++] = (registro_historial.V7 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V7 & 0xFF);
+                                data_array[position++] = (registro_historial.V8 >> 8) & 0xFF;
+                                data_array[position++] = (registro_historial.V8 & 0xFF);
+
+                                // Byte 41: Temperatura
+                                data_array[position++] = registro_historial.temp;
+
+                                // Byte 42-43: ID del registro solicitado (en lugar de
+                                // last_position)
+                                data_array[position++] = (registro_id >> 8) & 0xFF;
+                                data_array[position++] = (registro_id & 0xFF);
+
+                                // Enviar por NUS al celular
+                                ret_code_t send_result =
+                                    app_nus_server_send_data(data_array, position);
+                                if (send_result == NRF_SUCCESS)
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;32m> Registro #%u enviado por NUS "
+                                                     "exitosamente\x1b[0m",
+                                                     registro_id);
+                                }
+                                else
+                                {
+                                    NRF_LOG_RAW_INFO("\n\x1b[1;31m> Error enviando registro #%u "
+                                                     "por NUS: 0x%X\x1b[0m",
+                                                     registro_id,
+                                                     send_result);
+                                }
+
+                                // También imprimir en consola para depuración
                                 char titulo[41];
-                                snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", registro_id);
+                                snprintf(titulo,
+                                         sizeof(titulo),
+                                         "Historial enviado \x1B[33m#%u\x1B[0m",
+                                         registro_id);
                                 print_history_record(&registro_historial, titulo);
                                 NRF_LOG_FLUSH();
                             }
                             else
                             {
-                                NRF_LOG_RAW_INFO("\nError al solicitar el registro %u: 0x%X", registro_id, err_code);
+                                NRF_LOG_RAW_INFO(
+                                    "\n\x1b[1;31m> Error al leer el registro %u: 0x%X\x1b[0m",
+                                    registro_id,
+                                    err_code);
                             }
                         }
                         else
@@ -468,17 +765,134 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
-                case 98: // Pide una lectura de todos los historiales
+
+                case 13: {
+
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Solicitar el borrado "
+                                     "de un historial por ID\x1b[0m");
+
+                    if (p_evt->params.rx_data.length > 5)
+                    {
+                        size_t id_len    = p_evt->params.rx_data.length - 5;
+                        char   id_str[8] = {0};
+
+                        if (id_len < sizeof(id_str))
+                        {
+                            memcpy(id_str, &message[5], id_len);
+                            id_str[id_len]       = '\0';
+                            uint16_t registro_id = (uint16_t)atoi(id_str);
+
+                            NRF_LOG_RAW_INFO("\n> ID a borrar: %u (%s)", registro_id, id_str);
+
+                            err_code = delete_history_record_by_id(registro_id);
+                        }
+                        else
+                        {
+                            NRF_LOG_WARNING("ID de registro demasiado largo.");
+                        }
+                    }
+                    else
+                    {
+                        NRF_LOG_WARNING("Comando 13 recibido con datos insuficientes.");
+                    }
+
+                    break;
+                }
+
+                case 14: // Pide lectura de todos los historiales
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 98: Solicitud del historial completo\x1b[0m");
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 14: Solicitud del historial completo\x1b[0m");
                     // Llama a la función para solicitar el historial completo
                     send_all_history();
 
                     break;
                 }
+
+                case 15: // Guardar MAC custom del repetidor
+                {
+                    size_t mac_length = p_evt->params.rx_data.length - 5;
+                    if (mac_length == 12)
+                    {
+                        for (size_t i = 0; i < 6; i++)
+                        {
+
+                            char byte_str[3] = {message[5 + i * 2], message[6 + i * 2], '\0'};
+                            custom_mac_addr_[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
+                        }
+
+                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 20 recibido: Guardar MAC del "
+                                         "repetidor\x1b[0m");
+                        NRF_LOG_RAW_INFO(
+                            "\n> MAC del repetidor recibida: %02X:%02X:%02X:%02X:%02X:%02X",
+                            custom_mac_addr_[5],
+                            custom_mac_addr_[4],
+                            custom_mac_addr_[3],
+                            custom_mac_addr_[2],
+                            custom_mac_addr_[1],
+                            custom_mac_addr_[0]);
+
+                        // Guardar la MAC del repetidor en la memoria flash
+                        save_mac_to_flash(custom_mac_addr_, MAC_REPEATER);
+                    }
+                    break;
+                }
+                case 16: // Leer MAC custom del repetidor
+                {
+
+                    NRF_LOG_RAW_INFO(
+                        "\n\n\x1b[1;36m--- Comando 21 recibido: Leer MAC del repetidor\x1b[0m");
+
+                    uint8_t repeater_mac[6];
+                    load_mac_from_flash(repeater_mac, MAC_REPEATER);
+
+                    // Verificar si hay una MAC válida guardada
+                    bool mac_is_zero = true;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (repeater_mac[i] != 0)
+                        {
+                            mac_is_zero = false;
+                            break;
+                        }
+                    }
+
+                    if (!mac_is_zero)
+                    {
+                        char response[26];
+                        snprintf(response,
+                                 sizeof(response),
+                                 "REPEATER_MAC:%02X%02X%02X%02X%02X%02X",
+                                 repeater_mac[5],
+                                 repeater_mac[4],
+                                 repeater_mac[3],
+                                 repeater_mac[2],
+                                 repeater_mac[1],
+                                 repeater_mac[0]);
+                        app_nus_server_send_data((uint8_t *)response, strlen(response));
+                    }
+                    else
+                    {
+                        NRF_LOG_RAW_INFO("\n> No hay MAC del repetidor configurada");
+                        app_nus_server_send_data((uint8_t *)"REPEATER_MAC_NONE", 17);
+                    }
+                    break;
+                }
+
+                case 17: // Envía la configuracion del repetidor
+                {
+
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 22 recibido: Envia la configuracion"
+                                     " del repetidor\x1b[0m");
+                    send_configuration_nus(&config_repetidor);
+                    NRF_LOG_FLUSH();
+                    break;
+                }
+
                 case 99: // Comando para borrar todos los historiales
                 {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 99 recibido: Borrar todos los historiales\x1b[0m");
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 99 recibido: Borrar todos los "
+                                     "historiales\x1b[0m");
 
                     delete_all_history();
                     break;
@@ -504,8 +918,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
     }
     else if (p_evt->type == BLE_NUS_EVT_TX_RDY)
     {
-        // El buffer de transmisión está listo - enviar siguiente paquete del comando 15/16 si está activo
-        // También manejar el envío asíncrono de historial
+        // El buffer de transmisión está listo - enviar siguiente paquete del comando 15/16 si está
+        // activo También manejar el envío asíncrono de historial
         history_send_next_packet();
     }
 }
@@ -518,8 +932,8 @@ static void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
-    err_code = sd_ble_gap_device_name_set(&sec_mode, (const uint8_t *)DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
+    err_code =
+        sd_ble_gap_device_name_set(&sec_mode, (const uint8_t *)DEVICE_NAME, strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
@@ -563,8 +977,7 @@ static void on_conn_params_evt(ble_conn_params_evt_t *p_evt)
 
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
-        err_code = sd_ble_gap_disconnect(m_conn_handle,
-                                         BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
     }
 }
@@ -645,8 +1058,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
             NRF_LOG_RAW_INFO("\nEmisor desconectado");
             NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Buscando emisor...\n");
 
-            m_emisor_conn_handle =
-                BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
+            m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
             scan_start();
         }
         break;
@@ -664,8 +1076,10 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
         // Pairing not supported
-        err_code = sd_ble_gap_sec_params_reply(
-            m_conn_handle, BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP, NULL, NULL);
+        err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
+                                               BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
+                                               NULL,
+                                               NULL);
         APP_ERROR_CHECK(err_code);
         break;
 
@@ -697,8 +1111,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
 uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
 {
-    return ble_nus_data_send(&m_nus, (uint8_t *)data_array, &length,
-                             m_conn_handle);
+    return ble_nus_data_send(&m_nus, (uint8_t *)data_array, &length, m_conn_handle);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -733,16 +1146,15 @@ void advertising_init(void)
     init.config.ble_adv_on_disconnect_disabled = true;
     init.advdata.p_manuf_specific_data         = &manuf_specific_data;
 
-    init.srdata.uuids_complete.uuid_cnt =
-        sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.srdata.uuids_complete.p_uuids = m_adv_uuids;
+    init.srdata.uuids_complete.uuid_cnt        = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.srdata.uuids_complete.p_uuids         = m_adv_uuids;
 
-    init.config.ble_adv_fast_enabled   = true;
-    init.config.ble_adv_fast_interval  = APP_ADV_INTERVAL;
-    init.config.ble_adv_fast_timeout   = APP_ADV_DURATION;
-    init.evt_handler                   = on_adv_evt;
+    init.config.ble_adv_fast_enabled           = true;
+    init.config.ble_adv_fast_interval          = APP_ADV_INTERVAL;
+    init.config.ble_adv_fast_timeout           = APP_ADV_DURATION;
+    init.evt_handler                           = on_adv_evt;
 
-    err_code                           = ble_advertising_init(&m_advertising, &init);
+    err_code                                   = ble_advertising_init(&m_advertising, &init);
     APP_ERROR_CHECK(err_code);
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
@@ -772,8 +1184,7 @@ void disconnect_all_devices(void)
 
     if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
-        err_code = sd_ble_gap_disconnect(m_conn_handle,
-                                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nCelular desconectado.");
@@ -781,8 +1192,8 @@ void disconnect_all_devices(void)
 
     if (m_emisor_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
-        err_code = sd_ble_gap_disconnect(m_emisor_conn_handle,
-                                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        err_code =
+            sd_ble_gap_disconnect(m_emisor_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nEmisor desconectado.");

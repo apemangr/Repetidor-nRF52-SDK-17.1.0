@@ -29,8 +29,8 @@
 #include "variables.h"
 
 // store_flash Flash_array = {0};
-adc_values_t adc_values = {0};
-
+adc_values_t adc_values       = {0};
+config_t     config_repetidor = {0};
 /**
  * @brief Lee todos los registros de historial e imprime la hora de cada uno
  *
@@ -61,7 +61,8 @@ ret_code_t fds_print_all_record_times(void)
         if (flash_record.p_header->length_words != expected_words)
         {
             NRF_LOG_WARNING("Registro ID %d: tamaño incorrecto (%d words)",
-                            record_desc.record_id, flash_record.p_header->length_words);
+                            record_desc.record_id,
+                            flash_record.p_header->length_words);
             fds_record_close(&record_desc);
             continue;
         }
@@ -97,13 +98,12 @@ ret_code_t fds_print_all_record_times(void)
 // #define RTC_SLEEP_TICKS (10 * 8)
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
-nrfx_rtc_t           m_rtc            = NRFX_RTC_INSTANCE(2);
-bool                 m_device_active  = true;
-static uint16_t      m_conn_handle    = BLE_CONN_HANDLE_INVALID;
-static volatile bool m_rtc_on_flag    = false;
-static volatile bool m_rtc_sleep_flag = false;
-static uint16_t      m_ble_nus_max_data_len =
-    BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
+nrfx_rtc_t           m_rtc             = NRFX_RTC_INSTANCE(2);
+bool                 m_device_active   = true;
+static uint16_t      m_conn_handle     = BLE_CONN_HANDLE_INVALID;
+static volatile bool m_rtc_on_flag     = false;
+static volatile bool m_rtc_sleep_flag  = false;
+static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
 //
 
 void uart_event_handler(app_uart_evt_t *p_event)
@@ -158,17 +158,20 @@ static void uart_init(void)
 
     ret_code_t                   err_code;
 
-    app_uart_comm_params_t const comm_params = {
-        .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
-        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-        .use_parity   = false,
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
+    app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
+                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                                                .use_parity   = false,
+                                                .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
 
-    APP_UART_FIFO_INIT(&comm_params, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE,
-                       uart_event_handler, APP_IRQ_PRIORITY_LOWEST, err_code);
+    APP_UART_FIFO_INIT(&comm_params,
+                       UART_RX_BUF_SIZE,
+                       UART_TX_BUF_SIZE,
+                       uart_event_handler,
+                       APP_IRQ_PRIORITY_LOWEST,
+                       err_code);
 
     APP_ERROR_CHECK(err_code);
 }
@@ -202,7 +205,8 @@ void handle_rtc_events(void)
 
         if (m_device_active)
         {
-            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
+            NRF_LOG_RAW_INFO(
+                "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
             disconnect_all_devices();
             advertising_stop();
             scan_stop();
@@ -218,7 +222,8 @@ void handle_rtc_events(void)
 
         if (!m_device_active)
         {
-            NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
+            NRF_LOG_RAW_INFO(
+                "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
 
             // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
             // INICIAR EL ADVERTISING Y EL SCANEO
@@ -234,8 +239,12 @@ void handle_rtc_events(void)
             // Mostrar fecha y hora
             NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora actual: %04u-%02u-%02u, "
                              "%02u:%02u:%02u",
-                             m_time.year, m_time.month, m_time.day,
-                             m_time.hour, m_time.minute, m_time.second);
+                             m_time.year,
+                             m_time.month,
+                             m_time.day,
+                             m_time.hour,
+                             m_time.minute,
+                             m_time.second);
 
             // Actualizar el payload para mostrar los adc_values
             scan_start();
@@ -270,15 +279,18 @@ void rtc_init(void)
     // Configurar comparadores iniciales
 
     // Solo programar el primer evento de 15s
-    nrfx_rtc_cc_set(&m_rtc, 0, (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8, true);
+    nrfx_rtc_cc_set(&m_rtc,
+                    0,
+                    (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8,
+                    true);
 
     // Deshabilitar el evento de 20s inicialmente
     nrfx_rtc_cc_disable(&m_rtc, 1);
 
     // Habilitar interrupciones
-    nrfx_rtc_int_enable(&m_rtc, NRF_RTC_INT_COMPARE0_MASK |
-                                    NRF_RTC_INT_COMPARE1_MASK |
-                                    NRF_RTC_INT_COMPARE2_MASK);
+    nrfx_rtc_int_enable(&m_rtc,
+                        NRF_RTC_INT_COMPARE0_MASK | NRF_RTC_INT_COMPARE1_MASK |
+                            NRF_RTC_INT_COMPARE2_MASK);
     nrfx_rtc_enable(&m_rtc);
 }
 
@@ -293,8 +305,7 @@ static void base_timer_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-static void ble_nus_chars_received_uart_print(uint8_t *p_data,
-                                              uint16_t data_len)
+static void ble_nus_chars_received_uart_print(uint8_t *p_data, uint16_t data_len)
 {
     ret_code_t ret_val;
 
@@ -376,15 +387,16 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
         // Pairing not supported.
         err_code = sd_ble_gap_sec_params_reply(p_ble_evt->evt.gap_evt.conn_handle,
                                                BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
-                                               NULL, NULL);
+                                               NULL,
+                                               NULL);
         APP_ERROR_CHECK(err_code);
         break;
 
     case BLE_GAP_EVT_CONN_PARAM_UPDATE_REQUEST:
         // Accepting parameters requested by peer.
-        err_code = sd_ble_gap_conn_param_update(
-            p_gap_evt->conn_handle,
-            &p_gap_evt->params.conn_param_update_request.conn_params);
+        err_code =
+            sd_ble_gap_conn_param_update(p_gap_evt->conn_handle,
+                                         &p_gap_evt->params.conn_param_update_request.conn_params);
         APP_ERROR_CHECK(err_code);
         break;
 
@@ -444,8 +456,7 @@ static void ble_stack_init(void)
     APP_ERROR_CHECK(err_code);
 
     // Register a handler for BLE events.
-    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler,
-                         NULL);
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
 
 void gatt_evt_handler(nrf_ble_gatt_t *p_gatt, nrf_ble_gatt_evt_t const *p_evt)
@@ -454,8 +465,7 @@ void gatt_evt_handler(nrf_ble_gatt_t *p_gatt, nrf_ble_gatt_evt_t const *p_evt)
     {
         // NRF_LOG_INFO("ATT MTU exchange completed.");
 
-        m_ble_nus_max_data_len =
-            p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
+        m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
         // NRF_LOG_INFO("Ble NUS max data length set to 0x%X(%d)",
         // m_ble_nus_max_data_len, m_ble_nus_max_data_len);
     }
@@ -469,12 +479,10 @@ void gatt_init(void)
     err_code = nrf_ble_gatt_init(&m_gatt, gatt_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code =
-        nrf_ble_gatt_att_mtu_periph_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
+    err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
     APP_ERROR_CHECK(err_code);
 
-    err_code =
-        nrf_ble_gatt_att_mtu_central_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
+    err_code = nrf_ble_gatt_att_mtu_central_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -529,8 +537,7 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-void app_nus_server_on_data_received(const uint8_t *data_ptr,
-                                     uint16_t       data_length)
+void app_nus_server_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
     // // Output the data to the UART
     // NRF_LOG_RAW_INFO("\nServer data received: ");
@@ -543,8 +550,7 @@ void app_nus_server_on_data_received(const uint8_t *data_ptr,
 }
 
 // Procesa la información recibida desde el emisor
-void app_nus_client_on_data_received(const uint8_t *data_ptr,
-                                     uint16_t       data_length)
+void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length)
 {
     uint16_t position = 0;
 
@@ -576,8 +582,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
         uint8_t  hour     = data_ptr[position++];
         uint8_t  minute   = data_ptr[position++];
         uint8_t  second   = data_ptr[position++];
-        uint32_t contador = (data_ptr[position++] << 24) |
-                            (data_ptr[position++] << 16) |
+        uint32_t contador = (data_ptr[position++] << 24) | (data_ptr[position++] << 16) |
                             (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V1      = (data_ptr[position++] << 8) | data_ptr[position++];
         uint16_t V2      = (data_ptr[position++] << 8) | data_ptr[position++];
@@ -613,20 +618,18 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr,
                                          .battery  = battery};
 
         // Guardar el historial recibido en la posición indicada
-        ret_code_t ret =
-            save_history_record_emisor(&nuevo_historial, last_position);
+        ret_code_t ret = save_history_record_emisor(&nuevo_historial, last_position);
         if (ret != NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO(
-                "\nError al guardar historial en posicion: %u (ret=%d)\n",
-                last_position, ret);
+            NRF_LOG_RAW_INFO("\nError al guardar historial en posicion: %u (ret=%d)\n",
+                             last_position,
+                             ret);
         }
 
         // Imprimir usando print_history_record con el número de historial en el
         // título
         char titulo[41];
-        snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m",
-                 last_position);
+        snprintf(titulo, sizeof(titulo), "Historial recibido \x1B[33m#%u\x1B[0m", last_position);
         print_history_record(&nuevo_historial, titulo);
         // fds_print_all_record_times();
         NRF_LOG_FLUSH();
@@ -672,6 +675,8 @@ int main(void)
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
+
+    load_repeater_configuration(&config_repetidor, 0, 0, 1);
 
     calendar_init();
 
