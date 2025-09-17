@@ -420,16 +420,15 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
 
-                case 5: // Comando 05: Leer tiempo de encendido desde la
-                    // memoria flash
-                    {
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: "
-                                         "Leer tiempo de encendido \x1b[0m");
-                        uint32_t sleep_time_ms =
-                            read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+                case 5: // Comando 05: Leer tiempo de encendido
+                {
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: "
+                                     "Leer tiempo de encendido \x1b[0m");
+                    uint32_t sleep_time_ms =
+                        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case 6: // Comando 06: Guardar tiempo de apagado
                 {
@@ -482,7 +481,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
 
-                case 8: // Comando 08: Escribe en la memoria flash la fecha, hora, formato
+                case 8: // Comando 08: Guarda la fecha, hora, formato
                         // YYYYMMDDHHMMSS
                 {
 
@@ -766,7 +765,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
 
-                case 13: {
+                case 13: // Comando 13 - Borra historial por ID
+                {
 
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 13 recibido: Solicitar el borrado "
                                      "de un historial por ID\x1b[0m");
@@ -821,7 +821,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             custom_mac_addr_[5 - i] = (uint8_t)strtol(byte_str, NULL, 16);
                         }
 
-                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 20 recibido: Guardar MAC del "
+                        NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 15 recibido: Guardar MAC del "
                                          "repetidor\x1b[0m");
                         NRF_LOG_RAW_INFO(
                             "\n> MAC del repetidor recibida: %02X:%02X:%02X:%02X:%02X:%02X",
@@ -841,7 +841,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
 
                     NRF_LOG_RAW_INFO(
-                        "\n\n\x1b[1;36m--- Comando 21 recibido: Leer MAC del repetidor\x1b[0m");
+                        "\n\n\x1b[1;36m--- Comando 16 recibido: Leer MAC del repetidor\x1b[0m");
 
                     uint8_t repeater_mac[6];
                     load_mac_from_flash(repeater_mac, MAC_REPEATER);
@@ -882,7 +882,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 case 17: // Envía la configuracion del repetidor
                 {
 
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 22 recibido: Envia la configuracion"
+                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Envia la configuracion"
                                      " del repetidor\x1b[0m");
                     send_configuration_nus(&config_repetidor);
                     NRF_LOG_FLUSH();
