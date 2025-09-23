@@ -185,11 +185,12 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
         //                         COMANDOS
         //============================================================
 
-        uint8_t cmd_id[2];
+        uint8_t cmd_id[2] = {0};
 
         //
         // Enviar la hora actual del repetidor al emisor
         //
+
         char cmd_enviar_hora_a_emisor[24] = {0};
         snprintf(cmd_enviar_hora_a_emisor,
                  sizeof(cmd_enviar_hora_a_emisor),
@@ -209,26 +210,28 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
         cmd_id[0] = '9';
         cmd_id[1] = '6';
 
-        err_code  = app_nus_client_send_data(cmd_id, 2);
+        NRF_LOG_RAW_INFO("\nEnviando comando 96");
+        err_code = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\nFallo al solicitar datos de ADC y contador: %d", err_code);
+            NRF_LOG_RAW_INFO("\n[ERROR] Fallo al solicitar datos de ADC y contador: %d", err_code);
         }
 
         //
         // Solicitar el ultimo historial del emisor
         //
-        if (m_time.hour >= 23 || m_time.hour == 0)
-        {
-            cmd_id[0] = '0';
-            cmd_id[1] = '8';
 
-            err_code  = app_nus_client_send_data(cmd_id, 2);
-            if (err_code != NRF_SUCCESS)
-            {
-                NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
-            }
+        // if (m_time.hour >= 23 || m_time.hour == 0)
+        // {
+        cmd_id[0] = '0';
+        cmd_id[1] = '8';
+
+        err_code  = app_nus_client_send_data(cmd_id, 2);
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
         }
+        // }
 
         //============================================================
         //                  AQUI TERMINAN LOS COMANDOS
@@ -243,12 +246,14 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
             m_on_data_received(p_ble_nus_evt->p_data, p_ble_nus_evt->data_len);
         }
         // Imprime los datos recibidos
+
         // NRF_LOG_RAW_INFO("\nClient data received: ");
         // for (uint32_t i = 0; i < p_ble_nus_evt->data_len; i++)
         // {
-        //     NRF_LOG_RAW_INFO("%c", p_ble_nus_evt->p_data[i]);
+        //     NRF_LOG_RAW_INFO("%02X ", p_ble_nus_evt->p_data[i]);
         // }
         // NRF_LOG_RAW_INFO("\n");
+
         break;
 
     case BLE_NUS_C_EVT_DISCONNECTED:
@@ -335,6 +340,7 @@ void scan_stop(void)
 void app_nus_client_init(app_nus_client_on_data_received_t on_data_received)
 {
     m_on_data_received = on_data_received;
+
     target_periph_addr_init();
     db_discovery_init();
     nus_c_init();

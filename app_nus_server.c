@@ -22,21 +22,21 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
-#define APP_BLE_CONN_CFG_TAG           1
-#define DEVICE_NAME                    "Repetidor"
-#define NUS_SERVICE_UUID_TYPE          BLE_UUID_TYPE_VENDOR_BEGIN
-#define APP_BLE_OBSERVER_PRIO          3
-#define APP_ADV_INTERVAL               64
-#define APP_ADV_DURATION               18000
-#define MIN_CONN_INTERVAL              MSEC_TO_UNITS(20, UNIT_1_25_MS)
-#define MAX_CONN_INTERVAL              MSEC_TO_UNITS(75, UNIT_1_25_MS)
-#define SLAVE_LATENCY                  0
-#define CONN_SUP_TIMEOUT               MSEC_TO_UNITS(4000, UNIT_10_MS)
+#define APP_BLE_CONN_CFG_TAG 1
+#define DEVICE_NAME "Repetidor"
+#define NUS_SERVICE_UUID_TYPE BLE_UUID_TYPE_VENDOR_BEGIN
+#define APP_BLE_OBSERVER_PRIO 3
+#define APP_ADV_INTERVAL 64
+#define APP_ADV_DURATION 18000
+#define MIN_CONN_INTERVAL MSEC_TO_UNITS(20, UNIT_1_25_MS)
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(75, UNIT_1_25_MS)
+#define SLAVE_LATENCY 0
+#define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)
 #define FIRST_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(5000)
-#define NEXT_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(30000)
-#define MAX_CONN_PARAMS_UPDATE_COUNT   3
-#define DEAD_BEEF                      0xDEADBEEF
-#define LARGO_ADVERTISING              0x18 // Largo_Advertising  10 son 16 y 18 son 24
+#define NEXT_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(30000)
+#define MAX_CONN_PARAMS_UPDATE_COUNT 3
+#define DEAD_BEEF 0xDEADBEEF
+#define LARGO_ADVERTISING 0x18 // Largo_Advertising  10 son 16 y 18 son 24
 
 uint8_t m_beacon_info[LARGO_ADVERTISING];
 
@@ -44,13 +44,13 @@ BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_ADVERTISING_DEF(m_advertising);
 
-static bool                              m_emisor_nus_ready     = false;
-static app_nus_server_on_data_received_t m_on_data_received     = 0;
-static uint16_t                          m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;
-static uint16_t                          m_conn_handle          = BLE_CONN_HANDLE_INVALID;
-static uint16_t                          m_emisor_conn_handle   = BLE_CONN_HANDLE_INVALID;
-static uint8_t                           custom_mac_addr_[6]    = {0};
-static ble_gap_addr_t                    m_target_periph_addr;
+static bool m_emisor_nus_ready = false;
+static app_nus_server_on_data_received_t m_on_data_received = 0;
+static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
+static uint16_t m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
+static uint8_t custom_mac_addr_[6] = {0};
+static ble_gap_addr_t m_target_periph_addr;
 
 static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
@@ -84,8 +84,8 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
     }
 
     // Buffer binario para los datos
-    // 2 bytes identificador + 33 bytes datos = 35 bytes total
-    uint8_t  binary_data[35];
+    // 2 bytes identificador + 27 bytes datos = 29 bytes total
+    uint8_t binary_data[29];
     uint8_t *ptr = binary_data;
 
     NRF_LOG_RAW_INFO(
@@ -109,24 +109,24 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
 
     // 3. Tiempo de encendido (4 bytes, little endian)
     uint32_t tiempo_on = config_repetidor->tiempo_encendido_config;
-    *ptr++             = (uint8_t)(tiempo_on & 0xFF);
-    *ptr++             = (uint8_t)((tiempo_on >> 8) & 0xFF);
-    *ptr++             = (uint8_t)((tiempo_on >> 16) & 0xFF);
-    *ptr++             = (uint8_t)((tiempo_on >> 24) & 0xFF);
+    *ptr++ = (uint8_t)(tiempo_on & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_on >> 8) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_on >> 16) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_on >> 24) & 0xFF);
 
     // 4. Tiempo de dormido (4 bytes, little endian)
     uint32_t tiempo_sleep = config_repetidor->tiempo_dormido_config;
-    *ptr++                = (uint8_t)(tiempo_sleep & 0xFF);
-    *ptr++                = (uint8_t)((tiempo_sleep >> 8) & 0xFF);
-    *ptr++                = (uint8_t)((tiempo_sleep >> 16) & 0xFF);
-    *ptr++                = (uint8_t)((tiempo_sleep >> 24) & 0xFF);
+    *ptr++ = (uint8_t)(tiempo_sleep & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_sleep >> 8) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_sleep >> 16) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_sleep >> 24) & 0xFF);
 
     // 5. Tiempo de búsqueda (4 bytes, little endian)
     uint32_t tiempo_search = config_repetidor->tiempo_busqueda_config;
-    *ptr++                 = (uint8_t)(tiempo_search & 0xFF);
-    *ptr++                 = (uint8_t)((tiempo_search >> 8) & 0xFF);
-    *ptr++                 = (uint8_t)((tiempo_search >> 16) & 0xFF);
-    *ptr++                 = (uint8_t)((tiempo_search >> 24) & 0xFF);
+    *ptr++ = (uint8_t)(tiempo_search & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_search >> 8) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_search >> 16) & 0xFF);
+    *ptr++ = (uint8_t)((tiempo_search >> 24) & 0xFF);
 
     // 6. Versión del firmware (3 bytes)
     *ptr++ = config_repetidor->version[0];
@@ -141,13 +141,13 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
         switch (err_code)
         {
         case NRF_ERROR_INVALID_STATE:
-            error_msg = "Estado inválido (sin conexión o notificaciones deshabilitadas)";
+            error_msg = "Estado invalido (sin conexion o notificaciones deshabilitadas)";
             break;
         case NRF_ERROR_RESOURCES:
-            error_msg = "Buffer de transmisión lleno";
+            error_msg = "Buffer de transmision lleno";
             break;
         case NRF_ERROR_INVALID_PARAM:
-            error_msg = "Parámetros inválidos";
+            error_msg = "Parametros invalidos";
             break;
         case NRF_ERROR_BUSY:
             error_msg = "Servicio ocupado";
@@ -157,7 +157,7 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
             break;
         }
 
-        NRF_LOG_ERROR("Error enviando configuración binaria: 0x%X (%s)", err_code, error_msg);
+        NRF_LOG_RAW_INFO("\nError enviando configuracion binaria: 0x%X (%s)", err_code, error_msg);
         NRF_LOG_RAW_INFO("\n> Estado conexión: handle=0x%04X, activa=%s",
                          m_conn_handle,
                          (m_conn_handle != BLE_CONN_HANDLE_INVALID) ? "SI" : "NO");
@@ -168,14 +168,14 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
     }
 
     // Log de información enviada (mostrar en hexadecimal para debugging)
-    NRF_LOG_RAW_INFO("\n> Configuración binaria enviada (%d bytes):", sizeof(binary_data));
+    NRF_LOG_RAW_INFO("\n> Configuracion binaria enviada (%d bytes):", sizeof(binary_data));
     NRF_LOG_RAW_INFO("\n> Datos hex: ");
     for (int i = 0; i < sizeof(binary_data); i++)
     {
         NRF_LOG_RAW_INFO("%02X", binary_data[i]);
     }
 
-    NRF_LOG_RAW_INFO("\n> Decodificación:");
+    NRF_LOG_RAW_INFO("\n> Decodificacion:");
     NRF_LOG_RAW_INFO("\n  - Identificador: 0x%02X 0x%02X", binary_data[0], binary_data[1]);
     NRF_LOG_RAW_INFO("\n  - MAC Repetidor: %02X:%02X:%02X:%02X:%02X:%02X",
                      config_repetidor->mac_repetidor_config[5],
@@ -195,12 +195,12 @@ ret_code_t send_configuration_nus(config_t const *config_repetidor)
     NRF_LOG_RAW_INFO("\n  - Tiempo ON: %lu ms", config_repetidor->tiempo_encendido_config);
     NRF_LOG_RAW_INFO("\n  - Tiempo SLEEP: %lu ms", config_repetidor->tiempo_dormido_config);
     NRF_LOG_RAW_INFO("\n  - Tiempo SEARCH: %lu ms", config_repetidor->tiempo_busqueda_config);
-    NRF_LOG_RAW_INFO("\n  - Versión FW: %u.%u.%u",
+    NRF_LOG_RAW_INFO("\n  - Version FW: %u.%u.%u",
                      config_repetidor->version[0],
                      config_repetidor->version[1],
                      config_repetidor->version[2]);
 
-    NRF_LOG_RAW_INFO("\n\x1b[1;32m=== Configuración binaria enviada exitosamente ===\x1b[0m");
+    NRF_LOG_RAW_INFO("\n\x1b[1;32m=== Configuracion binaria enviada exitosamente ===\x1b[0m");
     return NRF_SUCCESS;
 }
 
@@ -398,19 +398,29 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
-                        uint32_t time_in_seconds __attribute__((aligned(4))) =
-                            atoi(time_str) * 1000;
-                        if (time_in_seconds <= 666000)
+                        // Calcular la longitud del número (hasta 6 caracteres máximo)
+                        size_t time_length = p_evt->params.rx_data.length - 5; // Restar "11104"
+                        if (time_length > 6)
+                            time_length = 6; // Máximo 6 caracteres
+
+                        char time_str[7] = {0}; // Buffer para hasta 6 dígitos + terminador nulo
+                        memcpy(time_str, &message[5], time_length);
+                        time_str[time_length] = '\0';
+
+                        uint32_t time_in_ms __attribute__((aligned(4))) = atoi(time_str);
+                        if (time_in_ms <= 666000)
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 04 recibido: "
                                              "Cambiar tiempo de encendido \x1b[0m");
-                            write_time_to_flash(TIEMPO_ENCENDIDO, time_in_seconds);
+                            NRF_LOG_RAW_INFO("\n> Tiempo configurado: %lu ms (%s)",
+                                             time_in_ms,
+                                             time_str);
+                            write_time_to_flash(TIEMPO_ENCENDIDO, time_in_ms);
                         }
                         else
                         {
                             NRF_LOG_WARNING("El tiempo de encendido excede el máximo "
-                                            "permitido (666 segundos).");
+                                            "permitido (666000 ms).");
                         }
                     }
                     else
@@ -424,9 +434,12 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 05 recibido: "
                                      "Leer tiempo de encendido \x1b[0m");
-                    uint32_t sleep_time_ms =
+                    uint32_t on_time_ms =
                         read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
+                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido configurado: %lu ms",
+                                     on_time_ms);
+                    NRF_LOG_FLUSH();
                     break;
                 }
 
@@ -444,21 +457,18 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         memcpy(time_str, &message[5], time_length);
                         time_str[time_length] = '\0';
 
-                        uint32_t time_in_seconds __attribute__((aligned(4))) =
-                            atoi(time_str) * 1000;
-                        if (time_in_seconds <= 82500000) // Máximo 82500 segundos
+                        uint32_t time_in_ms __attribute__((aligned(4))) = atoi(time_str);
+                        if (time_in_ms <= 82500000) // Máximo 82500000 ms (82500 segundos)
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 06 recibido: "
                                              "Cambiar tiempo de dormido \x1b[0m");
-                            NRF_LOG_RAW_INFO("\n> Tiempo configurado: %lu segundos (%s)",
-                                             time_in_seconds / 1000,
-                                             time_str);
-                            write_time_to_flash(TIEMPO_SLEEP, time_in_seconds);
+                            NRF_LOG_RAW_INFO("\n> Tiempo configurado: %lu ms", time_in_ms);
+                            write_time_to_flash(TIEMPO_SLEEP, time_in_ms);
                         }
                         else
                         {
                             NRF_LOG_RAW_INFO("\nEl tiempo de dormido excede el maximo "
-                                             "permitido (82500 segundos).");
+                                             "permitido (82500000 ms).");
                         }
                     }
                     else
@@ -475,8 +485,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     uint32_t sleep_time_ms =
                         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
 
-                    NRF_LOG_RAW_INFO("\n> Tiempo de dormido configurado: %lu segundos",
-                                     sleep_time_ms / 1000);
+                    NRF_LOG_RAW_INFO("\n> Tiempo de dormido configurado: %lu ms",
+                                     sleep_time_ms);
                     NRF_LOG_FLUSH();
                     break;
                 }
@@ -601,20 +611,30 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                 {
                     if (p_evt->params.rx_data.length >= 6) // Verifica que haya datos suficientes
                     {
-                        char     time_str[4] = {message[5], message[6], message[7], '\0'};
-                        uint32_t time_in_seconds_extended __attribute__((aligned(4))) =
-                            atoi(time_str) * 1000;
-                        if (time_in_seconds_extended <= 666000)
+                        // Calcular la longitud del número (hasta 7 caracteres máximo para valores grandes)
+                        size_t time_length = p_evt->params.rx_data.length - 5; // Restar "11110"
+                        if (time_length > 7)
+                            time_length = 7; // Máximo 7 caracteres
+
+                        char time_str[8] = {0}; // Buffer para hasta 7 dígitos + terminador nulo
+                        memcpy(time_str, &message[5], time_length);
+                        time_str[time_length] = '\0';
+
+                        uint32_t time_in_ms_extended __attribute__((aligned(4))) = atoi(time_str);
+                        if (time_in_ms_extended <= 9999000) // Máximo ~9999 segundos en ms
                         {
                             NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 10 recibido: "
                                              "Cambiar tiempo de encendido extendido\x1b[0m");
+                            NRF_LOG_RAW_INFO("\n> Tiempo extendido configurado: %lu ms (%s)",
+                                             time_in_ms_extended,
+                                             time_str);
                             write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED,
-                                                time_in_seconds_extended);
+                                                time_in_ms_extended);
                         }
                         else
                         {
-                            NRF_LOG_WARNING("El tiempo de encendido excede el máximo "
-                                            "permitido (666 segundos).");
+                            NRF_LOG_WARNING("El tiempo de encendido extendido excede el máximo "
+                                            "permitido (9999000 ms).");
                         }
                     }
                     else
@@ -631,9 +651,9 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED,
                                              DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
 
-                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu segundos",
-                                     encendido_extendido_ms / 1000);
-
+                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu ms",
+                                     encendido_extendido_ms);
+                    NRF_LOG_FLUSH();
                     break;
                 }
                 case 12: // Solicitar un registro de historial por ID
@@ -644,14 +664,14 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     {
                         // Extrae el ID del registro como string (todo lo que sigue después de
                         // "11111")
-                        size_t id_len    = p_evt->params.rx_data.length - 5;
-                        char   id_str[8] = {0}; // Soporta hasta 7 dígitos
-                                                //
+                        size_t id_len = p_evt->params.rx_data.length - 5;
+                        char id_str[8] = {0}; // Soporta hasta 7 dígitos
+                                              //
                         if (id_len < sizeof(id_str))
                         {
 
                             memcpy(id_str, &message[5], id_len);
-                            id_str[id_len]       = '\0';
+                            id_str[id_len] = '\0';
                             uint16_t registro_id = (uint16_t)atoi(id_str);
 
                             // Llama a la función para solicitar el registro por ID
@@ -665,7 +685,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                                 // Preparar array de datos en formato hex (igual que
                                 // send_all_history)
-                                uint8_t  data_array[244];
+                                uint8_t data_array[244];
                                 uint16_t position = 0;
 
                                 // Byte 0: Magic
@@ -773,13 +793,13 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     if (p_evt->params.rx_data.length > 5)
                     {
-                        size_t id_len    = p_evt->params.rx_data.length - 5;
-                        char   id_str[8] = {0};
+                        size_t id_len = p_evt->params.rx_data.length - 5;
+                        char id_str[8] = {0};
 
                         if (id_len < sizeof(id_str))
                         {
                             memcpy(id_str, &message[5], id_len);
-                            id_str[id_len]       = '\0';
+                            id_str[id_len] = '\0';
                             uint16_t registro_id = (uint16_t)atoi(id_str);
 
                             NRF_LOG_RAW_INFO("\n> ID a borrar: %u (%s)", registro_id, id_str);
@@ -884,6 +904,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Envia la configuracion"
                                      " del repetidor\x1b[0m");
+                    load_repeater_configuration(&config_repetidor, 0, 0, 1);
                     send_configuration_nus(&config_repetidor);
                     NRF_LOG_FLUSH();
                     break;
@@ -926,8 +947,8 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
 static void gap_params_init(void)
 {
-    uint32_t                err_code;
-    ble_gap_conn_params_t   gap_conn_params;
+    uint32_t err_code;
+    ble_gap_conn_params_t gap_conn_params;
     ble_gap_conn_sec_mode_t sec_mode;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
@@ -940,10 +961,10 @@ static void gap_params_init(void)
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
     gap_conn_params.max_conn_interval = MAX_CONN_INTERVAL;
-    gap_conn_params.slave_latency     = SLAVE_LATENCY;
-    gap_conn_params.conn_sup_timeout  = CONN_SUP_TIMEOUT;
+    gap_conn_params.slave_latency = SLAVE_LATENCY;
+    gap_conn_params.conn_sup_timeout = CONN_SUP_TIMEOUT;
 
-    err_code                          = sd_ble_gap_ppcp_set(&gap_conn_params);
+    err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -952,14 +973,14 @@ static void gap_params_init(void)
  */
 static void services_init(void)
 {
-    uint32_t           err_code;
-    ble_nus_init_t     nus_init;
+    uint32_t err_code;
+    ble_nus_init_t nus_init;
     nrf_ble_qwr_init_t qwr_init = {0};
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
 
-    err_code               = nrf_ble_qwr_init(&m_qwr, &qwr_init);
+    err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
 
     // Initialize NUS.
@@ -967,7 +988,7 @@ static void services_init(void)
 
     nus_init.data_handler = nus_data_handler;
 
-    err_code              = ble_nus_init(&m_nus, &nus_init);
+    err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -989,20 +1010,20 @@ static void conn_params_error_handler(uint32_t nrf_error)
 
 static void conn_params_init(void)
 {
-    uint32_t               err_code;
+    uint32_t err_code;
     ble_conn_params_init_t cp_init;
 
     memset(&cp_init, 0, sizeof(cp_init));
 
-    cp_init.p_conn_params                  = NULL;
+    cp_init.p_conn_params = NULL;
     cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
-    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
-    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
-    cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
-    cp_init.disconnect_on_fail             = true;
-    cp_init.evt_handler                    = on_conn_params_evt;
-    cp_init.error_handler                  = conn_params_error_handler;
-    err_code                               = ble_conn_params_init(&cp_init);
+    cp_init.next_conn_params_update_delay = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.start_on_notify_cccd_handle = BLE_GATT_HANDLE_INVALID;
+    cp_init.disconnect_on_fail = true;
+    cp_init.evt_handler = on_conn_params_evt;
+    cp_init.error_handler = conn_params_error_handler;
+    err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -1026,7 +1047,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 
 void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
 {
-    uint32_t             err_code;
+    uint32_t err_code;
     ble_gap_evt_t const *p_gap_evt = &p_ble_evt->evt.gap_evt;
 
     switch (p_ble_evt->header.evt_id)
@@ -1043,6 +1064,23 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             NRF_LOG_RAW_INFO("\nEmisor conectado\n");
             m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+
+            // Marcar que el emisor se encontró en este ciclo
+            m_emisor_found_this_cycle = true;
+
+            // Resetear el modo de reconexión ya que encontramos al emisor
+            if (m_reconnection_mode)
+            {
+                m_reconnection_mode = false;
+                NRF_LOG_RAW_INFO("\n\033[1;32m>>> MODO RECONEXION DESACTIVADO <<<\033[0m");
+                NRF_LOG_RAW_INFO("\n>> Emisor encontrado, restaurando tiempos normales");
+
+                // Si el dispositivo está activo, reiniciar con tiempo normal
+                if (m_device_active)
+                {
+                    restart_on_rtc(); // Cambiar a tiempo normal
+                }
+            }
         }
         break;
 
@@ -1063,7 +1101,8 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         }
         break;
 
-    case BLE_GAP_EVT_PHY_UPDATE_REQUEST: {
+    case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
+    {
         NRF_LOG_DEBUG("PHY update request.");
         ble_gap_phys_t const phys = {
             .rx_phys = BLE_GAP_PHY_AUTO,
@@ -1119,8 +1158,8 @@ uint32_t app_nus_server_send_data(const uint8_t *data_array, uint16_t length)
 
 void advertising_init(void)
 {
-    uint32_t                 err_code;
-    ble_advertising_init_t   init;
+    uint32_t err_code;
+    ble_advertising_init_t init;
     ble_advdata_manuf_data_t manuf_specific_data;
 
     memset(&m_beacon_info, 0, sizeof(m_beacon_info));
@@ -1135,26 +1174,26 @@ void advertising_init(void)
 
     // Indentificador
     manuf_specific_data.company_identifier = 0x1133;
-    manuf_specific_data.data.p_data        = (uint8_t *)m_beacon_info;
-    manuf_specific_data.data.size          = sizeof(m_beacon_info);
+    manuf_specific_data.data.p_data = (uint8_t *)m_beacon_info;
+    manuf_specific_data.data.size = sizeof(m_beacon_info);
 
     memset(&init, 0, sizeof(init));
 
-    init.advdata.name_type                     = BLE_ADVDATA_NO_NAME; // BLE_ADVDATA_FULL_NAME;
-    init.advdata.include_appearance            = false;
-    init.advdata.flags                         = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    init.advdata.name_type = BLE_ADVDATA_NO_NAME; // BLE_ADVDATA_FULL_NAME;
+    init.advdata.include_appearance = false;
+    init.advdata.flags = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
     init.config.ble_adv_on_disconnect_disabled = true;
-    init.advdata.p_manuf_specific_data         = &manuf_specific_data;
+    init.advdata.p_manuf_specific_data = &manuf_specific_data;
 
-    init.srdata.uuids_complete.uuid_cnt        = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.srdata.uuids_complete.p_uuids         = m_adv_uuids;
+    init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.srdata.uuids_complete.p_uuids = m_adv_uuids;
 
-    init.config.ble_adv_fast_enabled           = true;
-    init.config.ble_adv_fast_interval          = APP_ADV_INTERVAL;
-    init.config.ble_adv_fast_timeout           = APP_ADV_DURATION;
-    init.evt_handler                           = on_adv_evt;
+    init.config.ble_adv_fast_enabled = true;
+    init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
+    init.config.ble_adv_fast_timeout = APP_ADV_DURATION;
+    init.evt_handler = on_adv_evt;
 
-    err_code                                   = ble_advertising_init(&m_advertising, &init);
+    err_code = ble_advertising_init(&m_advertising, &init);
     APP_ERROR_CHECK(err_code);
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);

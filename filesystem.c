@@ -4,11 +4,11 @@
 
 // Buffer estático para evitar problemas con variables locales en el stack
 static store_history g_temp_history_buffer;
-extern void          app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length);
+extern void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length);
 
 void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3)
 {
-
+    // MAC's
     load_mac_from_flash(config_out->mac_repetidor_config, MAC_REPEATER);
     load_mac_from_flash(config_out->mac_emisor_config, MAC_FILTRADO);
 
@@ -26,22 +26,42 @@ void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, u
     config_out->version[0] = d1;
     config_out->version[1] = d2;
     config_out->version[2] = d3;
+
+    // // Imprimir por consola los valores de las MAC's
+    // NRF_LOG_RAW_INFO("\033[1;31m>\033[0m MAC's cargadas");
+
+    // // MAC Repetidor
+    // NRF_LOG_RAW_INFO("\n\t>> Repetidor : %02X:%02X:%02X:%02X:%02X:%02X",
+    //                  config_out->mac_repetidor_config[5],
+    //                  config_out->mac_repetidor_config[4],
+    //                  config_out->mac_repetidor_config[3],
+    //                  config_out->mac_repetidor_config[2],
+    //                  config_out->mac_repetidor_config[1],
+    //                  config_out->mac_repetidor_config[0]);
+    // // MAC Emisor
+    // NRF_LOG_RAW_INFO("\n\t>> Emisor    : %02X:%02X:%02X:%02X:%02X:%02X\n",
+    //                  config_out->mac_emisor_config[5],
+    //                  config_out->mac_emisor_config[4],
+    //                  config_out->mac_emisor_config[3],
+    //                  config_out->mac_emisor_config[2],
+    //                  config_out->mac_emisor_config[1],
+    //                  config_out->mac_emisor_config[0]);
 }
 
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset)
 {
-    ret_code_t        ret;
+    ret_code_t ret;
     fds_record_desc_t desc_history = {0};
     fds_record_desc_t desc_counter = {0};
-    fds_find_token_t  token        = {0};
+    fds_find_token_t token = {0};
 
     memcpy(&g_temp_history_buffer, p_history_data, sizeof(store_history));
 
     // Preparar nuevo registro histórico
-    uint16_t     record_key = HISTORY_RECORD_KEY_START + offset;
-    fds_record_t new_record = {.file_id           = HISTORY_FILE_ID,
-                               .key               = record_key,
-                               .data.p_data       = &g_temp_history_buffer, // Usar buffer estático
+    uint16_t record_key = HISTORY_RECORD_KEY_START + offset;
+    fds_record_t new_record = {.file_id = HISTORY_FILE_ID,
+                               .key = record_key,
+                               .data.p_data = &g_temp_history_buffer, // Usar buffer estático
                                .data.length_words = BYTES_TO_WORDS(sizeof(store_history))};
 
     // Buscar el registro del historial, si no existe lo escribe
@@ -88,16 +108,16 @@ ret_code_t save_history_record_emisor(store_history const *p_history_data, uint1
 ret_code_t update_history_counter(uint32_t new_count)
 {
     fds_record_desc_t desc_counter = {0};
-    fds_find_token_t  token        = {0};
-    ret_code_t        ret;
+    fds_find_token_t token = {0};
+    ret_code_t ret;
 
     // Buscar el registro del contador
     ret = fds_record_find(HISTORY_FILE_ID, HISTORY_COUNTER_RECORD_KEY, &desc_counter, &token);
 
     nrf_delay_ms(500);
-    fds_record_t counter_record = {.file_id           = HISTORY_FILE_ID,
-                                   .key               = HISTORY_COUNTER_RECORD_KEY,
-                                   .data.p_data       = &new_count,
+    fds_record_t counter_record = {.file_id = HISTORY_FILE_ID,
+                                   .key = HISTORY_COUNTER_RECORD_KEY,
+                                   .data.p_data = &new_count,
                                    .data.length_words = 1};
 
     if (ret == NRF_SUCCESS)
@@ -113,9 +133,9 @@ ret_code_t update_history_counter(uint32_t new_count)
     else if (ret == FDS_ERR_NOT_FOUND)
     {
         // Si no existe, escribir el valor inicial (0) en memoria
-        uint32_t initial_value     = 1;
+        uint32_t initial_value = 1;
         counter_record.data.p_data = &initial_value;
-        ret                        = fds_record_write(NULL, &counter_record);
+        ret = fds_record_write(NULL, &counter_record);
         nrf_delay_ms(500); // Delay tras escribir
         if (ret == NRF_SUCCESS)
         {
@@ -137,15 +157,16 @@ ret_code_t update_history_counter(uint32_t new_count)
 //-------------------------------------------------------------------------------------------------------------
 //                                      HISTORY FUNCTIONS STARTS HERE.
 //-------------------------------------------------------------------------------------------------------------
+
 ret_code_t save_history_record(store_history const *p_history_data)
 {
-    ret_code_t        ret;
-    fds_record_desc_t desc_history  = {0};
-    fds_record_desc_t desc_counter  = {0};
-    fds_find_token_t  token         = {0};
-    uint32_t          history_count = 0;
+    ret_code_t ret;
+    fds_record_desc_t desc_history = {0};
+    fds_record_desc_t desc_counter = {0};
+    fds_find_token_t token = {0};
+    uint32_t history_count = 0;
 
-    bool              counter_exists =
+    bool counter_exists =
         (fds_record_find(HISTORY_FILE_ID, HISTORY_COUNTER_RECORD_KEY, &desc_counter, &token) ==
          NRF_SUCCESS);
 
@@ -193,10 +214,10 @@ ret_code_t save_history_record(store_history const *p_history_data)
     memcpy(&g_temp_history_buffer, p_history_data, sizeof(store_history));
 
     // Preparar nuevo registro histórico
-    uint16_t     record_key = HISTORY_RECORD_KEY_START + history_count;
-    fds_record_t new_record = {.file_id           = HISTORY_FILE_ID,
-                               .key               = record_key,
-                               .data.p_data       = &g_temp_history_buffer, // Usar buffer estático
+    uint16_t record_key = HISTORY_RECORD_KEY_START + history_count;
+    fds_record_t new_record = {.file_id = HISTORY_FILE_ID,
+                               .key = record_key,
+                               .data.p_data = &g_temp_history_buffer, // Usar buffer estático
                                .data.length_words = BYTES_TO_WORDS(sizeof(store_history))};
 
     // Escribir registro histórico
@@ -226,8 +247,8 @@ ret_code_t save_history_record(store_history const *p_history_data)
 
 ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_history_data)
 {
-    fds_record_desc_t desc  = {0};
-    fds_find_token_t  token = {0};
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
 
     // La clave del registro se calcula sumando el ID a la clave base.
     uint16_t record_key = (uint16_t)(HISTORY_RECORD_KEY_START + record_id);
@@ -242,7 +263,7 @@ ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_histor
 
         nrf_delay_ms(100);
         fds_flash_record_t flash_record = {0};
-        ret_code_t         ret          = fds_record_open(&desc, &flash_record);
+        ret_code_t ret = fds_record_open(&desc, &flash_record);
         if (ret != NRF_SUCCESS)
         {
             NRF_LOG_RAW_INFO("\nError al abrir el registro de historial");
@@ -270,15 +291,15 @@ ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_histor
 
 ret_code_t read_last_history_record(store_history *p_history_data)
 {
-    fds_record_desc_t desc  = {0};
-    fds_find_token_t  token = {0};
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
 
     // 1. Buscar el contador para saber cuál es el último registro.
     if (fds_record_find(HISTORY_FILE_ID, (uint16_t)HISTORY_COUNTER_RECORD_KEY, &desc, &token) ==
         NRF_SUCCESS)
     {
-        fds_flash_record_t flash_record  = {0};
-        uint32_t           history_count = 0; // Correcto: uint32_t
+        fds_flash_record_t flash_record = {0};
+        uint32_t history_count = 0; // Correcto: uint32_t
 
         fds_record_open(&desc, &flash_record);
         memcpy(&history_count, flash_record.p_data,
@@ -334,12 +355,12 @@ void print_history_record(store_history const *p_record, const char *p_title)
 uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 {
     fds_flash_record_t flash_record;
-    fds_record_desc_t  record_desc;
-    fds_find_token_t   ftok      = {0}; // Importante inicializar a cero
-    uint32_t           resultado = default_valor;
-    uint32_t          *data;
-    uint16_t           record_key;
-    ret_code_t         err_code;
+    fds_record_desc_t record_desc;
+    fds_find_token_t ftok = {0}; // Importante inicializar a cero
+    uint32_t resultado = default_valor;
+    uint32_t *data;
+    uint16_t record_key;
+    ret_code_t err_code;
     // Determinar el Record Key según el tipo de valor
     if (valor_type == TIEMPO_ENCENDIDO)
     {
@@ -367,13 +388,13 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
             if (flash_record.p_header->length_words == 1)
             {
                 // Copiar directamente el valor desde flash
-                data                 = (uint32_t *)flash_record.p_data;
-                resultado            = *data;
+                data = (uint32_t *)flash_record.p_data;
+                resultado = *data;
                 const char *tipo_str = (valor_type == TIEMPO_ENCENDIDO) ? "encendido"
                                        : (valor_type == TIEMPO_ENCENDIDO_EXTENDED)
                                            ? "encendido extendido"
                                            : "sleep";
-                NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
+                //NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
             }
             else
             {
@@ -406,13 +427,13 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 
 datetime_t read_date_from_flash(void)
 {
-    const uint16_t     len = sizeof(datetime_t);
+    const uint16_t len = sizeof(datetime_t);
     fds_flash_record_t flash_record;
-    fds_record_desc_t  record_desc;
-    fds_find_token_t   ftok = {0};
-    ret_code_t         err_code;
+    fds_record_desc_t record_desc;
+    fds_find_token_t ftok = {0};
+    ret_code_t err_code;
 
-    datetime_t         resultado =
+    datetime_t resultado =
         {.year = 3000, .month = 5, .day = 30, .hour = 0, .minute = 0, .second = 0};
 
     err_code =
@@ -473,50 +494,50 @@ void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
         record_key = TIME_SLEEP_RECORD_KEY;
     }
 
-    fds_record_t      record = {.file_id           = TIME_FILE_ID,
-                                .key               = record_key,
-                                .data.p_data       = &valor,
-                                .data.length_words = 1};
+    fds_record_t record = {.file_id = TIME_FILE_ID,
+                           .key = record_key,
+                           .data.p_data = &valor,
+                           .data.length_words = 1};
     fds_record_desc_t record_desc;
-    fds_find_token_t  ftok     = {0};
-    ret_code_t        err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
+    fds_find_token_t ftok = {0};
+    ret_code_t err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
 
-    const char       *tipo_str = (valor_type == TIEMPO_ENCENDIDO)            ? "encendido"
-                                 : (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido"
-                                                                             : "sleep";
+    const char *tipo_str = (valor_type == TIEMPO_ENCENDIDO)            ? "encendido"
+                           : (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido"
+                                                                       : "sleep";
 
     if (err_code == NRF_SUCCESS)
     {
         err_code = fds_record_update(&record_desc, &record);
-        NRF_LOG_RAW_INFO("\n> Tiempo de %s %s: %d segundos.",
-                         tipo_str,
-                         (err_code == NRF_SUCCESS) ? "actualizado" : "falló al actualizar",
-                         valor / 1000);
+        // NRF_LOG_RAW_INFO("\n> Tiempo de %s %s: %d segundos.",
+        //                  tipo_str,
+        //                  (err_code == NRF_SUCCESS) ? "actualizado" : "falló al actualizar",
+        //                  valor / 1000);
     }
     else if (err_code == FDS_ERR_NOT_FOUND)
     {
         err_code = fds_record_write(&record_desc, &record);
-        NRF_LOG_RAW_INFO("\nTiempo de %s %s: %d segundos.\n",
-                         tipo_str,
-                         (err_code == NRF_SUCCESS) ? "guardado" : "falló al guardar",
-                         valor / 1000);
+        // NRF_LOG_RAW_INFO("\nTiempo de %s %s: %d segundos.\n",
+        //                  tipo_str,
+        //                  (err_code == NRF_SUCCESS) ? "guardado" : "falló al guardar",
+        //                  valor / 1000);
     }
     else
     {
-        NRF_LOG_ERROR("Error al buscar el registro en memoria flash: %d", err_code);
+        NRF_LOG_RAW_INFO("\nError al buscar el registro en memoria flash: %d", err_code);
     }
 }
 
 ret_code_t write_date_to_flash(const datetime_t *p_date)
 {
-    ret_code_t        err_code;
+    ret_code_t err_code;
     fds_record_desc_t record_desc;
-    fds_find_token_t  ftok   = {0};
+    fds_find_token_t ftok = {0};
 
-    fds_record_t      record = {
-             .file_id = DATE_AND_TIME_FILE_ID,
-             .key     = DATE_AND_TIME_RECORD_KEY,
-             .data = {.p_data = p_date, .length_words = (sizeof(datetime_t) + 3) / sizeof(uint32_t)}};
+    fds_record_t record = {
+        .file_id = DATE_AND_TIME_FILE_ID,
+        .key = DATE_AND_TIME_RECORD_KEY,
+        .data = {.p_data = p_date, .length_words = (sizeof(datetime_t) + 3) / sizeof(uint32_t)}};
 
     err_code =
         fds_record_find(DATE_AND_TIME_FILE_ID, DATE_AND_TIME_RECORD_KEY, &record_desc, &ftok);
@@ -526,7 +547,7 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
         err_code = fds_record_update(&record_desc, &record);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_ERROR("Error actualizando: 0x%X", err_code);
+            NRF_LOG_RAW_INFO("\nError actualizando: 0x%X", err_code);
         }
     }
     else if (err_code == FDS_ERR_NOT_FOUND)
@@ -534,12 +555,12 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
         err_code = fds_record_write(NULL, &record);
         if (err_code == NRF_SUCCESS)
         {
-            NRF_LOG_ERROR("Error escribiendo: 0x%X", err_code);
+            NRF_LOG_RAW_INFO("\nError escribiendo: 0x%X", err_code);
         }
     }
     else
     {
-        NRF_LOG_ERROR("Error buscando: 0x%X", err_code);
+        NRF_LOG_RAW_INFO("\nError buscando: 0x%X", err_code);
     }
 
     return err_code;
@@ -547,11 +568,11 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
 
 void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
 {
-    fds_record_desc_t  record_desc;
-    fds_find_token_t   ftok = {0};
+    fds_record_desc_t record_desc;
+    fds_find_token_t ftok = {0};
     fds_flash_record_t flash_record;
-    uint16_t           record_key_tipo;
-    ret_code_t         err_code;
+    uint16_t record_key_tipo;
+    ret_code_t err_code;
 
     switch (tipo)
     {
@@ -568,17 +589,17 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
     }
 
     // Busca el registro en la memeria
-    NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Buscando registro con KEY: 0x%04X", record_key_tipo);
+    // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Buscando registro con KEY: 0x%04X", record_key_tipo);
     err_code = fds_record_find(MAC_FILE_ID, record_key_tipo, &record_desc, &ftok);
     if (err_code == NRF_SUCCESS)
     {
-        NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro encontrado, abriendo...");
-        // Si existe trata de abrirlo
+        // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro encontrado, abriendo...");
+        //  Si existe trata de abrirlo
         err_code = fds_record_open(&record_desc, &flash_record);
         if (err_code == NRF_SUCCESS && flash_record.p_header->length_words * 4 >= 6)
         {
-            NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro abierto, tamaño: %d words",
-                             flash_record.p_header->length_words);
+            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro abierto, tamaño: %d words",
+            //                  flash_record.p_header->length_words);
 
             // Verifica que el tamaño del dato sea correcto
             if (flash_record.p_header->length_words != 2)
@@ -592,29 +613,29 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
 
             // Mostrar datos raw antes de copiar
             uint8_t *raw_data = (uint8_t *)flash_record.p_data;
-            NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (primeros 4): %02X %02X %02X %02X",
-                             raw_data[0],
-                             raw_data[1],
-                             raw_data[2],
-                             raw_data[3]);
-            NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (últimos 4): %02X %02X %02X %02X",
-                             raw_data[4],
-                             raw_data[5],
-                             raw_data[6],
-                             raw_data[7]);
+            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (primeros 4): %02X %02X %02X %02X",
+            //                  raw_data[0],
+            //                  raw_data[1],
+            //                  raw_data[2],
+            //                  raw_data[3]);
+            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (últimos 4): %02X %02X %02X %02X",
+            //                  raw_data[4],
+            //                  raw_data[5],
+            //                  raw_data[6],
+            //                  raw_data[7]);
 
             // Copia la MAC al buffer de salida
             memcpy(mac_out, flash_record.p_data, sizeof(uint8_t) * 6);
             fds_record_close(&record_desc);
 
-            NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 1): %02X:%02X:%02X",
-                             mac_out[5],
-                             mac_out[4],
-                             mac_out[3]);
-            NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 2): %02X:%02X:%02X",
-                             mac_out[2],
-                             mac_out[1],
-                             mac_out[0]);
+            // NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 1): %02X:%02X:%02X",
+            //                  mac_out[5],
+            //                  mac_out[4],
+            //                  mac_out[3]);
+            // NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 2): %02X:%02X:%02X",
+            //                  mac_out[2],
+            //                  mac_out[1],
+            //                  mac_out[0]);
             return;
         }
         else
@@ -624,7 +645,7 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
     }
     else
     {
-        NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro no encontrado, error: 0x%X", err_code);
+        // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro no encontrado, error: 0x%X", err_code);
         if (tipo == MAC_FILTRADO)
         {
             // Si no se encuentra una MAC, usa una dirección predeterminada
@@ -665,16 +686,17 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
             // mac_out[4] = 0x4C;
             // mac_out[5] = 0xD2;
 
-            NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC de filtrado. Usando valor predeterminado.");
+            // NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC de filtrado. Usando valor
+            // predeterminado.");
 
-            NRF_LOG_RAW_INFO("\n\t>> MAC de filtrado default: "
-                             "%02X:%02X:%02X:%02X:%02X:%02X",
-                             mac_out[5],
-                             mac_out[4],
-                             mac_out[3],
-                             mac_out[2],
-                             mac_out[1],
-                             mac_out[0]);
+            // NRF_LOG_RAW_INFO("\n\t>> MAC de filtrado default: "
+            //  "%02X:%02X:%02X:%02X:%02X:%02X",
+            //  mac_out[5],
+            //  mac_out[4],
+            //  mac_out[3],
+            //  mac_out[2],
+            //  mac_out[1],
+            //  mac_out[0]);
             return;
         }
 
@@ -687,14 +709,14 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
             mac_out[1] = 0x11;
             mac_out[0] = 0x22;
 
-            NRF_LOG_RAW_INFO("\n\t>> MAC del repetidor default: "
-                             "%02X:%02X:%02X:%02X:%02X:%02X",
-                             mac_out[5],
-                             mac_out[4],
-                             mac_out[3],
-                             mac_out[2],
-                             mac_out[1],
-                             mac_out[0]);
+            // NRF_LOG_RAW_INFO("\n\t>> MAC del repetidor default: "
+            //  "%02X:%02X:%02X:%02X:%02X:%02X",
+            //  mac_out[5],
+            //  mac_out[4],
+            //  mac_out[3],
+            //  mac_out[2],
+            //  mac_out[1],
+            //  mac_out[0]);
 
             return;
         }
@@ -705,13 +727,13 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
 
 void save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo)
 {
-    fds_record_t      record;
+    fds_record_t record;
     fds_record_desc_t record_desc;
-    fds_find_token_t  ftok = {0};
+    fds_find_token_t ftok = {0};
     // Crear un buffer exacto de 8 bytes (2 words) completamente limpio
-    uint8_t     clean_buffer[8] = {0};
-    ret_code_t  ret;
-    uint16_t    record_key;
+    uint8_t clean_buffer[8] = {0};
+    ret_code_t ret;
+    uint16_t record_key;
     const char *tipo_str;
 
     // Seleccionar la clave y descripción según el tipo de MAC
@@ -719,51 +741,51 @@ void save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo)
     {
     case MAC_FILTRADO:
         record_key = MAC_RECORD_KEY;
-        tipo_str   = "MAC de filtrado/emisor";
+        tipo_str = "MAC de filtrado/emisor";
         break;
     case MAC_REPEATER:
         record_key = MAC_REPEATER_RECORD_KEY;
-        tipo_str   = "MAC del repetidor";
+        tipo_str = "MAC del repetidor";
         break;
     default:
         NRF_LOG_RAW_INFO("\nError: Tipo de MAC no válido");
         return;
     }
 
-    // Debug: Mostrar MAC recibida
-    NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 1): %02X:%02X:%02X",
-                     tipo_str,
-                     mac_addr[5],
-                     mac_addr[4],
-                     mac_addr[3]);
-    NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 2): %02X:%02X:%02X",
-                     tipo_str,
-                     mac_addr[2],
-                     mac_addr[1],
-                     mac_addr[0]);
+    // // Debug: Mostrar MAC recibida
+    // NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 1): %02X:%02X:%02X",
+    //                  tipo_str,
+    //                  mac_addr[5],
+    //                  mac_addr[4],
+    //                  mac_addr[3]);
+    // NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 2): %02X:%02X:%02X",
+    //                  tipo_str,
+    //                  mac_addr[2],
+    //                  mac_addr[1],
+    //                  mac_addr[0]);
 
     // Copiar solo los 6 bytes de la MAC, el resto queda en 0
     memcpy(clean_buffer, mac_addr, 6);
 
-    // Debug: Mostrar buffer completo antes de guardar
-    NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (primeros 4 bytes): %02X %02X %02X %02X",
-                     clean_buffer[0],
-                     clean_buffer[1],
-                     clean_buffer[2],
-                     clean_buffer[3]);
-    NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (últimos 4 bytes): %02X %02X %02X %02X",
-                     clean_buffer[4],
-                     clean_buffer[5],
-                     clean_buffer[6],
-                     clean_buffer[7]);
+    // // Debug: Mostrar buffer completo antes de guardar
+    // NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (primeros 4 bytes): %02X %02X %02X %02X",
+    //                  clean_buffer[0],
+    //                  clean_buffer[1],
+    //                  clean_buffer[2],
+    //                  clean_buffer[3]);
+    // NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (últimos 4 bytes): %02X %02X %02X %02X",
+    //                  clean_buffer[4],
+    //                  clean_buffer[5],
+    //                  clean_buffer[6],
+    //                  clean_buffer[7]);
 
     // Configura el registro
-    record.file_id           = MAC_FILE_ID;
-    record.key               = record_key;
-    record.data.p_data       = clean_buffer; // Apunta al buffer limpio
-    record.data.length_words = 2;            // Exactamente 2 words (8 bytes)
+    record.file_id = MAC_FILE_ID;
+    record.key = record_key;
+    record.data.p_data = clean_buffer; // Apunta al buffer limpio
+    record.data.length_words = 2;      // Exactamente 2 words (8 bytes)
 
-    ret                      = fds_record_find(MAC_FILE_ID, record_key, &record_desc, &ftok);
+    ret = fds_record_find(MAC_FILE_ID, record_key, &record_desc, &ftok);
 
     if (ret == NRF_SUCCESS)
     {
@@ -798,11 +820,11 @@ void save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo)
 }
 
 // Variables globales para el envío asíncrono de historial (similar a cmd15)
-static bool     history_send_active    = false;
+static bool history_send_active = false;
 static uint32_t history_current_record = 0;
-static uint32_t history_total_records  = 0;
-static uint32_t history_sent_count     = 0;
-static uint32_t history_failed_count   = 0;
+static uint32_t history_total_records = 0;
+static uint32_t history_sent_count = 0;
+static uint32_t history_failed_count = 0;
 
 // Buffer para almacenar los record keys válidos encontrados por fds_record_iterate
 #define MAX_HISTORY_RECORDS 248
@@ -817,15 +839,15 @@ static uint16_t history_valid_count = 0;
  */
 static ret_code_t read_history_record_by_key(uint16_t record_key, store_history *p_history_data)
 {
-    fds_record_desc_t desc  = {0};
-    fds_find_token_t  token = {0};
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
 
     NRF_LOG_DEBUG("Leyendo registro con RECORD_KEY: 0x%04X", record_key);
 
     if (fds_record_find(HISTORY_FILE_ID, record_key, &desc, &token) == NRF_SUCCESS)
     {
         fds_flash_record_t flash_record = {0};
-        ret_code_t         ret          = fds_record_open(&desc, &flash_record);
+        ret_code_t ret = fds_record_open(&desc, &flash_record);
         if (ret != NRF_SUCCESS)
         {
             NRF_LOG_ERROR("Error al abrir el registro");
@@ -857,8 +879,8 @@ void history_send_next_packet(void)
         return;
     }
 
-    uint32_t       packets_sent_this_round = 0;
-    const uint32_t MAX_PACKETS_PER_ROUND   = 5; // Enviar hasta 5 paquetes por vez
+    uint32_t packets_sent_this_round = 0;
+    const uint32_t MAX_PACKETS_PER_ROUND = 5; // Enviar hasta 5 paquetes por vez
 
     while (history_send_active && history_current_record < history_total_records &&
            packets_sent_this_round < MAX_PACKETS_PER_ROUND)
@@ -878,7 +900,7 @@ void history_send_next_packet(void)
 
         // Leer el registro actual directamente desde flash usando el record key
         store_history current_record;
-        ret_code_t    read_result = read_history_record_by_key(current_key, &current_record);
+        ret_code_t read_result = read_history_record_by_key(current_key, &current_record);
 
         if (read_result != NRF_SUCCESS)
         {
@@ -891,7 +913,7 @@ void history_send_next_packet(void)
 
         // Estructurar los datos en array BLE
         static uint8_t data_array[244];
-        uint16_t       position = 0;
+        uint16_t position = 0;
 
         // Byte 0: Magic
         data_array[position++] = 0x08;
@@ -1000,9 +1022,9 @@ void history_send_next_packet(void)
 
 ret_code_t send_all_history(void)
 {
-    ret_code_t    err_code;
+    ret_code_t err_code;
     store_history history_record = {0};
-    uint16_t      valid_records  = 0;
+    uint16_t valid_records = 0;
 
     NRF_LOG_RAW_INFO("\n\n--- INICIANDO ENVIO DE HISTORIAL ASINCRONO ---");
 
@@ -1015,7 +1037,7 @@ ret_code_t send_all_history(void)
 
     // Verificar estado inicial enviando un pequeño paquete de prueba
     uint8_t test_data[] = {0x08, 0x00}; // Magic + test byte
-    err_code            = app_nus_server_send_data(test_data, 2);
+    err_code = app_nus_server_send_data(test_data, 2);
     if (err_code != NRF_SUCCESS)
     {
         NRF_LOG_RAW_INFO("\nError: No se puede enviar por BLE (0x%X). Verifica conexion.",
@@ -1032,10 +1054,10 @@ ret_code_t send_all_history(void)
     NRF_LOG_RAW_INFO("\n--- FASE 1: Contando registros validos en flash ---");
 
     // FASE 1: Contar y almacenar los record keys de registros válidos usando fds_record_iterate
-    fds_find_token_t   token          = {0};
-    fds_record_desc_t  record_desc    = {0};
-    fds_flash_record_t flash_record   = {0};
-    uint16_t           expected_words = BYTES_TO_WORDS(sizeof(store_history));
+    fds_find_token_t token = {0};
+    fds_record_desc_t record_desc = {0};
+    fds_flash_record_t flash_record = {0};
+    uint16_t expected_words = BYTES_TO_WORDS(sizeof(store_history));
 
     // Resetear contador y array de keys válidos
     history_valid_count = 0;
@@ -1095,11 +1117,11 @@ ret_code_t send_all_history(void)
     // FASE 2: Inicializar variables para envío asíncrono (usando array de record keys)
     NRF_LOG_RAW_INFO("\n--- FASE 2: Iniciando envio asincrono (usando record keys) ---");
 
-    history_send_active    = true;
+    history_send_active = true;
     history_current_record = 0;
-    history_total_records  = history_valid_count;
-    history_sent_count     = 0;
-    history_failed_count   = 0;
+    history_total_records = history_valid_count;
+    history_sent_count = 0;
+    history_failed_count = 0;
 
     NRF_LOG_RAW_INFO("\nEnviando %d registros de forma asincrona...", history_total_records);
 
@@ -1149,9 +1171,9 @@ void delete_all_history(void)
 
 ret_code_t delete_history_record_by_id(uint16_t record_id)
 {
-    ret_code_t        ret;
-    fds_record_desc_t desc  = {0};
-    fds_find_token_t  token = {0};
+    ret_code_t ret;
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
 
     // Calcular la clave del registro usando el offset del ID
     uint16_t record_key = HISTORY_RECORD_KEY_START + record_id;
@@ -1205,4 +1227,84 @@ ret_code_t delete_history_record_by_id(uint16_t record_id)
     }
 
     return ret;
+}
+
+ret_code_t load_adc_values(adc_values_t *adc_values_cargados)
+{
+    ret_code_t err_code;
+    fds_record_desc_t desc = {0};
+    fds_find_token_t token = {0};
+
+    err_code = fds_record_find(HISTORY_FILE_ID, HISTORY_ADC_VALUES_RECORD_KEY, &desc, &token);
+    if (err_code == NRF_SUCCESS)
+    {
+        fds_flash_record_t flash_record = {0};
+        err_code = fds_record_open(&desc, &flash_record);
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\n[ERROR] No se pudo cargar desde FLASH los ADC VALUES");
+            return err_code;
+        }
+
+        memcpy(adc_values_cargados, flash_record.p_data, sizeof(adc_values_t));
+
+        return fds_record_close(&desc);
+    }
+
+    return NRF_ERROR_NOT_FOUND;
+}
+
+ret_code_t save_adc_values(adc_values_t const *valores_a_guardar)
+{
+    ret_code_t err_code;
+    fds_record_desc_t desc_value = {0};
+    fds_find_token_t token = {0};
+    fds_record_t record = {.file_id = HISTORY_FILE_ID,
+                           .key = HISTORY_ADC_VALUES_RECORD_KEY,
+                           .data = {.p_data = valores_a_guardar,
+                                    .length_words = (sizeof(adc_values_t) + 3) / sizeof(uint32_t)}};
+
+    if (valores_a_guardar->V1 >= 0 && valores_a_guardar->V1 <= 1023 && //
+        valores_a_guardar->V2 >= 0 && valores_a_guardar->V2 <= 1023 && //
+        valores_a_guardar->contador >= 1 && valores_a_guardar->contador <= 65535)
+    {
+
+        adc_values.V1 = valores_a_guardar->V1;
+        adc_values.V2 = valores_a_guardar->V2;
+        adc_values.contador = valores_a_guardar->contador;
+        NRF_LOG_RAW_INFO("\n\nLos valores de \"adc_values\" cargados son:\n");
+        NRF_LOG_RAW_INFO("V1: %d\tV2: %d\tContador: %d\n",
+                         adc_values.V1,
+                         adc_values.V2,
+                         adc_values.contador);
+        NRF_LOG_FLUSH();
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n[ERROR] Valores de ADC_VALUES fuera de rango");
+        return FDS_ERR_NOT_FOUND;
+    }
+
+    err_code = fds_record_find(HISTORY_FILE_ID, HISTORY_ADC_VALUES_RECORD_KEY, &desc_value, &token);
+    if (err_code == NRF_SUCCESS)
+    {
+        err_code = fds_record_update(&desc_value, &record);
+        if (err_code != NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\n[ERROR] No se pudo actualizar el registro de ADC_VALUES");
+        }
+    }
+    else if (err_code == FDS_ERR_NOT_FOUND)
+    {
+        err_code = fds_record_write(NULL, &record);
+        if (err_code == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\n[ERROR] No se pudo escribir el registro ADC_VALUES");
+        }
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n[ERROR] No se encontro y no se pudo guardar el registro ADV_VALUES");
+    }
+    return err_code;
 }

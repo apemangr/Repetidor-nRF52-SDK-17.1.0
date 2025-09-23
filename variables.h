@@ -10,9 +10,10 @@
 #define ECHOBACK_BLE_UART_DATA 1
 
 // TIEMPO
-#define DEFAULT_DEVICE_ON_TIME_MS          10000  // Tiempo de encendido por defecto
-#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 999000 // Tiempo de encendido extentido por defecto
+#define DEFAULT_DEVICE_ON_TIME_MS          15000  // Tiempo de encendido por defecto
+#define DEFAULT_DEVICE_ON_TIME_EXTENDED_MS 40000 // Tiempo de encendido extentido por defecto
 #define DEFAULT_DEVICE_SLEEP_TIME_MS       (00000 + 5000) // Tiempo de dormido por defecto + delay
+#define RECONNECTION_SLEEP_TIME_MS         10000  // Tiempo de sleep fijo de 10 segundos durante reconexión
 
 // MAC'S
 #define MAC_FILE_ID             0x0001 // Dirección FILE_ID MAC's
@@ -28,9 +29,9 @@
 #define DATE_AND_TIME_RECORD_KEY    0x0009 // Valores del calendario RTC
 
 // HISTORY
-#define HISTORY_FILE_ID               0x000a             // Dirección FILE_ID Historiales
-#define HISTORY_COUNTER_RECORD_KEY    0x000b             // Contador de historiales
-#define HISTORY_ADC_VALUES_RECORD_KEY 0x000c             // Valores de los ADC's y el contador ADV
+#define HISTORY_FILE_ID               0x000A             // Dirección FILE_ID Historiales
+#define HISTORY_COUNTER_RECORD_KEY    0x000B             // Contador de historiales
+#define HISTORY_ADC_VALUES_RECORD_KEY 0x000C             // Valores de los ADC's y el contador ADV
 #define HISTORY_RECORD_KEY            0x1000             // Dirección inicial de los historiales
 #define HISTORY_BUFFER_SIZE           500                // Cantidad de historiales
 #define HISTORY_RECORD_KEY_START      HISTORY_RECORD_KEY // Renombre para comodidad
@@ -40,5 +41,7 @@
 #define LSB_16(a)                     ((a) & 0x00FF)        // Parte de abajo de un uint32_t
 
 extern bool m_device_active;
+extern bool m_reconnection_mode; // Nueva variable para controlar el modo de reconexión
+extern bool m_emisor_found_this_cycle; // Variable para rastrear si el emisor se conectó en este ciclo
 
 #endif // VARIABLES_H

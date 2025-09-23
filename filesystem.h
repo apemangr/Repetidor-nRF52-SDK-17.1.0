@@ -54,7 +54,7 @@ typedef struct
 } adc_values_t;
 
 extern adc_values_t adc_values;
-extern config_t config_repetidor;
+extern config_t     config_repetidor;
 
 typedef enum
 {
@@ -69,9 +69,11 @@ typedef enum
     MAC_FILTRADO
 } tipo_mac_t;
 
-static uint8_t  mac_address_from_flash[6] = {0};
+static uint8_t mac_address_from_flash[6] = {0};
 
-void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
+void       load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
+ret_code_t load_adc_values(adc_values_t *adc_values_cargados);
+ret_code_t save_adc_values(adc_values_t const *valores_a_guardar);
 
 // History functions
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset);

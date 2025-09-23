@@ -10,18 +10,16 @@ void                 restart_sleep_rtc(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t sleep_time_from_flash =
         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
-    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de sleep: %u ms", sleep_time_from_flash);
-    uint32_t next_event =
-        (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
+    NRF_LOG_RAW_INFO("\n>> Tiempo de sleep: %u ms", sleep_time_from_flash);
+    uint32_t next_event = (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
 }
 
 void restart_on_rtc(void)
 {
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
-    uint32_t read_time =
-        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
-    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido: %u ms", read_time);
+    uint32_t read_time       = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+    NRF_LOG_RAW_INFO("\n>> Tiempo de encendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
 }
@@ -31,10 +29,20 @@ void restart_on_rtc_extended(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t read_time =
         read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
-    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido extendido: %u ms", read_time);
+
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
-    NRF_LOG_RAW_INFO("\n\t>> Reiniciando RTC con tiempo extendido: %u ms", read_time);
+    NRF_LOG_RAW_INFO("\n>> Tiempo de encendido extendido: %u ms ", read_time);
+    //NRF_LOG_RAW_INFO("\n>> Valor por defecto: %u ms", DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+}
+
+void restart_sleep_rtc_reconnection(void)
+{
+    uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+    uint32_t sleep_time      = RECONNECTION_SLEEP_TIME_MS;
+    NRF_LOG_RAW_INFO("\n>> Tiempo de sleep en modo reconexion: %u ms", sleep_time);
+    uint32_t next_event = (current_counter + (sleep_time / 1000) * 8) & 0xFFFFFF;
+    nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
 }
 
 bool is_date_stored()
@@ -43,8 +51,8 @@ bool is_date_stored()
     fds_record_desc_t record_desc;
     fds_find_token_t  ftok = {0};
 
-    err_code               = fds_record_find(DATE_AND_TIME_FILE_ID, DATE_AND_TIME_RECORD_KEY,
-                                             &record_desc, &ftok);
+    err_code =
+        fds_record_find(DATE_AND_TIME_FILE_ID, DATE_AND_TIME_RECORD_KEY, &record_desc, &ftok);
 
     if (err_code != NRF_SUCCESS)
     {
@@ -59,15 +67,13 @@ static inline bool is_leap_year(uint16_t year)
     return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
 }
 
-static const uint8_t days_in_month[12] = {31, 28, 31, 30, 31, 30,
-                                          31, 31, 30, 31, 30, 31};
+static const uint8_t days_in_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 void                 calendar_rtc_handler(void)
 {
     m_tick_flag  = true;
     uint32_t cnt = nrfx_rtc_counter_get(&m_rtc);
-    nrfx_rtc_cc_set(&m_rtc, RTC_CHANNEL, (cnt + 8) & RTC_COUNTER_COUNTER_Msk,
-                    true);
+    nrfx_rtc_cc_set(&m_rtc, RTC_CHANNEL, (cnt + 8) & RTC_COUNTER_COUNTER_Msk, true);
 }
 
 bool calendar_set_time(const datetime_t *now)
@@ -77,10 +83,10 @@ bool calendar_set_time(const datetime_t *now)
         return false;
     }
     // Validate fields
-    uint8_t max_day = (now->month == 2) ? (is_leap_year(now->year) ? 29 : 28)
-                                        : days_in_month[now->month - 1];
-    if (now->month < 1 || now->month > 12 || now->day < 1 || now->day > max_day ||
-        now->hour > 23 || now->minute > 59 || now->second > 59)
+    uint8_t max_day =
+        (now->month == 2) ? (is_leap_year(now->year) ? 29 : 28) : days_in_month[now->month - 1];
+    if (now->month < 1 || now->month > 12 || now->day < 1 || now->day > max_day || now->hour > 23 ||
+        now->minute > 59 || now->second > 59)
     {
         return false;
     }
@@ -115,8 +121,7 @@ bool calendar_init(void)
 
     m_initialized = true;
 
-    NRF_LOG_RAW_INFO(
-        "\n\t>> \033[0;32mModulo RTC inicializado correctamente.\033[0m");
+    NRF_LOG_RAW_INFO("\n\t>> \033[0;32mModulo RTC inicializado correctamente.\033[0m");
 
     NRF_LOG_FLUSH();
     return true;
@@ -154,9 +159,8 @@ void calendar_update(void)
             {
                 m_time.hour = 0;
                 // Day rollover
-                uint8_t dim = (m_time.month == 2)
-                                  ? (is_leap_year(m_time.year) ? 29 : 28)
-                                  : days_in_month[m_time.month - 1];
+                uint8_t dim = (m_time.month == 2) ? (is_leap_year(m_time.year) ? 29 : 28)
+                                                  : days_in_month[m_time.month - 1];
                 if (++m_time.day > dim)
                 {
                     m_time.day = 1;
@@ -173,15 +177,13 @@ void calendar_update(void)
 
 bool calendar_set_datetime(void)
 {
-    NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo encendido\t: %d \t[segs]",
-        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
+    NRF_LOG_RAW_INFO("\n\t>> Tiempo encendido\t: %d \t[segs]",
+                     read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000);
     NRF_LOG_RAW_INFO(
         "\n\t>> Tiempo encendido ext\t: %d \t[segs]",
         read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS) / 1000);
-    NRF_LOG_RAW_INFO(
-        "\n\t>> Tiempo dormido\t: %d \t[segs]",
-        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000);
+    NRF_LOG_RAW_INFO("\n\t>> Tiempo dormido\t: %d \t[segs]",
+                     read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS) / 1000);
 
     NRF_LOG_FLUSH();
 
@@ -194,7 +196,11 @@ bool calendar_set_datetime(void)
         {
             NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde la memoria.");
             NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                             dt.year, dt.month, dt.day, dt.hour, dt.minute,
+                             dt.year,
+                             dt.month,
+                             dt.day,
+                             dt.hour,
+                             dt.minute,
                              dt.second);
 
             NRF_LOG_FLUSH();
@@ -208,15 +214,15 @@ bool calendar_set_datetime(void)
             NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
             NRF_LOG_FLUSH();
 
-            datetime_t now = {.year   = 2000,
-                              .month  = 1,
-                              .day    = 1,
-                              .hour   = 0,
-                              .minute = 0,
-                              .second = 0};
+            datetime_t now =
+                {.year = 2000, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
             calendar_set_time(&now);
             NRF_LOG_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                         now.year, now.month, now.day, now.hour, now.minute,
+                         now.year,
+                         now.month,
+                         now.day,
+                         now.hour,
+                         now.minute,
                          now.second);
             NRF_LOG_FLUSH();
 
@@ -225,21 +231,18 @@ bool calendar_set_datetime(void)
     }
     else
     {
-        NRF_LOG_RAW_INFO("\n\t>> No se encontro una fecha en la memoria.");
+        NRF_LOG_RAW_INFO("\n\t>> No se encontro una fecha. Cargando valor predeterminado.");
         NRF_LOG_FLUSH();
 
-        NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
-        NRF_LOG_FLUSH();
-
-        datetime_t now = {.year   = 2000,
-                          .month  = 2,
-                          .day    = 29,
-                          .hour   = 23,
-                          .minute = 59,
-                          .second = 50};
+        datetime_t now =
+            {.year = 2000, .month = 2, .day = 29, .hour = 23, .minute = 59, .second = 50};
         calendar_set_time(&now);
         NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                         now.year, now.month, now.day, now.hour, now.minute,
+                         now.year,
+                         now.month,
+                         now.day,
+                         now.hour,
+                         now.minute,
                          now.second);
         NRF_LOG_FLUSH();
 

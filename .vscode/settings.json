@@ -12,25 +12,5 @@
         "nrf_sdh_soc.h": "c"
     },
     "C_Cpp.default.compilerPath": "C:/msys64/mingw64/bin/arm-none-eabi-gcc.exe",
-    "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#0a395a",
-        "activityBar.background": "#0a395a",
-        "activityBar.foreground": "#e7e7e7",
-        "activityBar.inactiveForeground": "#e7e7e799",
-        "activityBarBadge.background": "#c9167f",
-        "activityBarBadge.foreground": "#e7e7e7",
-        "commandCenter.border": "#e7e7e799",
-        "sash.hoverBorder": "#0a395a",
-        "statusBar.background": "#051c2c",
-        "statusBar.foreground": "#e7e7e7",
-        "statusBarItem.hoverBackground": "#0a395a",
-        "statusBarItem.remoteBackground": "#051c2c",
-        "statusBarItem.remoteForeground": "#e7e7e7",
-        "titleBar.activeBackground": "#051c2c",
-        "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.inactiveBackground": "#051c2c99",
-        "titleBar.inactiveForeground": "#e7e7e799"
-    },
-    "peacock.color": "#051c2c",
     "C_Cpp.errorSquiggles": "disabled"
 }
