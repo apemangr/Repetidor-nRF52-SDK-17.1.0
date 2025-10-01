@@ -28,6 +28,7 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
+
 // store_flash Flash_array = {0};
 adc_values_t adc_values = {0};
 config_repeater_t config_repeater = {0};
@@ -219,6 +220,8 @@ void handle_rtc_events(void)
             NRF_LOG_RAW_INFO(
                 "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
 
+
+            nrf_gpio_pin_clear(LED1_PIN);
             // Verificar modo actual al ir a sleep
             if (m_reconnection_mode)
             {
@@ -263,7 +266,7 @@ void handle_rtc_events(void)
     if (m_rtc_sleep_flag)
     {
         m_rtc_sleep_flag = false;
-
+        nrf_gpio_pin_set(LED1_PIN);
         if (!m_device_active)
         {
             // Inicializar la bandera de emisor encontrado para este nuevo ciclo
@@ -363,6 +366,7 @@ void rtc_init(void)
                         NRF_RTC_INT_COMPARE0_MASK | NRF_RTC_INT_COMPARE1_MASK |
                             NRF_RTC_INT_COMPARE2_MASK);
     nrfx_rtc_enable(&m_rtc);
+    nrf_gpio_pin_set(LED1_PIN);
 }
 
 void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name)
@@ -752,8 +756,8 @@ int main(void)
 
     power_management_init();
 
-    buttons_leds_init();
-
+    //buttons_leds_init();
+    leds_init();
     ble_stack_init();
     gatt_init();
 

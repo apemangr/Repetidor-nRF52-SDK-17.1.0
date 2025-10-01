@@ -9,6 +9,7 @@
 #include "bsp_btn_ble.h"
 #include "calendar.h"
 #include "fds.h"
+#include "leds.h"
 #include "filesystem.h"
 #include "nrf.h"
 #include "nrf_ble_gatt.h"
@@ -985,12 +986,14 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             NRF_LOG_RAW_INFO("\nCelular conectado");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            nrf_gpio_pin_set(LED2_PIN);
             restart_extended_on_rtc();
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {
             NRF_LOG_RAW_INFO("\nEmisor conectado\n");
             m_emisor_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            nrf_gpio_pin_set(LED3_PIN); 
 
             // Marcar que el emisor se encontró en este ciclo
             m_emisor_found_this_cycle = true;
@@ -1016,13 +1019,14 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
             NRF_LOG_RAW_INFO("\nCelular desconectado\n");
+            nrf_gpio_pin_clear(LED2_PIN);
             m_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del celular
         }
         else if (p_gap_evt->conn_handle == m_emisor_conn_handle)
         {
             NRF_LOG_RAW_INFO("\nEmisor desconectado");
             NRF_LOG_RAW_INFO("\n\n\033[1;31m>\033[0m Buscando emisor...\n");
-
+            nrf_gpio_pin_clear(LED3_PIN);
             m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID; // Invalida el handle del emisor
             scan_start();
         }
@@ -1154,6 +1158,7 @@ void disconnect_all_devices(void)
         APP_ERROR_CHECK(err_code);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nCelular desconectado.");
+        nrf_gpio_pin_clear(LED2_PIN);
     }
 
     if (m_emisor_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -1163,6 +1168,7 @@ void disconnect_all_devices(void)
         APP_ERROR_CHECK(err_code);
         m_emisor_conn_handle = BLE_CONN_HANDLE_INVALID;
         NRF_LOG_RAW_INFO("\nEmisor desconectado.");
+        nrf_gpio_pin_clear(LED3_PIN);
     }
 }
 
