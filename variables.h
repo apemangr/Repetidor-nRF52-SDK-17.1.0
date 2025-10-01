@@ -55,8 +55,7 @@
 #define LOG_INFO "\n[\033[1;33m INFO \033[0m]"
 
 extern bool m_device_active;
-extern bool m_reconnection_mode; // Nueva variable para controlar el modo de reconexión
-extern bool
-    m_emisor_found_this_cycle; // Variable para rastrear si el emisor se conectó en este ciclo
+extern bool m_connected_this_cycle; // Nueva variable para controlar el modo de reconexión
+extern bool m_extended_mode_on;
 
 #endif // VARIABLES_H

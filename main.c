@@ -29,11 +29,9 @@
 #include "nrf_sdh_soc.h"
 #include "variables.h"
 
-
 // store_flash Flash_array = {0};
-adc_values_t adc_values = {0};
+adc_values_t      adc_values      = {0};
 config_repeater_t config_repeater = {0};
-
 
 // /**
 //  * @brief Lee todos los registros de historial e imprime la hora de cada uno
@@ -102,23 +100,26 @@ config_repeater_t config_repeater = {0};
 // #define RTC_SLEEP_TICKS (10 * 8)
 
 NRF_BLE_GATT_DEF(m_gatt); /**< GATT module instance. */
-nrfx_rtc_t m_rtc = NRFX_RTC_INSTANCE(2);
-bool m_device_active = true;
-bool m_reconnection_mode = false; // Variable para controlar el modo de reconexión
-bool m_emisor_found_this_cycle =
-    false; // Variable para rastrear si el emisor se conectó en este ciclo
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
-static volatile bool m_rtc_on_flag = false;
-static volatile bool m_rtc_sleep_flag = false;
+nrfx_rtc_t           m_rtc                     = NRFX_RTC_INSTANCE(2);
+bool                 m_device_active           = true;
+bool                 m_connected_this_cycle    = false;
+bool                 m_extended_mode_on        = false;
+
+bool                 m_reconnection_mode       = false; // BORRAR
+bool                 m_emisor_found_this_cycle = false; // BORRAR
+
+static uint16_t      m_conn_handle             = BLE_CONN_HANDLE_INVALID;
+static volatile bool m_rtc_on_flag             = false;
+static volatile bool m_rtc_sleep_flag          = false;
 static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH;
 //
 
 void uart_event_handler(app_uart_evt_t *p_event)
 {
 
-    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
+    static uint8_t  data_array[BLE_NUS_MAX_DATA_LEN];
     static uint16_t index = 0;
-    uint32_t ret_val;
+    uint32_t        ret_val;
 
     switch (p_event->evt_type)
     {
@@ -163,15 +164,15 @@ void uart_event_handler(app_uart_evt_t *p_event)
 static void uart_init(void)
 {
 
-    ret_code_t err_code;
+    ret_code_t                   err_code;
 
-    app_uart_comm_params_t const comm_params = {.rx_pin_no = RX_PIN_NUMBER,
-                                                .tx_pin_no = TX_PIN_NUMBER,
-                                                .rts_pin_no = RTS_PIN_NUMBER,
-                                                .cts_pin_no = CTS_PIN_NUMBER,
+    app_uart_comm_params_t const comm_params = {.rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
                                                 .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-                                                .use_parity = false,
-                                                .baud_rate = UART_BAUDRATE_BAUDRATE_Baud115200};
+                                                .use_parity   = false,
+                                                .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200};
 
     APP_UART_FIFO_INIT(&comm_params,
                        UART_RX_BUF_SIZE,
@@ -218,82 +219,70 @@ void handle_rtc_events(void)
 
         if (m_device_active)
         {
-            NRF_LOG_RAW_INFO(
-                "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;36mMODO SLEEP\033[0m");
-
-
-            nrf_gpio_pin_clear(LED1_PIN);
-            // Verificar modo actual al ir a sleep
-            if (m_reconnection_mode)
-            {
-                NRF_LOG_RAW_INFO("\n\033[1;33m>>> CONTINUANDO MODO RECONEXION <<<\033[0m");
-            }
-            else
-            {
-                // Activar modo reconexión si no se encontró al emisor durante este ciclo
-                if (!m_emisor_found_this_cycle)
-                {
-                    m_reconnection_mode = true;
-                    NRF_LOG_RAW_INFO("\n\033[1;33m>>> ACTIVANDO MODO RECONEXION <<<\033[0m");
-                    NRF_LOG_RAW_INFO("\n>> Emisor no encontrado durante tiempo normal");
-                }
-                else
-                {
-                    // NRF_LOG_RAW_INFO("\n\033[1;32m>>> USANDO MODO NORMAL <<<\033[0m");
-                }
-            }
-
-            // Resetear la bandera para el próximo ciclo
-            m_emisor_found_this_cycle = false;
-
             disconnect_all_devices();
             advertising_stop();
             scan_stop();
             app_uart_close();
+
+            nrf_gpio_pin_clear(LED1_PIN);
+
             m_device_active = false;
 
-            // Usar tiempo de sleep específico según el modo
-            if (m_reconnection_mode)
+            if (!m_connected_this_cycle)
             {
+
+                NRF_LOG_RAW_INFO("\n" LOG_INFO
+                                 " Transicion a \033[1;36mMODO SLEEP EXTENDIDO\033[0m");
+                uint32_t extended_on_ms = read_time_from_flash(TIEMPO_EXTENDED_ENCENDIDO,
+                                                               DEFAULT_DEVICE_EXTENDED_ON_TIME_MS);
+                uint32_t extended_sleep_ms =
+                    read_time_from_flash(TIEMPO_EXTENDED_SLEEP,
+                                         DEFAULT_DEVICE_EXTENDED_SLEEP_TIME_MS);
+                NRF_LOG_RAW_INFO(LOG_INFO " Modo extendido ACTIVADO (ON=%u ms, SLEEP=%u ms)",
+                                 extended_on_ms,
+                                 extended_sleep_ms);
+                m_extended_mode_on = true;
                 restart_extended_sleep_rtc();
             }
             else
             {
+                NRF_LOG_RAW_INFO("\n" LOG_INFO " Transicion a \033[1;36mMODO SLEEP\033[0m");
+                uint32_t on_ms = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+                uint32_t sleep_ms =
+                    read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+                NRF_LOG_RAW_INFO(LOG_INFO " Modo normal (ON=%u ms, SLEEP=%u ms)", on_ms, sleep_ms);
+                m_extended_mode_on = false;
                 restart_sleep_rtc();
             }
+
+            m_connected_this_cycle = false;
         }
     }
 
     if (m_rtc_sleep_flag)
     {
+
         m_rtc_sleep_flag = false;
-        nrf_gpio_pin_set(LED1_PIN);
+
         if (!m_device_active)
         {
-            // Inicializar la bandera de emisor encontrado para este nuevo ciclo
-            m_emisor_found_this_cycle = false;
+            nrf_gpio_pin_set(LED1_PIN);
 
-            if (m_reconnection_mode)
+            if (m_extended_mode_on)
             {
-                NRF_LOG_RAW_INFO("\n\n\033[1;31m--------->\033[0m Transicion a \033[1;33mMODO "
-                                 "ACTIVO (RECONEXION)\033[0m");
 
-                // restart_on_rtc_extended();
+                NRF_LOG_RAW_INFO("\n" LOG_INFO
+                                 " Transicion a \033[1;32mMODO ACTIVO EXTENDIDO\033[0m");
             }
             else
             {
-                NRF_LOG_RAW_INFO(
-                    "\n\n\033[1;31m--------->\033[0m Transicion a \033[1;32mMODO ACTIVO\033[0m");
+
+                NRF_LOG_RAW_INFO("\n" LOG_INFO " Transicion a \033[1;32mMODO ACTIVO\033[0m");
             }
 
-            // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
-            // INICIAR EL ADVERTISING Y EL SCANEO
-
-            // Modificar el advertising payload para mostrar
-            // los valores de los ADC
-
-            NRF_LOG_RAW_INFO("\n[GUARDADO] Fecha y hora: %04u-%02u-%02u, "
-                             "%02u:%02u:%02u",
+            save_config_to_flash(&config_repeater);
+            NRF_LOG_RAW_INFO(LOG_OK " Guardado de fecha y hora actual: %04u-%02u-%02u, "
+                                    "%02u:%02u:%02u",
                              m_time.year,
                              m_time.month,
                              m_time.day,
@@ -301,7 +290,55 @@ void handle_rtc_events(void)
                              m_time.minute,
                              m_time.second);
 
-            write_date_to_flash(&m_time);
+            advertising_init();
+
+            // Actualizar el payload para mostrar los adc_values
+            scan_start();
+            advertising_start();
+            uart_init();
+            m_device_active        = true;
+            m_connected_this_cycle = false;
+
+            if (m_extended_mode_on)
+            {
+                restart_extended_on_rtc();
+            }
+            else
+            {
+                restart_on_rtc();
+            }
+        }
+    }
+
+    if (m_rtc_sleep_flag)
+    {
+        m_rtc_sleep_flag = false;
+        if (!m_device_active)
+        {
+            nrf_gpio_pin_set(LED1_PIN);
+            // Inicializar la bandera de emisor encontrado para este nuevo ciclo
+
+            if (m_extended_mode_on)
+            {
+                NRF_LOG_RAW_INFO("\n" LOG_INFO
+                                 " Transicion a \033[1;32mMODO ACTIVO EXTENDIDO\033[0m");
+            }
+            else
+            {
+                NRF_LOG_RAW_INFO("\n" LOG_INFO " Transicion a \033[1;32mMODO ACTIVO\033[0m");
+            }
+            // TRATAR DE HACER LOS PROCESOS DE MEMORIA ANTES DE
+            // INICIAR EL ADVERTISING Y EL SCANEO
+
+            // Modificar el advertising payload para mostrar
+            // los valores de los ADC
+
+            save_config_to_flash(&config_repeater);
+
+           NRF_LOG_RAW_INFO(LOG_OK " Guardado de fecha y hora actual: %04u-%02u-%02u, "
+                                    "%02u:%02u:%02u",
+                             m_time.year, m_time.month, m_time.day,
+                             m_time.hour, m_time.minute, m_time.second);
 
             advertising_init();
 
@@ -313,18 +350,16 @@ void handle_rtc_events(void)
             scan_start();
             advertising_start();
             uart_init();
-            m_device_active = true;
 
-            // Usar tiempo de encendido específico según el modo
-            if (m_reconnection_mode)
+            m_device_active        = true;
+            m_connected_this_cycle = false;
+
+            if (m_extended_mode_on)
             {
-                // NRF_LOG_RAW_INFO("\n\033[1;33m>>> USANDO TIEMPO EXTENDIDO (modo reconexion)
-                // <<<\033[0m");
                 restart_extended_on_rtc();
             }
             else
             {
-                // NRF_LOG_RAW_INFO("\n\033[1;32m>>> USANDO TIEMPO NORMAL <<<\033[0m");
                 restart_on_rtc();
             }
         }
@@ -344,8 +379,8 @@ void rtc_init(void)
 
     // Configurar RTC con prescaler CORRECTO
     nrfx_rtc_config_t config = NRFX_RTC_DEFAULT_CONFIG;
-    config.prescaler = RTC_PRESCALER;
-    ret_code_t err_code = nrfx_rtc_init(&m_rtc, &config, rtc_handler);
+    config.prescaler         = RTC_PRESCALER;
+    ret_code_t err_code      = nrfx_rtc_init(&m_rtc, &config, rtc_handler);
     APP_ERROR_CHECK(err_code);
 
     // Limpiar contador y comenzar desde cero
@@ -400,10 +435,11 @@ static void ble_nus_chars_received_uart_print(uint8_t *p_data, uint16_t data_len
                 // No hacer crash, solo salir del loop
                 break;
             }
-            
+
             // Timeout para evitar loops infinitos
             timeout_counter++;
-            if (timeout_counter > 10000) {
+            if (timeout_counter > 10000)
+            {
                 NRF_LOG_WARNING("UART timeout, skipping byte %d", i);
                 break;
             }
@@ -459,7 +495,7 @@ NRF_PWR_MGMT_HANDLER_REGISTER(shutdown_handler, APP_SHUTDOWN_HANDLER_PRIORITY);
 
 static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
 {
-    ret_code_t err_code;
+    ret_code_t           err_code;
     ble_gap_evt_t const *p_gap_evt = &p_ble_evt->evt.gap_evt;
 
     switch (p_ble_evt->header.evt_id)
@@ -488,8 +524,7 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
         APP_ERROR_CHECK(err_code);
         break;
 
-    case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
-    {
+    case BLE_GAP_EVT_PHY_UPDATE_REQUEST: {
         NRF_LOG_DEBUG("PHY update request.");
         ble_gap_phys_t const phys = {
             .rx_phys = BLE_GAP_PHY_AUTO,
@@ -537,7 +572,7 @@ static void ble_stack_init(void)
     // Configure the BLE stack using the default settings.
     // Fetch the start address of the application RAM.
     uint32_t ram_start = 0;
-    err_code = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
+    err_code           = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
     APP_ERROR_CHECK(err_code);
 
     // Enable BLE stack.
@@ -595,7 +630,7 @@ void bsp_event_handler(bsp_event_t event)
 
 static void buttons_leds_init(void)
 {
-    ret_code_t err_code;
+    ret_code_t  err_code;
     bsp_event_t startup_event;
 
     err_code = bsp_init(BSP_INIT_LEDS, bsp_event_handler);
@@ -646,7 +681,7 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
     // Se recibieron los datos de los ADC's y contador
     if (data_length > 8 && data_ptr[0] == 0x96)
     {
-        uint16_t pos = 1;
+        uint16_t pos  = 1;
         adc_values.V1 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
         pos += 2;
         adc_values.V2 = (data_ptr[pos] << 8) | data_ptr[pos + 1];
@@ -664,46 +699,46 @@ void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_leng
     {
         position = 1; // Comenzar después del primer byte
         // Desempaquetar datos
-        uint8_t day = data_ptr[position++];
-        uint8_t month = data_ptr[position++];
-        uint16_t year = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint8_t hour = data_ptr[position++];
-        uint8_t minute = data_ptr[position++];
-        uint8_t second = data_ptr[position++];
+        uint8_t  day      = data_ptr[position++];
+        uint8_t  month    = data_ptr[position++];
+        uint16_t year     = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  hour     = data_ptr[position++];
+        uint8_t  minute   = data_ptr[position++];
+        uint8_t  second   = data_ptr[position++];
         uint32_t contador = (data_ptr[position++] << 24) | (data_ptr[position++] << 16) |
                             (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V1 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V2 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint8_t battery = data_ptr[position++];
+        uint16_t V1      = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V2      = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  battery = data_ptr[position++];
         position += 6; // MAC original
         position += 6; // MAC custom
-        uint16_t V3 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V4 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V5 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V6 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V7 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint16_t V8 = (data_ptr[position++] << 8) | data_ptr[position++];
-        uint8_t temp = data_ptr[position++]; // Temperatura del módulo
+        uint16_t V3            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V4            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V5            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V6            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V7            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint16_t V8            = (data_ptr[position++] << 8) | data_ptr[position++];
+        uint8_t  temp          = data_ptr[position++]; // Temperatura del módulo
         uint16_t last_position = (data_ptr[position++] << 8) | data_ptr[position++];
 
         // Construir el registro temporal
-        store_history nuevo_historial = {.year = year,
-                                         .month = month,
-                                         .day = day,
-                                         .hour = hour,
-                                         .minute = minute,
-                                         .second = second,
+        store_history nuevo_historial = {.year     = year,
+                                         .month    = month,
+                                         .day      = day,
+                                         .hour     = hour,
+                                         .minute   = minute,
+                                         .second   = second,
                                          .contador = contador,
-                                         .V1 = V1,
-                                         .V2 = V2,
-                                         .V3 = V3,
-                                         .V4 = V4,
-                                         .V5 = V5,
-                                         .V6 = V6,
-                                         .V7 = V7,
-                                         .V8 = V8,
-                                         .temp = temp,
-                                         .battery = battery};
+                                         .V1       = V1,
+                                         .V2       = V2,
+                                         .V3       = V3,
+                                         .V4       = V4,
+                                         .V5       = V5,
+                                         .V6       = V6,
+                                         .V7       = V7,
+                                         .V8       = V8,
+                                         .temp     = temp,
+                                         .battery  = battery};
 
         // Guardar el historial recibido en la posición indicada
         ret_code_t ret = save_history_record_emisor(&nuevo_historial, last_position);
@@ -757,10 +792,9 @@ int main(void)
 
     power_management_init();
 
-    //buttons_leds_init();
+    // buttons_leds_init();
     leds_init();
     button_handler_init();
-
 
     ble_stack_init();
     gatt_init();
