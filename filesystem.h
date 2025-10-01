@@ -38,42 +38,45 @@ typedef struct
 
 typedef struct
 {
-    uint8_t  mac_emisor_config[6];
-    uint8_t  mac_repetidor_config[6];
-    uint32_t tiempo_encendido_config;
-    uint32_t tiempo_dormido_config;
-    uint32_t tiempo_busqueda_config;
-    uint8_t  version[3];
-} config_t;
-
-typedef struct
-{
     uint16_t V1;       // Voltaje 1
     uint16_t V2;       // Voltaje 2
     uint32_t contador; // Contador de advertisings
 } adc_values_t;
 
-extern adc_values_t adc_values;
-extern config_t     config_repetidor;
+typedef struct
+{
+    uint8_t    mac_emisor[6];
+    uint8_t    mac_repetidor[6];
+    uint32_t   tiempo_encendido;
+    uint32_t   tiempo_dormido;
+    uint32_t   tiempo_extendido;
+    uint32_t   tiempo_extendido_dormido;
+    datetime_t fecha;
+    uint8_t    version[3];
+} config_repeater_t;
+
+extern adc_values_t      adc_values;
+extern config_repeater_t config_repeater;
 
 typedef enum
 {
     TIEMPO_ENCENDIDO,
-    TIEMPO_ENCENDIDO_EXTENDED,
-    TIEMPO_SLEEP
+    TIEMPO_EXTENDED_ENCENDIDO,
+    TIEMPO_SLEEP,
+    TIEMPO_EXTENDED_SLEEP
 } valor_type_t;
 
 typedef enum
 {
-    MAC_REPEATER,
-    MAC_FILTRADO
-} tipo_mac_t;
+    MAC_EMISOR,
+    MAC_REPETIDOR
+} mac_type_t;
 
 static uint8_t mac_address_from_flash[6] = {0};
 
-void       load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
-ret_code_t load_adc_values(adc_values_t *adc_values_cargados);
-ret_code_t save_adc_values(adc_values_t const *valores_a_guardar);
+// void       load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
+// ret_code_t load_adc_values(adc_values_t *adc_values_cargados);
+// ret_code_t save_adc_values(adc_values_t const *valores_a_guardar);
 
 // History functions
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset);
@@ -94,13 +97,11 @@ ret_code_t write_date_to_flash(const datetime_t *p_date);
 datetime_t read_date_from_flash(void);
 void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
 uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
-void       load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo);
-void       save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo);
+void       load_mac_from_flash(mac_type_t mac_type, uint8_t *mac_out);
+void       save_mac_to_flash(mac_type_t mac_type, uint8_t *mac_out);
 
 // FDS functions
 void fds_initialize(void);
-
-
 
 // typedef struct
 // {

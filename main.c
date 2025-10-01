@@ -30,7 +30,8 @@
 
 // store_flash Flash_array = {0};
 adc_values_t adc_values = {0};
-config_t config_repetidor = {0};
+config_repeater_t config_repeater = {0};
+
 
 // /**
 //  * @brief Lee todos los registros de historial e imprime la hora de cada uno
@@ -250,7 +251,7 @@ void handle_rtc_events(void)
             // Usar tiempo de sleep específico según el modo
             if (m_reconnection_mode)
             {
-                restart_sleep_rtc_reconnection();
+                restart_extended_sleep_rtc();
             }
             else
             {
@@ -315,7 +316,7 @@ void handle_rtc_events(void)
             {
                 // NRF_LOG_RAW_INFO("\n\033[1;33m>>> USANDO TIEMPO EXTENDIDO (modo reconexion)
                 // <<<\033[0m");
-                restart_on_rtc_extended();
+                restart_extended_on_rtc();
             }
             else
             {
@@ -747,21 +748,23 @@ int main(void)
 
     base_timer_init();
     fds_initialize();
-    rtc_init();
     uart_init();
-    buttons_leds_init();
+
     power_management_init();
+
+    buttons_leds_init();
 
     ble_stack_init();
     gatt_init();
 
-    load_adc_values(&adc_values);
-    load_repeater_configuration(&config_repetidor, 0, 0, 1);
+    // load_adc_values(&adc_values);
+    // load_repeater_configuration(&config_repetidor, 0, 0, 1);
 
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);
 
+    rtc_init();
     calendar_init();
 
     NRF_LOG_FLUSH();

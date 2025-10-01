@@ -68,141 +68,79 @@ static void perform_garbage_collection(void)
     }
 }
 
-ret_code_t send_configuration_nus(config_t const *config_repetidor)
+ret_code_t send_config_via_ble(void)
 {
-    if (config_repetidor == NULL)
+    ret_code_t ret;
+
+    // Crear buffer con identificadores + configuración
+    uint16_t config_size = sizeof(config_repeater_t);
+    uint16_t total_size  = 2 + config_size; // 2 bytes identificadores + configuración
+    uint8_t *buffer      = malloc(total_size);
+
+    if (buffer == NULL)
     {
-        NRF_LOG_ERROR("send_configuration_nus: config_repetidor is NULL");
-        return NRF_ERROR_NULL;
+        NRF_LOG_RAW_INFO("\n[ERROR] No se pudo reservar memoria para el buffer");
+        return NRF_ERROR_NO_MEM;
     }
 
-    // Verificar que hay conexión NUS activa
-    if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
+    // Agregar identificadores al inicio
+    buffer[0] = 0xCC;
+    buffer[1] = 0xAA;
+
+    // Copiar la estructura de configuración después de los identificadores
+    memcpy(&buffer[2], &config_repeater, config_size);
+
+    // Enviar via BLE NUS
+    ret = app_nus_server_send_data(buffer, total_size);
+
+    if (ret == NRF_SUCCESS)
     {
-        NRF_LOG_WARNING("send_configuration_nus: No hay conexión NUS activa");
-        return NRF_ERROR_INVALID_STATE;
-    }
+        NRF_LOG_RAW_INFO("\n[OK] Configuracion enviada via BLE con identificadores (%u bytes total)", total_size);
 
-    // Buffer binario para los datos
-    // 2 bytes identificador + 27 bytes datos = 29 bytes total
-    uint8_t binary_data[29];
-    uint8_t *ptr = binary_data;
-
-    NRF_LOG_RAW_INFO(
-        "\n\n\x1b[1;36m=== Enviando configuracion en formato binario optimizado ===\x1b[0m");
-
-    // Añadir bytes identificadores 0xCC, 0xAA al inicio
-    *ptr++ = 0xCC;
-    *ptr++ = 0xAA;
-
-    // 1. MAC del repetidor (6 bytes) - en orden inverso para formato little endian
-    for (int i = 5; i >= 0; i--)
-    {
-        *ptr++ = config_repetidor->mac_repetidor_config[i];
-    }
-
-    // 2. MAC del emisor (6 bytes) - en orden inverso para formato little endian
-    for (int i = 5; i >= 0; i--)
-    {
-        *ptr++ = config_repetidor->mac_emisor_config[i];
-    }
-
-    // 3. Tiempo de encendido (4 bytes, little endian)
-    uint32_t tiempo_on = config_repetidor->tiempo_encendido_config;
-    *ptr++ = (uint8_t)(tiempo_on & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_on >> 8) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_on >> 16) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_on >> 24) & 0xFF);
-
-    // 4. Tiempo de dormido (4 bytes, little endian)
-    uint32_t tiempo_sleep = config_repetidor->tiempo_dormido_config;
-    *ptr++ = (uint8_t)(tiempo_sleep & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_sleep >> 8) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_sleep >> 16) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_sleep >> 24) & 0xFF);
-
-    // 5. Tiempo de búsqueda (4 bytes, little endian)
-    uint32_t tiempo_search = config_repetidor->tiempo_busqueda_config;
-    *ptr++ = (uint8_t)(tiempo_search & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_search >> 8) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_search >> 16) & 0xFF);
-    *ptr++ = (uint8_t)((tiempo_search >> 24) & 0xFF);
-
-    // 6. Versión del firmware (3 bytes)
-    *ptr++ = config_repetidor->version[0];
-    *ptr++ = config_repetidor->version[1];
-    *ptr++ = config_repetidor->version[2];
-
-    // Enviar los datos binarios
-    ret_code_t err_code = app_nus_server_send_data(binary_data, sizeof(binary_data));
-    if (err_code != NRF_SUCCESS)
-    {
-        const char *error_msg;
-        switch (err_code)
+        // Mostrar los primeros bytes en log para debug
+        NRF_LOG_RAW_INFO("\nPrimeros bytes: ");
+        for (int i = 0; i < (total_size > 16 ? 16 : total_size); i++)
         {
-        case NRF_ERROR_INVALID_STATE:
-            error_msg = "Estado invalido (sin conexion o notificaciones deshabilitadas)";
-            break;
-        case NRF_ERROR_RESOURCES:
-            error_msg = "Buffer de transmision lleno";
-            break;
-        case NRF_ERROR_INVALID_PARAM:
-            error_msg = "Parametros invalidos";
-            break;
-        case NRF_ERROR_BUSY:
-            error_msg = "Servicio ocupado";
-            break;
-        default:
-            error_msg = "Error desconocido";
-            break;
+            NRF_LOG_RAW_INFO("%02X ", buffer[i]);
         }
-
-        NRF_LOG_RAW_INFO("\nError enviando configuracion binaria: 0x%X (%s)", err_code, error_msg);
-        NRF_LOG_RAW_INFO("\n> Estado conexión: handle=0x%04X, activa=%s",
-                         m_conn_handle,
-                         (m_conn_handle != BLE_CONN_HANDLE_INVALID) ? "SI" : "NO");
-
-        // Ejecutar diagnóstico completo cuando hay error
-
-        return err_code;
+        if (total_size > 16)
+        {
+            NRF_LOG_RAW_INFO("... (%u bytes total)", total_size);
+        }
+        NRF_LOG_RAW_INFO("\n");
     }
-
-    // Log de información enviada (mostrar en hexadecimal para debugging)
-    NRF_LOG_RAW_INFO("\n> Configuracion binaria enviada (%d bytes):", sizeof(binary_data));
-    NRF_LOG_RAW_INFO("\n> Datos hex: ");
-    for (int i = 0; i < sizeof(binary_data); i++)
+    else
     {
-        NRF_LOG_RAW_INFO("%02X", binary_data[i]);
+        NRF_LOG_RAW_INFO("\n[ERROR] No se pudo enviar configuracion: 0x%X", ret);
     }
 
-    NRF_LOG_RAW_INFO("\n> Decodificacion:");
-    NRF_LOG_RAW_INFO("\n  - Identificador: 0x%02X 0x%02X", binary_data[0], binary_data[1]);
-    NRF_LOG_RAW_INFO("\n  - MAC Repetidor: %02X:%02X:%02X:%02X:%02X:%02X",
-                     config_repetidor->mac_repetidor_config[5],
-                     config_repetidor->mac_repetidor_config[4],
-                     config_repetidor->mac_repetidor_config[3],
-                     config_repetidor->mac_repetidor_config[2],
-                     config_repetidor->mac_repetidor_config[1],
-                     config_repetidor->mac_repetidor_config[0]);
-    NRF_LOG_RAW_INFO("\n  - MAC Emisor: %02X:%02X:%02X:%02X:%02X:%02X",
-                     config_repetidor->mac_emisor_config[5],
-                     config_repetidor->mac_emisor_config[4],
-                     config_repetidor->mac_emisor_config[3],
-                     config_repetidor->mac_emisor_config[2],
-                     config_repetidor->mac_emisor_config[1],
-                     config_repetidor->mac_emisor_config[0]);
+    // Liberar memoria
+    free(buffer);
 
-    NRF_LOG_RAW_INFO("\n  - Tiempo ON: %lu ms", config_repetidor->tiempo_encendido_config);
-    NRF_LOG_RAW_INFO("\n  - Tiempo SLEEP: %lu ms", config_repetidor->tiempo_dormido_config);
-    NRF_LOG_RAW_INFO("\n  - Tiempo SEARCH: %lu ms", config_repetidor->tiempo_busqueda_config);
-    NRF_LOG_RAW_INFO("\n  - Version FW: %u.%u.%u",
-                     config_repetidor->version[0],
-                     config_repetidor->version[1],
-                     config_repetidor->version[2]);
+    // También mostrar en log local para debug
+    NRF_LOG_RAW_INFO("\n--- CONFIGURACION ACTUAL ---");
+    NRF_LOG_RAW_INFO("\nMAC Emisor: %02X:%02X:%02X:%02X:%02X:%02X",
+                     config_repeater.mac_emisor[5], config_repeater.mac_emisor[4],
+                     config_repeater.mac_emisor[3], config_repeater.mac_emisor[2],
+                     config_repeater.mac_emisor[1], config_repeater.mac_emisor[0]);
+    NRF_LOG_RAW_INFO("\nMAC Repetidor: %02X:%02X:%02X:%02X:%02X:%02X",
+                     config_repeater.mac_repetidor[5], config_repeater.mac_repetidor[4],
+                     config_repeater.mac_repetidor[3], config_repeater.mac_repetidor[2],
+                     config_repeater.mac_repetidor[1], config_repeater.mac_repetidor[0]);
+    NRF_LOG_RAW_INFO("\nTiempos: Activo=%ums, Sleep=%ums, Extendido=%ums",
+                     config_repeater.tiempo_encendido, config_repeater.tiempo_dormido, config_repeater.tiempo_extendido);
+    NRF_LOG_RAW_INFO("\nVersion: v%u.%u.%u",
+                     config_repeater.version[0], config_repeater.version[1], config_repeater.version[2]);
+    NRF_LOG_RAW_INFO("\nFecha Config: %02u/%02u/%u %02u:%02u:%02u",
+                     config_repeater.fecha.day, config_repeater.fecha.month,
+                     config_repeater.fecha.year, config_repeater.fecha.hour,
+                     config_repeater.fecha.minute, config_repeater.fecha.second);
+    NRF_LOG_RAW_INFO("\n--- FIN CONFIGURACION ---\n");
+    NRF_LOG_FLUSH();
 
-    NRF_LOG_RAW_INFO("\n\x1b[1;32m=== Configuracion binaria enviada exitosamente ===\x1b[0m");
-    return NRF_SUCCESS;
+    return ret;
 }
+
 
 static void fds_evt_handler(fds_evt_t const *p_evt)
 {
@@ -352,7 +290,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
 
                         // Guarda la MAC en la memoria flash y reinicia el
                         // dispositivo
-                        save_mac_to_flash(custom_mac_addr_, MAC_FILTRADO);
+                        save_mac_to_flash(MAC_EMISOR, custom_mac_addr_);
                     }
                     else
                     {
@@ -368,7 +306,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 02 recibido: Mostrando "
                                          "MAC "
                                          "guardada \x1b[0m");
-                        load_mac_from_flash(mac_print, MAC_FILTRADO);
+                        load_mac_from_flash(MAC_EMISOR, mac_print);
                         // muestra la MAC
                     }
 
@@ -617,7 +555,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             NRF_LOG_RAW_INFO("\n> Tiempo extendido configurado: %lu ms (%s)",
                                              time_in_ms_extended,
                                              time_str);
-                            write_time_to_flash(TIEMPO_ENCENDIDO_EXTENDED,
+                            write_time_to_flash(TIEMPO_EXTENDED_ENCENDIDO,
                                                 time_in_ms_extended);
                         }
                         else
@@ -632,19 +570,19 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     }
                     break;
                 }
-                case 11: // Solicitar tiempo de encendido extendido
-                {
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de "
-                                     "encendido extendido\x1b[0m");
-                    uint32_t encendido_extendido_ms =
-                        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED,
-                                             DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+                //case 11: // Solicitar tiempo de encendido extendido
+                //{
+                //    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 11 recibido: Solicitar tiempo de "
+                //                     "encendido extendido\x1b[0m");
+                //    uint32_t encendido_extendido_ms =
+                //        read_time_from_flash(TIEMPO_EXTENDED_ENCENDIDO,
+                //                             DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
 
-                    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu ms",
-                                     encendido_extendido_ms);
-                    NRF_LOG_FLUSH();
-                    break;
-                }
+                //    NRF_LOG_RAW_INFO("\n> Tiempo de encendido extendido configurado: %lu ms",
+                //                     encendido_extendido_ms);
+                //    NRF_LOG_FLUSH();
+                //    break;
+                //}
                 case 12: // Solicitar un registro de historial por ID
                 {
                     NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 12 recibido: Solicitar registro de "
@@ -842,7 +780,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                             custom_mac_addr_[0]);
 
                         // Guardar la MAC del repetidor en la memoria flash
-                        save_mac_to_flash(custom_mac_addr_, MAC_REPEATER);
+                        save_mac_to_flash(MAC_REPETIDOR, custom_mac_addr_);
                     }
                     break;
                 }
@@ -853,7 +791,7 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                         "\n\n\x1b[1;36m--- Comando 16 recibido: Leer MAC del repetidor\x1b[0m");
 
                     uint8_t repeater_mac[6];
-                    load_mac_from_flash(repeater_mac, MAC_REPEATER);
+                    load_mac_from_flash(MAC_REPETIDOR, repeater_mac);
 
                     // Verificar si hay una MAC válida guardada
                     bool mac_is_zero = true;
@@ -888,16 +826,16 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
                     break;
                 }
 
-                case 17: // Envía la configuracion del repetidor
-                {
+                //case 17: // Envía la configuracion del repetidor
+                //{
 
-                    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Envia la configuracion"
-                                     " del repetidor\x1b[0m");
-                    load_repeater_configuration(&config_repetidor, 0, 0, 1);
-                    send_configuration_nus(&config_repetidor);
-                    NRF_LOG_FLUSH();
-                    break;
-                }
+                //    NRF_LOG_RAW_INFO("\n\n\x1b[1;36m--- Comando 17 recibido: Envia la configuracion"
+                //                     " del repetidor\x1b[0m");
+                //    load_repeater_configuration(&config_repetidor, 0, 0, 1);
+                //    send_configuration_nus(&config_repetidor);
+                //    NRF_LOG_FLUSH();
+                //    break;
+                //}
 
                 case 99: // Comando para borrar todos los historiales
                 {
@@ -1047,7 +985,7 @@ void app_nus_server_ble_evt_handler(ble_evt_t const *p_ble_evt)
         {
             NRF_LOG_RAW_INFO("\nCelular conectado");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            restart_on_rtc_extended();
+            restart_extended_on_rtc();
         }
         else if (p_gap_evt->params.connected.role == BLE_GAP_ROLE_CENTRAL)
         {

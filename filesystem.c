@@ -6,47 +6,47 @@
 static store_history g_temp_history_buffer;
 extern void app_nus_client_on_data_received(const uint8_t *data_ptr, uint16_t data_length);
 
-void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3)
-{
-    // MAC's
-    load_mac_from_flash(config_out->mac_repetidor_config, MAC_REPEATER);
-    load_mac_from_flash(config_out->mac_emisor_config, MAC_FILTRADO);
+//void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3)
+//{
+//    // MAC's
+//    load_mac_from_flash(config_out->mac_repetidor_config, MAC_REPEATER);
+//    load_mac_from_flash(config_out->mac_emisor_config, MAC_FILTRADO);
 
-    // Tiempos
-    config_out->tiempo_encendido_config =
-        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
+//    // Tiempos
+//    config_out->tiempo_encendido_config =
+//        read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
 
-    config_out->tiempo_dormido_config =
-        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
+//    config_out->tiempo_dormido_config =
+//        read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
 
-    config_out->tiempo_busqueda_config =
-        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
+//    config_out->tiempo_busqueda_config =
+//        read_time_from_flash(TIEMPO_ENCENDIDO_EXTENDED, DEFAULT_DEVICE_ON_TIME_EXTENDED_MS);
 
-    // Version del repetidor
-    config_out->version[0] = d1;
-    config_out->version[1] = d2;
-    config_out->version[2] = d3;
+//    // Version del repetidor
+//    config_out->version[0] = d1;
+//    config_out->version[1] = d2;
+//    config_out->version[2] = d3;
 
-    // // Imprimir por consola los valores de las MAC's
-    // NRF_LOG_RAW_INFO("\033[1;31m>\033[0m MAC's cargadas");
+//    // // Imprimir por consola los valores de las MAC's
+//    // NRF_LOG_RAW_INFO("\033[1;31m>\033[0m MAC's cargadas");
 
-    // // MAC Repetidor
-    // NRF_LOG_RAW_INFO("\n\t>> Repetidor : %02X:%02X:%02X:%02X:%02X:%02X",
-    //                  config_out->mac_repetidor_config[5],
-    //                  config_out->mac_repetidor_config[4],
-    //                  config_out->mac_repetidor_config[3],
-    //                  config_out->mac_repetidor_config[2],
-    //                  config_out->mac_repetidor_config[1],
-    //                  config_out->mac_repetidor_config[0]);
-    // // MAC Emisor
-    // NRF_LOG_RAW_INFO("\n\t>> Emisor    : %02X:%02X:%02X:%02X:%02X:%02X\n",
-    //                  config_out->mac_emisor_config[5],
-    //                  config_out->mac_emisor_config[4],
-    //                  config_out->mac_emisor_config[3],
-    //                  config_out->mac_emisor_config[2],
-    //                  config_out->mac_emisor_config[1],
-    //                  config_out->mac_emisor_config[0]);
-}
+//    // // MAC Repetidor
+//    // NRF_LOG_RAW_INFO("\n\t>> Repetidor : %02X:%02X:%02X:%02X:%02X:%02X",
+//    //                  config_out->mac_repetidor_config[5],
+//    //                  config_out->mac_repetidor_config[4],
+//    //                  config_out->mac_repetidor_config[3],
+//    //                  config_out->mac_repetidor_config[2],
+//    //                  config_out->mac_repetidor_config[1],
+//    //                  config_out->mac_repetidor_config[0]);
+//    // // MAC Emisor
+//    // NRF_LOG_RAW_INFO("\n\t>> Emisor    : %02X:%02X:%02X:%02X:%02X:%02X\n",
+//    //                  config_out->mac_emisor_config[5],
+//    //                  config_out->mac_emisor_config[4],
+//    //                  config_out->mac_emisor_config[3],
+//    //                  config_out->mac_emisor_config[2],
+//    //                  config_out->mac_emisor_config[1],
+//    //                  config_out->mac_emisor_config[0]);
+//}
 
 
 
@@ -459,24 +459,36 @@ void print_history_record(store_history const *p_record, const char *p_title)
 uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
 {
     fds_flash_record_t flash_record;
-    fds_record_desc_t record_desc;
-    fds_find_token_t ftok = {0}; // Importante inicializar a cero
-    uint32_t resultado = default_valor;
-    uint32_t *data;
-    uint16_t record_key;
-    ret_code_t err_code;
-    // Determinar el Record Key según el tipo de valor
-    if (valor_type == TIEMPO_ENCENDIDO)
+    fds_record_desc_t  record_desc;
+    fds_find_token_t   ftok      = {0}; // Importante inicializar a cero
+    uint32_t           resultado = default_valor;
+    uint32_t          *data;
+    ret_code_t         err_code;
+    const char        *label;
+    uint16_t           record_key;
+
+    switch (valor_type)
     {
+    case TIEMPO_ENCENDIDO:
         record_key = TIME_ON_RECORD_KEY;
-    }
-    else if (valor_type == TIEMPO_ENCENDIDO_EXTENDED)
-    {
-        record_key = TIME_ON_EXTENDED_RECORD_KEY;
-    }
-    else
-    {
+        label      = "encendido";
+        break;
+    case TIEMPO_SLEEP:
         record_key = TIME_SLEEP_RECORD_KEY;
+        label      = "sleep";
+        break;
+    case TIEMPO_EXTENDED_SLEEP:
+        record_key = TIME_EXTENDED_SLEEP_RECORD_KEY;
+        label      = "sleep extendido";
+        break;
+    case TIEMPO_EXTENDED_ENCENDIDO:
+        record_key = TIME_EXTENDED_ON_RECORD_KEY;
+        label      = "encendido extendido";
+        break;
+    default:
+        record_key = TIME_ON_RECORD_KEY;
+        label      = "desconocido";
+        break;
     }
 
     // Busca el registro en la memoria flash
@@ -492,19 +504,16 @@ uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor)
             if (flash_record.p_header->length_words == 1)
             {
                 // Copiar directamente el valor desde flash
-                data = (uint32_t *)flash_record.p_data;
+                data      = (uint32_t *)flash_record.p_data;
                 resultado = *data;
-                const char *tipo_str = (valor_type == TIEMPO_ENCENDIDO) ? "encendido"
-                                       : (valor_type == TIEMPO_ENCENDIDO_EXTENDED)
-                                           ? "encendido extendido"
-                                           : "sleep";
-                //NRF_LOG_RAW_INFO("\n\t>> Tiempo de %s cargado: %u ms", tipo_str, resultado);
+                // NRF_LOG_RAW_INFO(LOG_INFO " Tiempo de %s cargado: %u segundos", label, resultado/1000);
             }
             else
             {
-                NRF_LOG_RAW_INFO("\n\t>> Tamaño del dato en memoria flash no coincide con "
-                                 "el "
-                                 "esperado.\n");
+                NRF_LOG_RAW_INFO(
+                    "\n\t>> Tamaño del dato en memoria flash no coincide con "
+                    "el "
+                    "esperado.\n");
             }
 
             err_code = fds_record_close(&record_desc);
@@ -584,51 +593,57 @@ datetime_t read_date_from_flash(void)
 
 void write_time_to_flash(valor_type_t valor_type, uint32_t valor)
 {
-    uint16_t record_key;
-    if (valor_type == TIEMPO_ENCENDIDO)
+    uint16_t    record_key;
+    const char *label;
+
+    switch (valor_type)
     {
+    case TIEMPO_ENCENDIDO:
         record_key = TIME_ON_RECORD_KEY;
-    }
-    else if (valor_type == TIEMPO_ENCENDIDO_EXTENDED)
-    {
-        record_key = TIME_ON_EXTENDED_RECORD_KEY;
-    }
-    else
-    {
+        label      = "encendido";
+        break;
+    case TIEMPO_SLEEP:
         record_key = TIME_SLEEP_RECORD_KEY;
+        label      = "sleep";
+        break;
+    case TIEMPO_EXTENDED_SLEEP:
+        record_key = TIME_EXTENDED_SLEEP_RECORD_KEY;
+        label      = "sleep extendido";
+        break;
+    case TIEMPO_EXTENDED_ENCENDIDO:
+        record_key = TIME_EXTENDED_ON_RECORD_KEY;
+        label      = "encendido extendido";
+        break;
+    default:
+        record_key = TIME_ON_RECORD_KEY;
+        label      = "desconocido";
+        break;
     }
 
-    fds_record_t record = {.file_id = TIME_FILE_ID,
-                           .key = record_key,
-                           .data.p_data = &valor,
-                           .data.length_words = 1};
+    fds_record_t      record = {.file_id = TIME_FILE_ID, .key = record_key, .data.p_data = &valor, .data.length_words = 1};
     fds_record_desc_t record_desc;
-    fds_find_token_t ftok = {0};
-    ret_code_t err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
-
-    const char *tipo_str = (valor_type == TIEMPO_ENCENDIDO)            ? "encendido"
-                           : (valor_type == TIEMPO_ENCENDIDO_EXTENDED) ? "encendido extendido"
-                                                                       : "sleep";
+    fds_find_token_t  ftok     = {0};
+    ret_code_t        err_code = fds_record_find(TIME_FILE_ID, record_key, &record_desc, &ftok);
 
     if (err_code == NRF_SUCCESS)
     {
         err_code = fds_record_update(&record_desc, &record);
-        // NRF_LOG_RAW_INFO("\n> Tiempo de %s %s: %d segundos.",
-        //                  tipo_str,
-        //                  (err_code == NRF_SUCCESS) ? "actualizado" : "falló al actualizar",
-        //                  valor / 1000);
+        NRF_LOG_RAW_INFO(LOG_INFO " Tiempo de %s %s: %d segundos.",
+                         label,
+                         (err_code == NRF_SUCCESS) ? "actualizado" : "falló al actualizar",
+                         valor / 1000);
     }
     else if (err_code == FDS_ERR_NOT_FOUND)
     {
         err_code = fds_record_write(&record_desc, &record);
-        // NRF_LOG_RAW_INFO("\nTiempo de %s %s: %d segundos.\n",
-        //                  tipo_str,
-        //                  (err_code == NRF_SUCCESS) ? "guardado" : "falló al guardar",
-        //                  valor / 1000);
+        NRF_LOG_RAW_INFO(LOG_OK " Tiempo de %s %s: %d segundos.",
+                         label,
+                         (err_code == NRF_SUCCESS) ? "guardado" : "falló al guardar",
+                         valor / 1000);
     }
     else
     {
-        NRF_LOG_RAW_INFO("\nError al buscar el registro en memoria flash: %d", err_code);
+        NRF_LOG_ERROR("Error al buscar el registro en memoria flash: %d", err_code);
     }
 }
 
@@ -670,256 +685,179 @@ ret_code_t write_date_to_flash(const datetime_t *p_date)
     return err_code;
 }
 
-void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
+void load_mac_from_flash(mac_type_t mac_type, uint8_t *mac_out)
 {
-    fds_record_desc_t record_desc;
-    fds_find_token_t ftok = {0};
+    fds_record_desc_t  record_desc;
+    fds_find_token_t   ftok = {0};
     fds_flash_record_t flash_record;
-    uint16_t record_key_tipo;
-    ret_code_t err_code;
+    uint16_t           record_key;
+    const char        *mac_label;
 
-    switch (tipo)
+    // Determinar la clave de registro y etiqueta según el tipo de MAC
+    switch (mac_type)
     {
-    case MAC_FILTRADO:
-        record_key_tipo = MAC_RECORD_KEY;
+    case MAC_EMISOR:
+        record_key = MAC_EMISOR_RECORD_KEY;
+        mac_label  = "MAC del emisor";
         break;
-
-    case MAC_REPEATER:
-        record_key_tipo = MAC_REPEATER_RECORD_KEY;
+    case MAC_REPETIDOR:
+        record_key = MAC_REPETIDOR_RECORD_KEY;
+        mac_label  = "MAC del repetidor";
         break;
-
     default:
+        record_key = MAC_EMISOR_RECORD_KEY;
+        mac_label  = "MAC desconocida";
         break;
     }
 
-    // Busca el registro en la memeria
-    // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Buscando registro con KEY: 0x%04X", record_key_tipo);
-    err_code = fds_record_find(MAC_FILE_ID, record_key_tipo, &record_desc, &ftok);
+    // Busca el registro en la memoria flash
+    ret_code_t err_code;
+    err_code = fds_record_find(MAC_FILE_ID, record_key, &record_desc, &ftok);
     if (err_code == NRF_SUCCESS)
     {
-        // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro encontrado, abriendo...");
-        //  Si existe trata de abrirlo
         err_code = fds_record_open(&record_desc, &flash_record);
         if (err_code == NRF_SUCCESS && flash_record.p_header->length_words * 4 >= 6)
         {
-            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro abierto, tamaño: %d words",
-            //                  flash_record.p_header->length_words);
-
             // Verifica que el tamaño del dato sea correcto
             if (flash_record.p_header->length_words != 2)
             {
-                NRF_LOG_RAW_INFO("\n\t>> Tamaño de MAC en memoria flash no coincide con "
-                                 "el esperado. Esperado: 2, Real: %d",
-                                 flash_record.p_header->length_words);
+                NRF_LOG_RAW_INFO(
+                    "\n\t>> Tamaño de MAC en memoria flash no coincide con "
+                    "el esperado.");
                 fds_record_close(&record_desc);
                 return;
             }
 
-            // Mostrar datos raw antes de copiar
-            uint8_t *raw_data = (uint8_t *)flash_record.p_data;
-            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (primeros 4): %02X %02X %02X %02X",
-            //                  raw_data[0],
-            //                  raw_data[1],
-            //                  raw_data[2],
-            //                  raw_data[3]);
-            // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Datos raw (últimos 4): %02X %02X %02X %02X",
-            //                  raw_data[4],
-            //                  raw_data[5],
-            //                  raw_data[6],
-            //                  raw_data[7]);
-
             // Copia la MAC al buffer de salida
             memcpy(mac_out, flash_record.p_data, sizeof(uint8_t) * 6);
             fds_record_close(&record_desc);
+            NRF_LOG_RAW_INFO(LOG_OK " %s cargada desde memoria: ", mac_label);
+            NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
 
-            // NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 1): %02X:%02X:%02X",
-            //                  mac_out[5],
-            //                  mac_out[4],
-            //                  mac_out[3]);
-            // NRF_LOG_RAW_INFO("\n\t>> MAC cargada desde memoria (parte 2): %02X:%02X:%02X",
-            //                  mac_out[2],
-            //                  mac_out[1],
-            //                  mac_out[0]);
-            return;
+                             mac_out[0],
+                             mac_out[1],
+                             mac_out[2],
+                             mac_out[3],
+                             mac_out[4],
+                             mac_out[5]);
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Error abriendo registro: 0x%X", err_code);
+            memcpy(mac_out, flash_record.p_data, sizeof(mac_out));
+            fds_record_close(&record_desc);
+            NRF_LOG_RAW_INFO(
+                LOG_OK " %s cargada desde memoria: ", mac_label);
+            NRF_LOG_RAW_INFO("%02X:%02X:%02X:%02X:%02X:%02X",
+
+                             mac_out[0],
+                             mac_out[1],
+                             mac_out[2],
+                             mac_out[3],
+                             mac_out[4],
+                             mac_out[5]);
         }
     }
     else
     {
-        // NRF_LOG_RAW_INFO("\n[DEBUG LOAD] Registro no encontrado, error: 0x%X", err_code);
-        if (tipo == MAC_FILTRADO)
+        NRF_LOG_RAW_INFO(
+            LOG_WARN " No se encontro %s. Usando valor "
+                     "predeterminado.",
+            mac_label);
+
+        // Valores predeterminados según el tipo de MAC
+        if (mac_type == MAC_EMISOR)
         {
-            // Si no se encuentra una MAC, usa una dirección predeterminada
-            //
-
-            mac_out[5] = 0xC1;
-            mac_out[4] = 0xAB;
-            mac_out[3] = 0x00;
+            // MAC predeterminada del emisor
+            mac_out[0] = 0xC1;
+            mac_out[1] = 0xAB;
             mac_out[2] = 0x00;
-            mac_out[1] = 0x00;
-            mac_out[0] = 0xFF;
-
-            // mac_out[5] = 0xC3;
-            // mac_out[4] = 0xAB;
-            // mac_out[3] = 0x00;
-            // mac_out[2] = 0x00;
-            // mac_out[1] = 0x00;
-            // mac_out[0] = 0x04;
-
-            // mac_out[0] = 0x6A;
-            // mac_out[1] = 0x0C;
-            // mac_out[2] = 0x04;
-            // mac_out[3] = 0xB3;
-            // mac_out[4] = 0x72;
-            // mac_out[5] = 0xE4;
-
-            // mac_out[0] = 0x10;
-            // mac_out[1] = 0x4A;
-            // mac_out[2] = 0x7C;
-            // mac_out[3] = 0xD9;
-            // mac_out[4] = 0x3E;
-            // mac_out[5] = 0xC7;
-
-            // mac_out[0] = 0x08;
-            // mac_out[1] = 0x63;
-            // mac_out[2] = 0x50;
-            // mac_out[3] = 0xD4;
-            // mac_out[4] = 0x4C;
-            // mac_out[5] = 0xD2;
-
-            // NRF_LOG_RAW_INFO("\n\t>> No se encontro MAC de filtrado. Usando valor
-            // predeterminado.");
-
-            // NRF_LOG_RAW_INFO("\n\t>> MAC de filtrado default: "
-            //  "%02X:%02X:%02X:%02X:%02X:%02X",
-            //  mac_out[5],
-            //  mac_out[4],
-            //  mac_out[3],
-            //  mac_out[2],
-            //  mac_out[1],
-            //  mac_out[0]);
-            return;
+            mac_out[3] = 0x00;
+            mac_out[4] = 0x00;
+            mac_out[5] = 0xFF;
+        }
+        else // MAC_REPETIDOR
+        {
+            // MAC predeterminada del repetidor
+            mac_out[0] = 0xE4;
+            mac_out[1] = 0x72;
+            mac_out[2] = 0xB3;
+            mac_out[3] = 0x04;
+            mac_out[4] = 0x0C;
+            mac_out[5] = 0x6A;
         }
 
-        if (tipo == MAC_REPEATER)
-        {
-            mac_out[5] = 0xC3;
-            mac_out[4] = 0xAB;
-            mac_out[3] = 0x00;
-            mac_out[2] = 0x00;
-            mac_out[1] = 0x11;
-            mac_out[0] = 0x22;
-
-            // NRF_LOG_RAW_INFO("\n\t>> MAC del repetidor default: "
-            //  "%02X:%02X:%02X:%02X:%02X:%02X",
-            //  mac_out[5],
-            //  mac_out[4],
-            //  mac_out[3],
-            //  mac_out[2],
-            //  mac_out[1],
-            //  mac_out[0]);
-
-            return;
-        }
+        NRF_LOG_RAW_INFO(LOG_INFO " %s cargada (predeterminada): ", mac_label);
+        NRF_LOG_RAW_INFO(
+            "%02X:%02X:%02X:%02X:%02X:%02X", mac_out[0], mac_out[1], mac_out[2], mac_out[3], mac_out[4], mac_out[5]);
     }
-
-    return;
 }
 
-void save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo)
+void save_mac_to_flash(mac_type_t mac_type, uint8_t *mac_addr)
 {
-    fds_record_t record;
+    fds_record_t      record;
     fds_record_desc_t record_desc;
-    fds_find_token_t ftok = {0};
-    // Crear un buffer exacto de 8 bytes (2 words) completamente limpio
-    uint8_t clean_buffer[8] = {0};
-    ret_code_t ret;
-    uint16_t record_key;
-    const char *tipo_str;
+    fds_find_token_t  ftok = {0};
+    uint32_t          aligned_data_buffer[2]; // 2 * 4 = 8 bytes
+    ret_code_t        ret;
+    uint16_t          record_key;
+    const char       *mac_label;
 
-    // Seleccionar la clave y descripción según el tipo de MAC
-    switch (tipo)
+    // Determinar la clave de registro y etiqueta según el tipo de MAC
+    switch (mac_type)
     {
-    case MAC_FILTRADO:
-        record_key = MAC_RECORD_KEY;
-        tipo_str = "MAC de filtrado/emisor";
+    case MAC_EMISOR:
+        record_key = MAC_EMISOR_RECORD_KEY;
+        mac_label  = "MAC del emisor";
         break;
-    case MAC_REPEATER:
-        record_key = MAC_REPEATER_RECORD_KEY;
-        tipo_str = "MAC del repetidor";
+    case MAC_REPETIDOR:
+        record_key = MAC_REPETIDOR_RECORD_KEY;
+        mac_label  = "MAC del repetidor";
         break;
     default:
-        NRF_LOG_RAW_INFO("\nError: Tipo de MAC no válido");
-        return;
+        record_key = MAC_EMISOR_RECORD_KEY;
+        mac_label  = "MAC desconocida";
+        break;
     }
 
-    // // Debug: Mostrar MAC recibida
-    // NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 1): %02X:%02X:%02X",
-    //                  tipo_str,
-    //                  mac_addr[5],
-    //                  mac_addr[4],
-    //                  mac_addr[3]);
-    // NRF_LOG_RAW_INFO("\n[DEBUG] %s recibida (parte 2): %02X:%02X:%02X",
-    //                  tipo_str,
-    //                  mac_addr[2],
-    //                  mac_addr[1],
-    //                  mac_addr[0]);
+    memcpy(aligned_data_buffer, mac_addr, 6);
 
-    // Copiar solo los 6 bytes de la MAC, el resto queda en 0
-    memcpy(clean_buffer, mac_addr, 6);
+    // Configura el registro con la MAC
+    record.file_id           = MAC_FILE_ID;
+    record.key               = record_key;
+    record.data.p_data       = aligned_data_buffer; // Apunta al buffer alineado
 
-    // // Debug: Mostrar buffer completo antes de guardar
-    // NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (primeros 4 bytes): %02X %02X %02X %02X",
-    //                  clean_buffer[0],
-    //                  clean_buffer[1],
-    //                  clean_buffer[2],
-    //                  clean_buffer[3]);
-    // NRF_LOG_RAW_INFO("\n[DEBUG] Buffer a guardar (últimos 4 bytes): %02X %02X %02X %02X",
-    //                  clean_buffer[4],
-    //                  clean_buffer[5],
-    //                  clean_buffer[6],
-    //                  clean_buffer[7]);
+    record.data.length_words = (6 + sizeof(uint32_t) - 1) / sizeof(uint32_t); // (6 + 3) / 4 = 2
 
-    // Configura el registro
-    record.file_id = MAC_FILE_ID;
-    record.key = record_key;
-    record.data.p_data = clean_buffer; // Apunta al buffer limpio
-    record.data.length_words = 2;      // Exactamente 2 words (8 bytes)
+    // Realiza la recolección de basura si es necesario
+    // perform_garbage_collection();
 
     ret = fds_record_find(MAC_FILE_ID, record_key, &record_desc, &ftok);
-
+    // Si ya existe un registro, actualízalo
     if (ret == NRF_SUCCESS)
     {
-        // El registro existe, actualízalo
-        ret = fds_record_update(&record_desc, &record);
-        if (ret != NRF_SUCCESS)
+        if (fds_record_update(&record_desc, &record) == NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\nError al actualizar %s: %d", tipo_str, ret);
+            NRF_LOG_RAW_INFO(LOG_INFO " Actualizando %s en memoria flash.", mac_label);
+            // NVIC_SystemReset();  // Reinicia el dispositivo
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> %s actualizada correctamente.\x1b[0m", tipo_str);
-        }
-    }
-    else if (ret == FDS_ERR_NOT_FOUND)
-    {
-        // El registro no existe, créalo
-        ret = fds_record_write(&record_desc, &record);
-        if (ret != NRF_SUCCESS)
-        {
-            NRF_LOG_RAW_INFO("\nError al escribir %s: %d", tipo_str, ret);
-        }
-        else
-        {
-            NRF_LOG_RAW_INFO("\n\x1b[1;32m>> %s guardada correctamente.\x1b[0m", tipo_str);
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al actualizar %s en memoria flash.", mac_label);
         }
     }
     else
     {
-        NRF_LOG_RAW_INFO("\nError al buscar %s: %d", tipo_str, ret);
+        // Si no existe, crea un nuevo registro
+        ret = fds_record_write(&record_desc, &record);
+
+        if (ret == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " %s guardada correctamente en memoria.", mac_label);
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al crear el registro de %s: %d", mac_label, ret);
+        }
     }
 }
 
@@ -1412,3 +1350,275 @@ ret_code_t save_adc_values(adc_values_t const *valores_a_guardar)
     }
     return err_code;
 }
+
+
+//
+//
+
+void load_default_config(config_repeater_t *p_config)
+{
+    if (p_config == NULL)
+        return;
+
+    // MACs predeterminadas
+    // MAC del emisor
+    p_config->mac_emisor[5] = 0x04;
+    p_config->mac_emisor[4] = 0x00;
+    p_config->mac_emisor[3] = 0x00;
+    p_config->mac_emisor[2] = 0x00;
+    p_config->mac_emisor[1] = 0xAB;
+    p_config->mac_emisor[0] = 0xC3;
+
+    // MAC del repetidor
+    p_config->mac_repetidor[5] = 0x6A;
+    p_config->mac_repetidor[4] = 0x0C;
+    p_config->mac_repetidor[3] = 0x04;
+    p_config->mac_repetidor[2] = 0xB3;
+    p_config->mac_repetidor[1] = 0x72;
+    p_config->mac_repetidor[0] = 0xE4;
+
+    // Tiempos predeterminados
+    p_config->tiempo_encendido = DEFAULT_DEVICE_ON_TIME_MS;
+    p_config->tiempo_dormido   = DEFAULT_DEVICE_SLEEP_TIME_MS;
+    p_config->tiempo_extendido = DEFAULT_DEVICE_EXTENDED_ON_TIME_MS;
+
+    // Version de firmware
+    p_config->version[0] = 1;
+    p_config->version[1] = 0;
+    p_config->version[2] = 0;
+
+    // Fecha y hora predeterminada de configuracion
+    p_config->fecha.year   = 2024;
+    p_config->fecha.month  = 1;
+    p_config->fecha.day    = 1;
+    p_config->fecha.hour   = 0;
+    p_config->fecha.minute = 0;
+    p_config->fecha.second = 0;
+
+    NRF_LOG_RAW_INFO(LOG_INFO " Configuracion predeterminada cargada");
+}
+
+/**
+ * @brief Guarda configuracion con fecha actual automaticamente
+ *
+ * Esta funcion actualiza la fecha de configuracion con el tiempo actual
+ * del RTC antes de guardar la configuracion en flash.
+ */
+ret_code_t save_config_to_flash(config_repeater_t *p_config)
+{
+    if (p_config == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    // Actualizar la fecha de configuracion con el tiempo actual del RTC
+    datetime_t current_time;
+    if (calendar_get_time(&current_time))
+    {
+        p_config->fecha = current_time;
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO("\n> Advertencia: No se pudo obtener tiempo actual del RTC");
+    }
+
+    fds_record_t      record;
+    fds_record_desc_t record_desc;
+    fds_find_token_t  ftok = {0};
+    ret_code_t        ret;
+
+    // Configura el registro
+    record.file_id           = CONFIG_FILE_ID;
+    record.key               = CONFIG_RECORD_KEY;
+    record.data.p_data       = p_config;
+    record.data.length_words = (sizeof(config_repeater_t) + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+
+    // Buscar si ya existe el registro
+    ret = fds_record_find(CONFIG_FILE_ID, CONFIG_RECORD_KEY, &record_desc, &ftok);
+
+    if (ret == NRF_SUCCESS)
+    {
+        // Si existe, actualizar
+        ret = fds_record_update(&record_desc, &record);
+        if (ret == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " Configuracion actualizada en memoria flash");
+        }
+        else
+        {
+            NRF_LOG_ERROR("Error al actualizar configuracion: 0x%X", ret);
+        }
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        // Si no existe, crear nuevo registro
+        ret = fds_record_write(&record_desc, &record);
+        if (ret == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " Configuracion guardada en memoria flash");
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " Error al guardar configuracion: 0x%X", ret);
+        }
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO(LOG_FAIL " Error al buscar configuracion: 0x%X", ret);
+    }
+
+    return ret;
+}
+
+ret_code_t load_config_from_flash(config_repeater_t *p_config)
+{
+    if (p_config == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    fds_record_desc_t  record_desc;
+    fds_find_token_t   ftok = {0};
+    fds_flash_record_t flash_record;
+    ret_code_t         ret;
+
+    // Buscar el registro de configuración
+    ret = fds_record_find(CONFIG_FILE_ID, CONFIG_RECORD_KEY, &record_desc, &ftok);
+
+    if (ret == NRF_SUCCESS)
+    {
+        // Abrir el registro
+        ret = fds_record_open(&record_desc, &flash_record);
+        if (ret == NRF_SUCCESS)
+        {
+            // Verificar tamaño
+            uint32_t expected_words = (sizeof(config_repeater_t) + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+            if (flash_record.p_header->length_words >= expected_words)
+            {
+                // Copiar los datos
+                memcpy(p_config, flash_record.p_data, sizeof(config_repeater_t));
+
+                // Cerrar el registro
+                fds_record_close(&record_desc);
+
+                // Validar si la fecha es valida (diferente de cero)
+                if (p_config->fecha.year == 0 || p_config->fecha.month == 0 || p_config->fecha.day == 0)
+                {
+                    NRF_LOG_RAW_INFO(LOG_FAIL " Fecha de configuracion no valida - configuracion antigua");
+                }
+
+                return NRF_SUCCESS;
+            }
+            else
+            {
+                NRF_LOG_RAW_INFO(LOG_FAIL " Tamano de configuracion en flash no coincide");
+                fds_record_close(&record_desc);
+                return NRF_ERROR_INVALID_DATA;
+            }
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al abrir configuracion: 0x%X", ret);
+        }
+    }
+    else if (ret == FDS_ERR_NOT_FOUND)
+    {
+        NRF_LOG_RAW_INFO(LOG_WARN " Configuracion no encontrada en flash - usando valores predeterminados");
+        load_default_config(p_config);
+        return NRF_SUCCESS;
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO(LOG_FAIL " Error al buscar configuracion: 0x%X", ret);
+    }
+
+    return ret;
+}
+
+void init_sistema_configuracion(config_repeater_t *p_config)
+{
+    ret_code_t ret;
+
+    // Validar parametro de entrada
+    if (p_config == NULL)
+    {
+        NRF_LOG_RAW_INFO(LOG_FAIL " Puntero de configuracion nulo");
+        return;
+    }
+
+    // Flush inicial para limpiar buffer
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(10);
+
+    NRF_LOG_RAW_INFO("\n\n\033[1;36m==================\033[0m ");
+    NRF_LOG_RAW_INFO("\033[1;33mCONFIGURACION CARGADA\033[0m");
+    NRF_LOG_RAW_INFO(" \033[1;36m===================\033[0m\n");
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(20);
+
+    // Cargar configuracion desde flash
+    ret = load_config_from_flash(p_config);
+
+    if (ret == NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO(LOG_OK " Configuracion cargada desde flash\n\n");
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO(LOG_INFO " Usando configuracion predeterminada\n\n");
+
+        // Guardar configuracion predeterminada para futuras cargas
+        ret_code_t save_ret = save_config_to_flash(p_config);
+        if (save_ret == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " Configuracion predeterminada guardada\n");
+        }
+    }
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(20);
+
+    // Mostrar MACs (una linea por MAC para respetar limite de argumentos)
+    NRF_LOG_RAW_INFO(" - MAC Emisor    : %02X:%02X:%02X:",
+                     p_config->mac_emisor[0], p_config->mac_emisor[1], p_config->mac_emisor[2]);
+    NRF_LOG_RAW_INFO("%02X:%02X:%02X\n",
+                     p_config->mac_emisor[3], p_config->mac_emisor[4], p_config->mac_emisor[5]);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
+    NRF_LOG_RAW_INFO(" - MAC Repetidor : %02X:%02X:%02X:",
+                     p_config->mac_repetidor[0], p_config->mac_repetidor[1], p_config->mac_repetidor[2]);
+    NRF_LOG_RAW_INFO("%02X:%02X:%02X\n",
+                     p_config->mac_repetidor[3], p_config->mac_repetidor[4], p_config->mac_repetidor[5]);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
+    // Mostrar tiempos
+    NRF_LOG_RAW_INFO(" - Tiempo Activo : %u ms\n", p_config->tiempo_encendido);
+    NRF_LOG_RAW_INFO(" - Tiempo Sleep  : %u ms\n", p_config->tiempo_dormido);
+    NRF_LOG_RAW_INFO(" - Tiempo Extend.: %u ms\n", p_config->tiempo_extendido);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
+    // Mostrar version
+    NRF_LOG_RAW_INFO(" - Version FW    : v%u.%u.%u\n",
+                     p_config->version[0], p_config->version[1], p_config->version[2]);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
+    // Mostrar fecha de configuracion
+    NRF_LOG_RAW_INFO(" - Fecha y hora  : %02u/%02u/%u ",
+                     p_config->fecha.day,
+                     p_config->fecha.month,
+                     p_config->fecha.year);
+    NRF_LOG_RAW_INFO("%02u:%02u:%02u\n",
+                     p_config->fecha.hour,
+                     p_config->fecha.minute,
+                     p_config->fecha.second);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
+    NRF_LOG_RAW_INFO("\n\033[1;36m============================================================\033[0m");
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(10);
+}
+
