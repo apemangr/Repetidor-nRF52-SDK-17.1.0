@@ -187,7 +187,7 @@ static void uart_init(void)
         // No hacer crash, continuar sin UART
         return;
     }
-    NRF_LOG_INFO("UART initialized successfully");
+    //NRF_LOG_INFO("UART initialized successfully");
 }
 
 void rtc_handler(nrfx_rtc_int_type_t int_type)
@@ -335,10 +335,14 @@ void handle_rtc_events(void)
 
             save_config_to_flash(&config_repeater);
 
-           NRF_LOG_RAW_INFO(LOG_OK " Guardado de fecha y hora actual: %04u-%02u-%02u, "
+            NRF_LOG_RAW_INFO(LOG_OK " Guardado de fecha y hora actual: %04u-%02u-%02u, "
                                     "%02u:%02u:%02u",
-                             m_time.year, m_time.month, m_time.day,
-                             m_time.hour, m_time.minute, m_time.second);
+                             m_time.year,
+                             m_time.month,
+                             m_time.day,
+                             m_time.hour,
+                             m_time.minute,
+                             m_time.second);
 
             advertising_init();
 
@@ -387,12 +391,9 @@ void rtc_init(void)
     nrfx_rtc_counter_clear(&m_rtc);
 
     // Configurar comparadores iniciales
-
+    ret_code_t on_ms = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
     // Solo programar el primer evento de 15s
-    nrfx_rtc_cc_set(&m_rtc,
-                    0,
-                    (read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS) / 1000) * 8,
-                    true);
+    nrfx_rtc_cc_set(&m_rtc, 0, (on_ms / 1000) * 8, true);
 
     // Deshabilitar el evento de 20s inicialmente
     nrfx_rtc_cc_disable(&m_rtc, 1);
@@ -801,7 +802,7 @@ int main(void)
 
     // load_adc_values(&adc_values);
     // load_repeater_configuration(&config_repetidor, 0, 0, 1);
-
+    init_sistema_configuracion(&config_repeater);
     // Inicializa los servicios de servidor y cliente NUS
     app_nus_server_init(app_nus_server_on_data_received);
     app_nus_client_init(app_nus_client_on_data_received);

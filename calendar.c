@@ -45,29 +45,28 @@ void restart_extended_sleep_rtc(void)
     nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
 }
 
-bool is_date_stored()
-{
-    ret_code_t        err_code;
-    fds_record_desc_t record_desc;
-    fds_find_token_t  ftok = {0};
-
-    err_code =
-        fds_record_find(DATE_AND_TIME_FILE_ID, DATE_AND_TIME_RECORD_KEY, &record_desc, &ftok);
-
-    if (err_code != NRF_SUCCESS)
-    {
-        return false;
-    }
-
-    return true;
-}
-
 static inline bool is_leap_year(uint16_t year)
 {
     return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
 }
 
 static const uint8_t days_in_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+static bool is_valid_datetime(const datetime_t *dt)
+{
+    if (dt == NULL) return false;
+    
+    // Verificar rangos básicos
+    if (dt->year < 2000 || dt->year > 2099) return false;
+    if (dt->month < 1 || dt->month > 12) return false;
+    if (dt->hour > 23 || dt->minute > 59 || dt->second > 59) return false;
+    
+    // Verificar día válido para el mes
+    uint8_t max_day = (dt->month == 2) ? (is_leap_year(dt->year) ? 29 : 28) : days_in_month[dt->month - 1];
+    if (dt->day < 1 || dt->day > max_day) return false;
+    
+    return true;
+}
 
 void                 calendar_rtc_handler(void)
 {
@@ -91,7 +90,6 @@ bool calendar_set_time(const datetime_t *now)
         return false;
     }
 
-    // Disable RTC to safely update
     nrfx_rtc_disable(&m_rtc);
     memcpy(&m_time, now, sizeof(m_time));
     nrfx_rtc_counter_clear(&m_rtc);
@@ -177,67 +175,78 @@ void calendar_update(void)
 
 bool calendar_set_datetime(void)
 {
+    datetime_t dt = {0};
+    bool success = false;
+    const char* source = "";
 
-
-    if (is_date_stored() == true)
+    // Prioridad 1: Intentar usar config_repeater.fecha si es válida
+    if (is_valid_datetime(&config_repeater.fecha))
     {
-        datetime_t dt       = read_date_from_flash();
-        bool       err_code = calendar_set_time(&dt);
-
-        if (err_code == true)
+        dt = config_repeater.fecha;
+        source = "config_repeater";
+        success = calendar_set_time(&dt);
+        
+        if (success)
         {
-            NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde la memoria.");
-            NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                             dt.year,
-                             dt.month,
-                             dt.day,
-                             dt.hour,
-                             dt.minute,
-                             dt.second);
-
-            NRF_LOG_FLUSH();
-            return true;
+            NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha y hora.");
-            NRF_LOG_FLUSH();
-
-            NRF_LOG_RAW_INFO("\n\t>> Cargando valor predeterminado.");
-            NRF_LOG_FLUSH();
-
-            datetime_t now =
-                {.year = 2000, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
-            calendar_set_time(&now);
-            NRF_LOG_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                         now.year,
-                         now.month,
-                         now.day,
-                         now.hour,
-                         now.minute,
-                         now.second);
-            NRF_LOG_FLUSH();
-
-            return false;
+            NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha desde %s.", source);
         }
     }
-    else
+    
+    // Prioridad 2: Si config_repeater no es válida o falló, intentar cargar desde flash
+    if (!success)
     {
-        NRF_LOG_RAW_INFO("\n\t>> No se encontro una fecha. Cargando valor predeterminado.");
-        NRF_LOG_FLUSH();
-
-        datetime_t now =
-            {.year = 2000, .month = 2, .day = 29, .hour = 23, .minute = 59, .second = 50};
-        calendar_set_time(&now);
-        NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u\n",
-                         now.year,
-                         now.month,
-                         now.day,
-                         now.hour,
-                         now.minute,
-                         now.second);
-        NRF_LOG_FLUSH();
-
-        return true;
+        dt = read_date_from_flash();
+        source = "memoria flash";
+        
+        // read_date_from_flash() retorna una fecha válida si existe, o valores cero si no existe
+        if (is_valid_datetime(&dt))
+        {
+            success = calendar_set_time(&dt);
+            
+            if (success)
+            {
+                NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
+            }
+            else
+            {
+                NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha desde %s.", source);
+            }
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("\n\t>> No se encontró fecha válida en %s.", source);
+        }
     }
+    
+    // Prioridad 3: Si todo falló, usar valores por defecto
+    if (!success)
+    {
+        dt = (datetime_t){.year = 2000, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
+        source = "valores por defecto";
+        success = calendar_set_time(&dt);
+        
+        if (success)
+        {
+            NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("\n\t>> Error crítico: no se pudo establecer fecha.");
+        }
+    }
+    
+    // Mostrar fecha establecida
+    if (success)
+    {
+        NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u",
+                         dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+        NRF_LOG_RAW_INFO("\n\t>> Fuente: %s\n", source);
+    }
+    
+    NRF_LOG_FLUSH();
+    return success;
 }
