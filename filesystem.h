@@ -96,6 +96,12 @@ void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
 uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
 void       load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo);
 void       save_mac_to_flash(uint8_t *mac_addr, tipo_mac_t tipo);
+
+// FDS functions
+void fds_initialize(void);
+
+
+
 // typedef struct
 // {
 //   uint8_t company[2];

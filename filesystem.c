@@ -48,6 +48,110 @@ void load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, u
     //                  config_out->mac_emisor_config[0]);
 }
 
+
+
+//-------------------------------------------------------------------------------------------------------------
+//                                      FDS INIT FUNCTIONS STARTS HERE
+//-------------------------------------------------------------------------------------------------------------
+
+// Función para realizar la recolección de basura
+static void perform_garbage_collection(void)
+{
+    ret_code_t err_code = fds_gc();
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_RAW_INFO(LOG_OK " Recoleccion de basura completada.");
+    }
+    else
+    {
+        NRF_LOG_RAW_INFO(LOG_FAIL " Error en la recoleccion de basura: %d", err_code);
+    }
+}
+
+static void fds_evt_handler(fds_evt_t const *p_evt)
+{
+    if (p_evt->id == FDS_EVT_INIT)
+    {
+        if (p_evt->result == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_EXEC " Iniciando el modulo de almacenamiento...");
+
+            fds_stat_t stat = {0};
+            fds_stat(&stat);
+            NRF_LOG_RAW_INFO(LOG_INFO " Se encontraron %d registros validos.",
+                             stat.valid_records);
+            NRF_LOG_RAW_INFO(LOG_INFO " Se encontraron %d registros no validos.",
+                             stat.dirty_records);
+
+            if (stat.dirty_records > 0)
+            {
+                // Realiza la recolección de basura
+                NRF_LOG_RAW_INFO(LOG_INFO " Limpiando registros no validos...");
+                perform_garbage_collection();
+            }
+            NRF_LOG_RAW_INFO(LOG_OK " Modulo inicializado correctamente.");
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO(LOG_FAIL " nError al inicializar FDS: %d", p_evt->result);
+        }
+    }
+    else if (p_evt->id == FDS_EVT_WRITE)
+    {
+        if (p_evt->result == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO(LOG_OK " Registro escrito correctamente!\x1b[0m");
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO(LOG_FAIL "Error al escribir el registro: %d", p_evt->result);
+        }
+    }
+    else if (p_evt->id == FDS_EVT_UPDATE)
+    {
+        if (p_evt->result == NRF_SUCCESS)
+        {
+            // NRF_LOG_RAW_INFO(
+            //     "\n\n\x1b[1;32m>>\x1b[0m Registro actualizado correctamente!");
+        }
+        else
+        {
+            NRF_LOG_ERROR("Error al actualizar el registro: %d", p_evt->result);
+        }
+    }
+    else if (p_evt->id == FDS_EVT_DEL_RECORD)
+    {
+        if (p_evt->result == NRF_SUCCESS)
+        {
+            NRF_LOG_RAW_INFO("\nRegistro eliminado correctamente.");
+        }
+        else
+        {
+            NRF_LOG_ERROR("Error al eliminar el registro: %d", p_evt->result);
+        }
+    }
+}
+
+void fds_initialize(void)
+{
+    ret_code_t err_code;
+
+    // Registra el manejador de eventos
+    err_code = fds_register(fds_evt_handler);
+    APP_ERROR_CHECK(err_code);
+
+    // Inicializa el módulo FDS
+    err_code = fds_init();
+    APP_ERROR_CHECK(err_code);
+}
+
+//-------------------------------------------------------------------------------------------------------------
+//                                      FDS INIT FUNCTIONS ENDS HERE
+//-------------------------------------------------------------------------------------------------------------
+
+
+
+
 ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset)
 {
     ret_code_t ret;
@@ -651,12 +755,12 @@ void load_mac_from_flash(uint8_t *mac_out, tipo_mac_t tipo)
             // Si no se encuentra una MAC, usa una dirección predeterminada
             //
 
-            mac_out[5] = 0xE3;
-            mac_out[4] = 0xCB;
-            mac_out[3] = 0x69;
-            mac_out[2] = 0xFE;
-            mac_out[1] = 0xC6;
-            mac_out[0] = 0x58;
+            mac_out[5] = 0xC1;
+            mac_out[4] = 0xAB;
+            mac_out[3] = 0x00;
+            mac_out[2] = 0x00;
+            mac_out[1] = 0x00;
+            mac_out[0] = 0xFF;
 
             // mac_out[5] = 0xC3;
             // mac_out[4] = 0xAB;

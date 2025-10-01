@@ -40,6 +40,17 @@
 #define MSB_16(a)                     (((a) & 0xFF00) >> 8) // Parte de arriba de un uint32_t
 #define LSB_16(a)                     ((a) & 0x00FF)        // Parte de abajo de un uint32_t
 
+
+
+// LOGS
+#define LOG_EXEC "\n[\033[1;36m EXEC \033[0m]"
+#define LOG_OK   "\n[\033[1;32m  OK  \033[0m]"
+#define LOG_FAIL "\n[\033[1;31m FAIL \033[0m]"
+#define LOG_WARN "\n[\033[1;35m WARN \033[0m]"
+#define LOG_INFO "\n[\033[1;33m INFO \033[0m]"
+
+
+
 extern bool m_device_active;
 extern bool m_reconnection_mode; // Nueva variable para controlar el modo de reconexión
 extern bool m_emisor_found_this_cycle; // Variable para rastrear si el emisor se conectó en este ciclo

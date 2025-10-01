@@ -746,6 +746,7 @@ int main(void)
                      "\033[1;90mCrea\033[1;31mLab\033[0m\n\n");
 
     base_timer_init();
+    fds_initialize();
     rtc_init();
     uart_init();
     buttons_leds_init();

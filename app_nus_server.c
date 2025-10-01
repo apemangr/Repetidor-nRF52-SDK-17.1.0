@@ -277,18 +277,7 @@ static void fds_evt_handler(fds_evt_t const *p_evt)
     }
 }
 
-static void fds_initialize(void)
-{
-    ret_code_t err_code;
 
-    // Registra el manejador de eventos
-    err_code = fds_register(fds_evt_handler);
-    APP_ERROR_CHECK(err_code);
-
-    // Inicializa el módulo FDS
-    err_code = fds_init();
-    APP_ERROR_CHECK(err_code);
-}
 /**@brief Function for handling Queued Write Module errors.
  *
  * @details A pointer to this function will be passed to each service which may
@@ -1241,7 +1230,6 @@ void disconnect_all_devices(void)
 
 void app_nus_server_init(app_nus_server_on_data_received_t on_data_received)
 {
-    fds_initialize();
     m_on_data_received = on_data_received;
     gap_params_init();
     services_init();
