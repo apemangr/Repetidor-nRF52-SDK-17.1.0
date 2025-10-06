@@ -54,6 +54,7 @@ typedef struct
     uint32_t   tiempo_extendido_dormido;
     datetime_t fecha;
     uint8_t    version[3];
+    uint16_t   cantidad_historiales;  // Cantidad de historiales guardados
 } config_repeater_t;
 
 extern adc_values_t      adc_values;
@@ -84,7 +85,6 @@ static uint8_t mac_address_from_flash[6] = {0};
 ret_code_t save_history_record_emisor(
            store_history const *p_history_data,
            uint16_t             offset);
-ret_code_t save_history_record(store_history const *p_history_data);
 ret_code_t read_history_record_by_id(
            uint16_t       record_id,
            store_history *p_history_data);

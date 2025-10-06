@@ -1310,15 +1310,15 @@ void advertising_init(void)
     memset(&m_beacon_info, 0, sizeof(m_beacon_info));
     // Se modifica para tener un numero de advertising mayor a 0
     // y poder ser procesado por la app
-    m_beacon_info[0]  = 0x11; // MSB_16(adc_values.contador);
-    m_beacon_info[1]  = 0x11; // LSB_16(adc_values.contador);
-    m_beacon_info[2]  = 0x22; // MSB_16(adc_values.V1);
-    m_beacon_info[3]  = 0x22; // LSB_16(adc_values.V1);
-    m_beacon_info[4]  = 0x33; // MSB_16(adc_values.V2);
-    m_beacon_info[5]  = 0x33; // LSB_16(adc_values.V2);
-    m_beacon_info[6]  = 0xCC;
-    m_beacon_info[7]  = 0xAB;
-    m_beacon_info[8]  = 0xAB;
+    m_beacon_info[0]  = 0x30;
+    m_beacon_info[1]  = MSB_16(adc_values.contador);
+    m_beacon_info[2]  = LSB_16(adc_values.contador);
+    m_beacon_info[3]  = MSB_16(adc_values.V1); // LSB_16(adc_values.V1);
+    m_beacon_info[4]  = LSB_16(adc_values.V1);
+    m_beacon_info[5]  = MSB_16(adc_values.V2);                  // LSB_16(adc_values.V2);
+    m_beacon_info[6]  = LSB_16(adc_values.V2); 
+    m_beacon_info[7]  = 0xAB; // MSB Num. Historiales 
+    m_beacon_info[8]  = 0xAB; // LSB Num. Historiales
     m_beacon_info[9]  = 0xAB;
     m_beacon_info[10] = 0xAB;
     m_beacon_info[11] = 0xAB;

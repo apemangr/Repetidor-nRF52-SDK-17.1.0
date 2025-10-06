@@ -162,6 +162,12 @@ ret_code_t save_history_record_emisor(
         // Esperar que FDS complete la operación + flush de GC si es necesario
         nrf_delay_ms(1000);
         (void)fds_gc(); // Forzar garbage collection si es necesario
+        
+        // Incrementar contador de historiales en memoria
+        // La configuración se guardará cuando el dispositivo entre en modo sleep
+        config_repeater.cantidad_historiales++;
+        NRF_LOG_RAW_INFO(LOG_INFO " Contador de historiales: %u", 
+                       config_repeater.cantidad_historiales);
     }
     else {
         NRF_LOG_RAW_INFO(LOG_FAIL " Error al buscar el registro: %d", ret);
@@ -1146,6 +1152,20 @@ void delete_all_history(void)
                             "historiales: %d",
                    ret);
     }
+    else {
+        // Si se eliminaron exitosamente, resetear el contador
+        config_repeater.cantidad_historiales = 0;
+        
+        // Guardar la configuración actualizada
+        ret_code_t save_ret = save_config_to_flash(&config_repeater);
+        if (save_ret == NRF_SUCCESS) {
+            NRF_LOG_RAW_INFO(LOG_OK " Contador de historiales reseteado a 0");
+        }
+        else {
+            NRF_LOG_RAW_INFO(LOG_WARN " Error al guardar contador: 0x%X", save_ret);
+        }
+    }
+    
     NRF_LOG_RAW_INFO(LOG_EXEC " Corriendo el recolector de basura...");
 
     ret = fds_gc();
@@ -1355,6 +1375,9 @@ void load_default_config(config_repeater_t *p_config)
     p_config->fecha.hour   = 0;
     p_config->fecha.minute = 0;
     p_config->fecha.second = 0;
+
+    // Cantidad de historiales guardados (inicialmente 0)
+    p_config->cantidad_historiales = 0;
 
     NRF_LOG_RAW_INFO(LOG_INFO " Configuracion predeterminada cargada");
 }
@@ -1656,6 +1679,11 @@ void init_sistema_configuracion(config_repeater_t *p_config)
     NRF_LOG_FLUSH();
     nrf_delay_ms(15);
 
+    // Mostrar cantidad de historiales
+    NRF_LOG_RAW_INFO(" - Historiales   : %u registros\n", p_config->cantidad_historiales);
+    NRF_LOG_FLUSH();
+    nrf_delay_ms(15);
+
     NRF_LOG_RAW_INFO(
                "\n\033[1;36m==================================================="
                "======="
@@ -1758,6 +1786,9 @@ ret_code_t send_config_via_ble(void)
                config_repeater.fecha.hour,
                config_repeater.fecha.minute,
                config_repeater.fecha.second);
+    NRF_LOG_RAW_INFO(
+               "\nCantidad Historiales: %u",
+               config_repeater.cantidad_historiales);
     NRF_LOG_RAW_INFO("\n--- FIN CONFIGURACION ---\n");
     NRF_LOG_FLUSH();
 
