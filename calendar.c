@@ -10,7 +10,6 @@ void                 restart_sleep_rtc(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t sleep_time_from_flash =
         read_time_from_flash(TIEMPO_SLEEP, DEFAULT_DEVICE_SLEEP_TIME_MS);
-    NRF_LOG_RAW_INFO("\n>> Tiempo de sleep: %u ms", sleep_time_from_flash);
     uint32_t next_event = (current_counter + (sleep_time_from_flash / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 1, next_event, true);
 }
@@ -19,7 +18,6 @@ void restart_on_rtc(void)
 {
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t read_time       = read_time_from_flash(TIEMPO_ENCENDIDO, DEFAULT_DEVICE_ON_TIME_MS);
-    NRF_LOG_RAW_INFO("\n>> Tiempo de encendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
 }
@@ -29,7 +27,6 @@ void restart_extended_on_rtc(void)
     uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
     uint32_t read_time =
         read_time_from_flash(TIEMPO_EXTENDED_ENCENDIDO, DEFAULT_DEVICE_EXTENDED_ON_TIME_MS);
-    // NRF_LOG_RAW_INFO("\n\t>> Tiempo de encendido: %u ms", read_time);
     uint32_t next_event = (current_counter + (read_time / 1000) * 8) & 0xFFFFFF;
     nrfx_rtc_cc_set(&m_rtc, 0, next_event, true);
 }
@@ -102,12 +99,12 @@ bool calendar_set_time(const datetime_t *now)
 bool calendar_init(void)
 {
 
-    NRF_LOG_RAW_INFO("\n\033[1;31m>\033[0m Iniciando modulo RTC...");
+    NRF_LOG_RAW_INFO(LOG_EXEC " Iniciando modulo RTC...");
     ret_code_t err_code;
 
     if (m_initialized)
     {
-        NRF_LOG_RAW_INFO("\n\t>> Error al inicializar modulo RTC");
+        NRF_LOG_RAW_INFO(LOG_FAIL " Error al inicializar modulo RTC");
 
         NRF_LOG_FLUSH();
         return false;
@@ -119,7 +116,7 @@ bool calendar_init(void)
 
     m_initialized = true;
 
-    NRF_LOG_RAW_INFO("\n\t>> \033[0;32mModulo RTC inicializado correctamente.\033[0m");
+    NRF_LOG_RAW_INFO(LOG_OK " Modulo RTC inicializado correctamente");
 
     NRF_LOG_FLUSH();
     return true;
@@ -188,11 +185,11 @@ bool calendar_set_datetime(void)
         
         if (success)
         {
-            NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
+            NRF_LOG_RAW_INFO(LOG_INFO " Fecha y hora cargada desde %s.", source);
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha desde %s.", source);
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al cargar fecha desde %s.", source);
         }
     }
     
@@ -209,16 +206,16 @@ bool calendar_set_datetime(void)
             
             if (success)
             {
-                NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
+                NRF_LOG_RAW_INFO(LOG_INFO " Fecha y hora cargada desde %s.", source);
             }
             else
             {
-                NRF_LOG_RAW_INFO("\n\t>> Error al cargar fecha desde %s.", source);
+                NRF_LOG_RAW_INFO(LOG_FAIL " Error al cargar fecha desde %s.", source);
             }
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n\t>> No se encontró fecha válida en %s.", source);
+            NRF_LOG_RAW_INFO(LOG_WARN " No se encontró fecha válida en %s.", source);
         }
     }
     
@@ -231,22 +228,21 @@ bool calendar_set_datetime(void)
         
         if (success)
         {
-            NRF_LOG_RAW_INFO("\n\t>> Fecha y hora cargada desde %s.", source);
+            NRF_LOG_RAW_INFO(LOG_INFO " Fecha y hora cargada desde %s.", source);
         }
         else
         {
-            NRF_LOG_RAW_INFO("\n\t>> Error crítico: no se pudo establecer fecha.");
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error crítico: no se pudo establecer fecha.");
         }
     }
     
     // Mostrar fecha establecida
     if (success)
     {
-        NRF_LOG_RAW_INFO("\n\t>> Fecha: %04u-%02u-%02u, Hora: %02u:%02u:%02u",
-                         dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
-        NRF_LOG_RAW_INFO("\n\t>> Fuente: %s\n", source);
+        NRF_LOG_RAW_INFO(LOG_INFO " Fecha: %02u/%02u/%04u, Hora: %02u:%02u:%02u",
+                         dt.day, dt.month, dt.year, dt.hour, dt.minute, dt.second);
+        NRF_LOG_RAW_INFO(LOG_INFO " Fuente: %s\n", source);
     }
-    
     NRF_LOG_FLUSH();
     return success;
 }

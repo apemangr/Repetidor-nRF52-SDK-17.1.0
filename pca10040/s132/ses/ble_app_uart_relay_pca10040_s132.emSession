@@ -32,7 +32,6 @@
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132"/>
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132"/>
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;Application"/>
-  <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;None"/>
   <ProjectSessionItem path="ble_app_uart_relay_pca10040_s132;ble_app_uart_relay_pca10040_s132;nRF_Libraries"/>
  </Project>
  <Register1>
@@ -74,16 +73,23 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="666" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="645" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="139" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="107" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="701" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="675" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="720" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="696" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="91" y="261" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../calendar.c" selected="0" top="236" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="36" y="1615" useTextEdit="1" openedFrom="C:/Users/guill/OneDrive/Desktop/SDK_CON_FIRMWARE/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/nuevo_intento/app_nus_server.c" useBinaryEdit="0" left="0" path="../../../filesystem.c" selected="0" top="1588" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="67" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/delay/nrf_delay.h" selected="0" top="31" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="77" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="100" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="62" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="27" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../variables.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="111" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" selected="0" top="86" codecName=""/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="294" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_client.c" selected="0" top="258" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="20" y="922" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="899" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="800" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../external/fprintf/nrf_fprintf_format.c" selected="1" top="776" codecName=""/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="111" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" selected="0" top="86" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="47" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_client.c" selected="0" top="25" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="4" y="1015" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.c" selected="0" top="986" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="806" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../external/fprintf/nrf_fprintf_format.c" selected="0" top="776" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="26" y="94" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../filesystem.h" selected="0" top="69" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="18" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../app_nus_server.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="132" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer.h" selected="0" top="98" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="206" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/uart/app_uart.h" selected="0" top="172" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="158" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/log/src/nrf_log_internal.h" selected="0" top="125" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="35" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../leds.h" selected="0" top="6" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="33" y="95" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="ble_app_uart_relay_pca10040_s132.emProject" selected="0" top="84" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="ble_app_uart_relay_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/guill/OneDrive/Desktop/nRF5_SDK_17.1.0_ddde560/examples/ble_central_and_peripheral/Repetidor-nRF52-SDK-17.1.0" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

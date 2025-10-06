@@ -47,6 +47,7 @@ typedef struct
 {
     uint8_t    mac_emisor[6];
     uint8_t    mac_repetidor[6];
+    bool       enable_custom_mac_repetidor;  // True = usar mac_repetidor custom, False = usar MAC por defecto
     uint32_t   tiempo_encendido;
     uint32_t   tiempo_dormido;
     uint32_t   tiempo_extendido;
@@ -74,15 +75,20 @@ typedef enum
 
 static uint8_t mac_address_from_flash[6] = {0};
 
-// void       load_repeater_configuration(config_t *config_out, uint8_t d1, uint8_t d2, uint8_t d3);
-// ret_code_t load_adc_values(adc_values_t *adc_values_cargados);
-// ret_code_t save_adc_values(adc_values_t const *valores_a_guardar);
+// void       load_repeater_configuration(config_t *config_out, uint8_t d1,
+// uint8_t d2, uint8_t d3); ret_code_t load_adc_values(adc_values_t
+// *adc_values_cargados); ret_code_t save_adc_values(adc_values_t const
+// *valores_a_guardar);
 
 // History functions
-ret_code_t save_history_record_emisor(store_history const *p_history_data, uint16_t offset);
+ret_code_t save_history_record_emisor(
+           store_history const *p_history_data,
+           uint16_t             offset);
 ret_code_t save_history_record(store_history const *p_history_data);
-ret_code_t read_history_record_by_id(uint16_t record_id, store_history *p_history_data);
-void       print_history_record(store_history const *p_record, const char *p_title);
+ret_code_t read_history_record_by_id(
+           uint16_t       record_id,
+           store_history *p_history_data);
+void print_history_record(store_history const *p_record, const char *p_title);
 ret_code_t read_last_history_record(store_history *p_history_data);
 
 void       delete_all_history(void);
@@ -96,12 +102,21 @@ uint32_t   history_get_progress(void);
 ret_code_t write_date_to_flash(const datetime_t *p_date);
 datetime_t read_date_from_flash(void);
 void       write_time_to_flash(valor_type_t valor_type, uint32_t valor);
-uint32_t   read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
-void       load_mac_from_flash(mac_type_t mac_type, uint8_t *mac_out);
-void       save_mac_to_flash(mac_type_t mac_type, uint8_t *mac_out);
+uint32_t read_time_from_flash(valor_type_t valor_type, uint32_t default_valor);
+void     load_mac_from_flash(mac_type_t mac_type, uint8_t *mac_out);
+void     save_mac_to_flash(mac_type_t mac_type, uint8_t *mac_out);
+
+// Configuration functions
+void       set_custom_mac_repeater(void);
+void       init_sistema_configuracion(config_repeater_t *p_config);
+ret_code_t load_config_from_flash(config_repeater_t *p_config);
+ret_code_t save_config_to_flash(config_repeater_t *p_config);
+void       load_default_config(config_repeater_t *p_config);
 
 // FDS functions
-void fds_initialize(void);
+void       fds_initialize(void);
+
+ret_code_t send_config_via_ble(void);
 
 // typedef struct
 // {

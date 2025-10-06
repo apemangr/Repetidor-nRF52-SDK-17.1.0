@@ -25,7 +25,12 @@ Todos los comandos que vayan dirigidos al repetidor deben tener el prefijo `111`
 | 10      | Solicitar el ultimo historial       | Lee del repetidor el último valor guardado en el historial                           | 11110                                                    |
 | 11      | Solicitar un historial por ID (WIP) | Lee un registro del repetidor segun el ID indicado                                   | 111115 <br> (Solicita el 5 historial)                   |
 | 12      | Borra un historial por ID (WIP)     | Elimina un registro del repetidor segun el ID indicado                               | 111125 <br> (Borra el 5 historial)                      |
-| 666     | Borra todos los historiales (WIP)   | Limpia de la memoria flash todos los registros almacenados                           | 111666                                                   |
+| 16      | Enviar configuración actual         | Envía toda la configuración del repetidor por BLE                                    | 11116                                                    |
+| 17      | Guardar MAC del repetidor           | Escribe la MAC custom del repetidor (habilita automáticamente la MAC custom)         | 11117A566CE57FF66                                        |
+| 18      | Leer MAC del repetidor              | Lee la MAC del repetidor guardada en memoria                                         | 11118                                                    |
+| 19      | Habilitar/Deshabilitar MAC custom   | Habilita (1) o deshabilita (0) el uso de MAC custom del repetidor                    | 111191 (habilitar) <br> 111190 (deshabilitar)           |
+| 20      | Leer estado MAC custom              | Lee si la MAC custom del repetidor está habilitada o deshabilitada                   | 11120                                                    |
+| 99      | Borra todos los historiales         | Limpia de la memoria flash todos los registros almacenados                           | 11199                                                    |
 
 
 # Roadmap

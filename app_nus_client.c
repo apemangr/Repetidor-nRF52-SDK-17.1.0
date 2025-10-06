@@ -36,41 +36,43 @@ void target_periph_addr_init(void)
 {
     // Buffer temporal para cargar la MAC
     static uint8_t temp_mac[6];
-    
+
     // Carga la MAC desde la memoria flash
     NRF_LOG_RAW_INFO("\n" LOG_EXEC " Configurando filtrado...");
     nrf_delay_ms(20);
     load_mac_from_flash(MAC_EMISOR, temp_mac);
 
     // Verifica si la MAC se ha cargado correctamente
-    if (temp_mac[0] == 0 && temp_mac[1] == 0 && temp_mac[2] == 0 && 
-        temp_mac[3] == 0 && temp_mac[4] == 0 && temp_mac[5] == 0)
+    if (temp_mac[0] == 0 && temp_mac[1] == 0 && temp_mac[2] == 0 && temp_mac[3] == 0 &&
+        temp_mac[4] == 0 && temp_mac[5] == 0)
     {
         NRF_LOG_RAW_INFO(LOG_FAIL " No se pudo cargar la direccion "
                                   "MAC desde la memoria flash.\033[0m\n");
         return;
     }
-    
+
     // Invertir los bytes para el filtro BLE (BLE usa little-endian)
     // Si guardamos aabbccddeeff, BLE espera ffeeddccbbaa para el filtro
     for (int i = 0; i < 6; i++)
     {
         m_target_periph_addr.addr[i] = temp_mac[5 - i];
     }
-    
+
     // Configura la dirección del dispositivo objetivo
     m_target_periph_addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
-    
+
     // Log para verificar la MAC configurada para filtrado
-    NRF_LOG_RAW_INFO(LOG_INFO " MAC para filtrado: %02X:%02X:%02X:%02X:%02X:%02X",
-                     m_target_periph_addr.addr[5], m_target_periph_addr.addr[4],
-                     m_target_periph_addr.addr[3], m_target_periph_addr.addr[2],
-                     m_target_periph_addr.addr[1], m_target_periph_addr.addr[0]);
+    // NRF_LOG_RAW_INFO(LOG_INFO " MAC para filtrado: %02X:%02X:%02X:%02X:%02X:%02X",
+    //                  m_target_periph_addr.addr[5],
+    //                  m_target_periph_addr.addr[4],
+    //                  m_target_periph_addr.addr[3],
+    //                  m_target_periph_addr.addr[2],
+    //                  m_target_periph_addr.addr[1],
+    //                  m_target_periph_addr.addr[0]);
     // memcpy(m_target_periph_addr.addr, m_target_periph_addr.addr,
     // sizeof(m_target_periph_addr.addr));
 
-    NRF_LOG_RAW_INFO(
-        LOG_OK " Filtrado configurado correctamente.\033[0m\n");
+    NRF_LOG_RAW_INFO(LOG_OK " Filtrado configurado correctamente.\033[0m\n");
 }
 
 static void nus_error_handler(uint32_t nrf_error)
@@ -126,8 +128,8 @@ static void scan_evt_handler(scan_evt_t const *p_scan_evt)
     case NRF_BLE_SCAN_EVT_CONNECTED: {
         ble_gap_evt_connected_t const *p_connected = p_scan_evt->params.connected.p_connected;
 
-        NRF_LOG_RAW_INFO("\n\n\033[1;32mConectado a dispositivo autorizado:\033[0m "
-                         "\033[1;36m%02x:%02x:%02x:%02x:%02x:%02x\033[0m",
+        NRF_LOG_RAW_INFO(LOG_OK " Conectado a dispositivo autorizado: "
+                                "%02x:%02x:%02x:%02x:%02x:%02x",
                          p_connected->peer_addr.addr[5],
                          p_connected->peer_addr.addr[4],
                          p_connected->peer_addr.addr[3],
@@ -170,15 +172,6 @@ static void scan_init(void)
 
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
     APP_ERROR_CHECK(err_code);
-}
-void string_to_command(const char *input, uint8_t *output, uint16_t output_size)
-{
-    uint16_t input_len = strlen(input);
-    if (input_len > output_size)
-    {
-        input_len = output_size;
-    }
-    memcpy(output, input, input_len);
 }
 
 static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t const *p_ble_nus_evt)
@@ -226,28 +219,21 @@ static void ble_nus_c_evt_handler(ble_nus_c_t *p_ble_nus_c, ble_nus_c_evt_t cons
         cmd_id[0] = '9';
         cmd_id[1] = '6';
 
-        NRF_LOG_RAW_INFO("\nEnviando comando 96");
+        NRF_LOG_RAW_INFO(LOG_EXEC " Enviando comando 96");
         err_code = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\n[ERROR] Fallo al solicitar datos de ADC y contador: %d", err_code);
+            NRF_LOG_RAW_INFO(LOG_FAIL " Fallo al solicitar datos de ADC y contador: %d", err_code);
         }
 
-        //
-        // Solicitar el ultimo historial del emisor
-        //
-
-        // if (m_time.hour >= 23 || m_time.hour == 0)
-        // {
         cmd_id[0] = '0';
         cmd_id[1] = '8';
 
         err_code  = app_nus_client_send_data(cmd_id, 2);
         if (err_code != NRF_SUCCESS)
         {
-            NRF_LOG_RAW_INFO("\nFallo al solicitar el ultimo historial: %d", err_code);
+            NRF_LOG_RAW_INFO(LOG_FAIL " Fallo al solicitar el ultimo historial: %d", err_code);
         }
-        // }
 
         //============================================================
         //                  AQUI TERMINAN LOS COMANDOS
@@ -316,9 +302,14 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
                 if (err_code == NRF_SUCCESS)
                 {
                     m_rssi_requested = true;
-                    NRF_LOG_RAW_INFO("\nSolicitando RSSI...");
+                    NRF_LOG_RAW_INFO(LOG_EXEC " Solicitando RSSI...");
                 }
             }
+
+            restart_on_rtc();
+            m_connected_this_cycle = true;
+            m_extended_mode_on     = false;
+
             err_code =
                 ble_nus_c_handles_assign(&m_ble_nus_c, p_ble_evt->evt.gap_evt.conn_handle, NULL);
             APP_ERROR_CHECK(err_code);
@@ -326,8 +317,6 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
 
-            // start discovery of services. The NUS Client waits for a
-            // discovery result
             err_code = ble_db_discovery_start(&m_db_disc, p_ble_evt->evt.gap_evt.conn_handle);
             APP_ERROR_CHECK(err_code);
         }
@@ -335,7 +324,7 @@ void app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt)
 
     case BLE_GAP_EVT_RSSI_CHANGED: {
         int8_t rssi = p_gap_evt->params.rssi_changed.rssi;
-        NRF_LOG_RAW_INFO("\nRSSI Emisor: %d dbm", rssi);
+        NRF_LOG_RAW_INFO(LOG_INFO " RSSI Emisor: %d [dbm]", rssi);
         sd_ble_gap_rssi_stop(conn_handle);
         break;
     }
