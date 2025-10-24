@@ -9,6 +9,7 @@
 #include "nordic_common.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_scan.h"
+#include "nrf_delay.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
@@ -30,6 +31,9 @@ static ble_gap_addr_t                    m_target_periph_addr;
 static ble_uuid_t const m_nus_uuid = {.uuid = BLE_UUID_NUS_SERVICE, .type = NUS_SERVICE_UUID_TYPE};
 
 static bool             m_rssi_requested = false;
+
+// Forward declaration
+static void scan_evt_handler(scan_evt_t const *p_scan_evt);
 
 // Función para inicializar `m_target_periph_addr` con la MAC leída
 void target_periph_addr_init(void)
@@ -109,6 +113,75 @@ void scan_start(void)
 
     ret = bsp_indication_set(BSP_INDICATE_SCANNING);
     APP_ERROR_CHECK(ret);
+}
+
+
+void scan_start_passive_mode(void)
+{
+    ret_code_t err_code;
+    
+    // Detener el escaneo actual
+    scan_stop();
+    nrf_delay_ms(50);
+    
+    // Reconfigurar el escaneo sin auto-conexión
+    nrf_ble_scan_init_t init_scan;
+    memset(&init_scan, 0, sizeof(init_scan));
+    
+    init_scan.connect_if_match = false;  // ¡IMPORTANTE! No conectar automáticamente
+    init_scan.conn_cfg_tag     = APP_BLE_CONN_CFG_TAG;
+    
+    err_code = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
+    APP_ERROR_CHECK(err_code);
+    
+    // NO usar filtros del módulo scan para modo pasivo
+    // El filtrado se hará manualmente en BLE_GAP_EVT_ADV_REPORT
+    // Esto asegura que TODOS los ADV reports lleguen al handler
+    
+    // Iniciar escaneo pasivo SIN filtros
+    err_code = nrf_ble_scan_start(&m_scan);
+    APP_ERROR_CHECK(err_code);
+    
+    err_code = bsp_indication_set(BSP_INDICATE_SCANNING);
+    APP_ERROR_CHECK(err_code);
+    
+    NRF_LOG_RAW_INFO(LOG_OK " Escaneo PASIVO activado (escuchando TODOS los ADV)");
+}
+
+
+void scan_start_active_mode(void)
+{
+    ret_code_t err_code;
+    
+    // Detener el escaneo actual
+    scan_stop();
+    nrf_delay_ms(10);
+    
+    // Reconfigurar el escaneo CON auto-conexión
+    nrf_ble_scan_init_t init_scan;
+    memset(&init_scan, 0, sizeof(init_scan));
+    
+    init_scan.connect_if_match = true;  // Conectar automáticamente
+    init_scan.conn_cfg_tag     = APP_BLE_CONN_CFG_TAG;
+    
+    err_code = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
+    APP_ERROR_CHECK(err_code);
+    
+    // Mantener el filtro por MAC del emisor
+    err_code = nrf_ble_scan_filter_set(&m_scan, NRF_BLE_SCAN_ADDR_FILTER, m_target_periph_addr.addr);
+    APP_ERROR_CHECK(err_code);
+    
+    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
+    APP_ERROR_CHECK(err_code);
+    
+    // Iniciar escaneo activo
+    err_code = nrf_ble_scan_start(&m_scan);
+    APP_ERROR_CHECK(err_code);
+    
+    err_code = bsp_indication_set(BSP_INDICATE_SCANNING);
+    APP_ERROR_CHECK(err_code);
+    
+    NRF_LOG_RAW_INFO(LOG_OK " Escaneo ACTIVO restaurado (con auto-conexion)");
 }
 
 /**@brief Function for handling Scanning Module events.

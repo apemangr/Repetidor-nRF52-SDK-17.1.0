@@ -20,6 +20,7 @@
 #include "nordic_common.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_drv_rtc.h"
+#include "nrf_rtc.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
@@ -27,7 +28,11 @@
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
+#include "nrf_ble_scan.h"
 #include "variables.h"
+
+// Forward declarations
+void activate_extended_search_mode(void);
 
 // store_flash Flash_array = {0};
 adc_values_t      adc_values      = {0};
@@ -110,6 +115,12 @@ bool                 m_extended_mode_on        = false;
 bool                 m_reconnection_mode       = false; // BORRAR
 bool                 m_emisor_found_this_cycle = false; // BORRAR
 
+// Extended search mode variables
+bool                 m_extended_search_active  = false;
+uint8_t              m_extended_search_seconds_remaining = 0;
+bool                 m_emisor_adv_detected     = false;
+uint32_t             m_last_adv_contador       = 0; // Para evitar duplicados
+
 static uint16_t      m_conn_handle             = BLE_CONN_HANDLE_INVALID;
 static volatile bool m_rtc_on_flag             = false;
 static volatile bool m_rtc_sleep_flag          = false;
@@ -161,8 +172,6 @@ void uart_event_handler(app_uart_evt_t *p_event)
     }
 }
 
-/**@brief Function for initializing the UART. */
-
 static void uart_init(void)
 {
     ret_code_t                   err_code;
@@ -204,6 +213,47 @@ void rtc_handler(nrfx_rtc_int_type_t int_type)
 
     else if (int_type == NRFX_RTC_INT_COMPARE2) {
         calendar_rtc_handler();
+        
+        // Verificar si estamos en modo activo y quedan 5 segundos antes de dormir
+        if (m_device_active && !m_connected_this_cycle && !m_extended_search_active) {
+            // Obtener el contador actual y el valor de COMPARE0 (cuando se apagará)
+            uint32_t current_counter = nrfx_rtc_counter_get(&m_rtc);
+            uint32_t compare0_value = nrf_rtc_cc_get(m_rtc.p_reg, 0);
+            
+            // Calcular ticks restantes (manejando wrap-around de 24 bits)
+            uint32_t ticks_remaining;
+            if (compare0_value > current_counter) {
+                ticks_remaining = compare0_value - current_counter;
+            } else {
+                ticks_remaining = (0xFFFFFF - current_counter) + compare0_value;
+            }
+            
+            // Convertir ticks a segundos (8 ticks = 1 segundo)
+            uint32_t seconds_remaining = ticks_remaining / 8;
+            
+            // Si quedan exactamente 5 segundos, activar búsqueda extendida
+            if (seconds_remaining == EXTENDED_SEARCH_DURATION_SECONDS) {
+                activate_extended_search_mode();
+            }
+        }
+        
+        // Manejar countdown de búsqueda extendida
+        if (m_extended_search_active && m_extended_search_seconds_remaining > 0) {
+            m_extended_search_seconds_remaining--;
+            NRF_LOG_RAW_INFO(LOG_INFO " Busqueda extendida: %u segundos restantes...",
+                           m_extended_search_seconds_remaining);
+            
+            if (m_extended_search_seconds_remaining == 0) {
+                m_extended_search_active = false;
+                NRF_LOG_RAW_INFO(LOG_WARN " Tiempo de busqueda extendida agotado");
+                
+                // Restaurar escaneo activo (con auto-conexión) si aún estamos en modo activo
+                if (m_device_active) {
+                    NRF_LOG_RAW_INFO(LOG_INFO " Restaurando modo de escaneo activo...");
+                    scan_start_active_mode();
+                }
+            }
+        }
     }
 }
 
@@ -295,8 +345,13 @@ void handle_rtc_events(void)
 
             advertising_init();
 
+            // Asegurarse de que la búsqueda extendida esté desactivada al iniciar nuevo ciclo
+            m_extended_search_active = false;
+            m_extended_search_seconds_remaining = 0;
+            
             // Actualizar el payload para mostrar los adc_values
-            scan_start();
+            // Iniciar con escaneo activo (con auto-conexión) al comenzar nuevo ciclo
+            scan_start_active_mode();
             advertising_start();
             uart_init();
             m_device_active        = true;
@@ -437,6 +492,68 @@ static bool shutdown_handler(nrf_pwr_mgmt_evt_t event)
 
 NRF_PWR_MGMT_HANDLER_REGISTER(shutdown_handler, APP_SHUTDOWN_HANDLER_PRIORITY);
 
+void activate_extended_search_mode(void)
+{
+    if (m_extended_search_active) {
+        return; // Ya está activo
+    }
+    
+    NRF_LOG_RAW_INFO("\n" LOG_INFO " \033[1;33mActivando busqueda extendida de ADV\033[0m");
+    NRF_LOG_RAW_INFO(LOG_INFO " Escuchando ADV del emisor durante %u segundos...",
+                   EXTENDED_SEARCH_DURATION_SECONDS);
+    NRF_LOG_RAW_INFO(LOG_WARN " Modo PASIVO: NO se conectara al emisor");
+    
+    m_extended_search_active = true;
+    m_extended_search_seconds_remaining = EXTENDED_SEARCH_DURATION_SECONDS;
+    m_emisor_adv_detected = false;
+    
+    // Iniciar escaneo PASIVO (solo escucha ADV, NO conecta automáticamente)
+    scan_start_passive_mode();
+}
+
+/**@brief Función para parsear los datos de advertising del emisor
+ * 
+ * Estructura del ADV (31 bytes):
+ * Pos 01-05: Nordic header
+ * Pos 06-07: Manufacturer filter
+ * Pos 08:    Tipo de perno
+ * Pos 09-10: Contador ADV (uint16_t, little-endian)
+ * Pos 11-12: ADC1 (V1) (uint16_t, little-endian)
+ * Pos 13-14: ADC2 (V2) (uint16_t, little-endian)
+ * Pos 15-19: Vacio
+ * Pos 20:    Resets
+ * Pos 21:    Desgaste
+ * Pos 22:    Bateria
+ * Pos 23:    Temperatura
+ * Pos 24-25: Vacio
+ * Pos 26-31: MAC Original
+ */
+static bool parse_emisor_adv_data(const uint8_t *p_adv_data, 
+                                   uint8_t data_len,
+                                   uint32_t *p_contador,
+                                   uint16_t *p_v1,
+                                   uint16_t *p_v2)
+{
+    // Verificar longitud mínima (debe tener al menos 14 bytes)
+    if (data_len < 14 || p_adv_data == NULL) {
+        return false;
+    }
+
+    // Extraer contador ADV (posición 9-10, índices 8-9 en array)
+    // Big-endian: byte alto primero
+    *p_contador = ((uint32_t)p_adv_data[8] << 8) | (uint32_t)p_adv_data[9];
+
+    // Extraer V1/ADC1 (posición 11-12, índices 10-11)
+    // Big-endian: byte alto primero
+    *p_v1 = ((uint16_t)p_adv_data[10] << 8) | (uint16_t)p_adv_data[11];
+
+    // Extraer V2/ADC2 (posición 13-14, índices 12-13)
+    // Big-endian: byte alto primero
+    *p_v2 = ((uint16_t)p_adv_data[12] << 8) | (uint16_t)p_adv_data[13];
+
+    return true;
+}
+
 static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
 {
     ret_code_t           err_code;
@@ -497,6 +614,114 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
                    BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
         APP_ERROR_CHECK(err_code);
         break;
+
+    case BLE_GAP_EVT_ADV_REPORT:
+    {
+        const ble_gap_evt_adv_report_t *p_adv_report = &p_gap_evt->params.adv_report;
+        
+        // Debug: Imprimir todos los ADV que se reciben durante búsqueda extendida
+        if (m_extended_search_active) {
+            NRF_LOG_RAW_INFO("\n[ADV] MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+                           p_adv_report->peer_addr.addr[5],
+                           p_adv_report->peer_addr.addr[4],
+                           p_adv_report->peer_addr.addr[3],
+                           p_adv_report->peer_addr.addr[2],
+                           p_adv_report->peer_addr.addr[1],
+                           p_adv_report->peer_addr.addr[0]);
+
+         NRF_LOG_RAW_INFO(" RSSI:%d Len:%d", p_adv_report->rssi,p_adv_report->data.len);
+        }
+        
+        // Solo procesar si estamos en modo de búsqueda extendida
+        if (!m_extended_search_active) {
+            break;
+        }
+        
+        // Debug: Imprimir MAC objetivo
+        NRF_LOG_RAW_INFO(" [TARGET] %02X:%02X:%02X:%02X:%02X:%02X",
+                       config_repeater.mac_emisor[0],
+                       config_repeater.mac_emisor[1],
+                       config_repeater.mac_emisor[2],
+                       config_repeater.mac_emisor[3],
+                       config_repeater.mac_emisor[4],
+                       config_repeater.mac_emisor[5]);
+        
+        // Filtrar por MAC del emisor (comparar con inversión de bytes)
+        // BLE GAP addr viene como: [0]=LSB ... [5]=MSB
+        // config_repeater.mac_emisor está como: [0]=MSB ... [5]=LSB
+        bool mac_match = true;
+        for (int i = 0; i < 6; i++) {
+            if (p_adv_report->peer_addr.addr[i] != config_repeater.mac_emisor[5-i]) {
+                mac_match = false;
+                break;
+            }
+        }
+        
+        if (mac_match) {
+            NRF_LOG_RAW_INFO("\n" LOG_OK " \033[1;32m*** MAC MATCH! ***\033[0m");
+            
+            // Es el emisor objetivo, parsear los datos
+            uint32_t contador = 0;
+            uint16_t v1 = 0;
+            uint16_t v2 = 0;
+            
+            if (parse_emisor_adv_data(p_adv_report->data.p_data, 
+                                      p_adv_report->data.len,
+                                      &contador, &v1, &v2)) {
+                
+                // Verificar si es un contador nuevo (evitar duplicados)
+                if (contador != m_last_adv_contador) {
+                    m_last_adv_contador = contador;
+                    m_emisor_adv_detected = true;
+                    
+                    NRF_LOG_RAW_INFO("\n" LOG_OK " \033[1;32mADV del EMISOR detectado!\033[0m");
+                    NRF_LOG_RAW_INFO(LOG_INFO " Contador=%u, V1=%u, V2=%u", contador, v1, v2);
+                    
+                    // Crear estructura de historial ADV
+                    store_adv_history adv_hist = {
+                        .year     = m_time.year,
+                        .month    = m_time.month,
+                        .day      = m_time.day,
+                        .hour     = m_time.hour,
+                        .minute   = m_time.minute,
+                        .second   = m_time.second,
+                        .contador = contador,
+                        .V1       = v1,
+                        .V2       = v2
+                    };
+                    
+                    // Guardar historial (el sistema calcula automáticamente el offset)
+                    // record_id = ADV_HISTORY_RECORD_KEY + (contador / 142)
+                    uint16_t history_id = contador / 142;
+                    ret_code_t ret = save_adv_history_record(&adv_hist, contador);
+                    if (ret == NRF_SUCCESS) {
+                        // Imprimir el historial ADV con formato completo
+                        char titulo[50];
+                        snprintf(titulo, sizeof(titulo), 
+                                "Historial ADV \x1B[33m#%u\x1B[0m", history_id);
+                        print_adv_history_record(&adv_hist, titulo);
+                        
+                        // Imprimir el RSSI del ADV detectado
+                        NRF_LOG_RAW_INFO(LOG_INFO " RSSI: \x1B[36m%d dBm\x1B[0m\r\n", p_adv_report->rssi);
+                        
+                        // Marcar que se detectó al emisor en este ciclo
+                        m_connected_this_cycle = true;
+                        
+                        // Desactivar búsqueda extendida (detener escaneo pasivo)
+                        // pero NO restaurar modo activo - simplemente esperar a entrar en sleep
+                        m_extended_search_active = false;
+                        m_extended_search_seconds_remaining = 0;
+                        NRF_LOG_RAW_INFO(LOG_INFO " Match detectado. Deteniendo escaneo. Esperando modo sleep...");
+                        
+                        // Detener el escaneo completamente
+                        nrf_ble_scan_stop();
+                    } else {
+                        NRF_LOG_RAW_INFO(LOG_WARN " Error al guardar historial ADV: %d", ret);
+                    }
+                }
+            }
+        }
+    } break;
 
     default:
         break;

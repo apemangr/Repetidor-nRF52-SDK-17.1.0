@@ -2,6 +2,7 @@
 #include "variables.h"
 #include "ble_gap.h"
 #include "nrf_sdh_ble.h"
+#include "app_nus_server.h"
 #include <stdint.h>
 
 // Buffer estático para evitar problemas con variables locales en el stack
@@ -177,6 +178,60 @@ ret_code_t save_history_record_emisor(
     return NRF_SUCCESS;
 }
 
+ret_code_t save_adv_history_record(const store_adv_history *p_adv_history, 
+                                    uint32_t contador)
+{
+    ret_code_t        ret;
+    fds_record_desc_t desc        = {0};
+    fds_find_token_t  token       = {0};
+    
+    // Calcular el offset basado en el contador (cada 142 contadores = 1 historial)
+    uint16_t history_number = (uint16_t)(contador / 142);
+    uint16_t record_key = ADV_HISTORY_RECORD_KEY + history_number;
+    
+    NRF_LOG_RAW_INFO(LOG_INFO " Guardando historial ADV #%u (contador=%u, record_key=0x%04X)",
+                   history_number, contador, record_key);
+    
+    // Preparar registro para FDS
+    fds_record_t new_record = {
+        .file_id           = ADV_HISTORY_FILE_ID,
+        .key               = record_key,
+        .data.p_data       = p_adv_history,
+        .data.length_words = BYTES_TO_WORDS(sizeof(store_adv_history))
+    };
+    
+    // Buscar si ya existe el registro
+    ret = fds_record_find(ADV_HISTORY_FILE_ID, record_key, &desc, &token);
+    
+    if (ret == NRF_SUCCESS) {
+        // Si existe, actualizar
+        ret = fds_record_update(&desc, &new_record);
+        if (ret != NRF_SUCCESS) {
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al actualizar historial ADV: %d", ret);
+            return ret;
+        }
+        NRF_LOG_RAW_INFO(LOG_OK " Historial ADV #%u actualizado", history_number);
+    }
+    else if (ret == FDS_ERR_NOT_FOUND) {
+        // Si no existe, crear nuevo
+        ret = fds_record_write(&desc, &new_record);
+        if (ret != NRF_SUCCESS) {
+            NRF_LOG_RAW_INFO(LOG_FAIL " Error al escribir historial ADV: %d", ret);
+            return ret;
+        }
+        NRF_LOG_RAW_INFO(LOG_OK " Historial ADV #%u creado", history_number);
+    }
+    else {
+        NRF_LOG_RAW_INFO(LOG_FAIL " Error al buscar historial ADV: %d", ret);
+        return ret;
+    }
+    
+    // Dar tiempo para que FDS complete la operación
+    nrf_delay_ms(50);
+    
+    return NRF_SUCCESS;
+}
+
 ret_code_t update_history_counter(uint32_t new_count)
 {
     fds_record_desc_t desc_counter = {0};
@@ -345,6 +400,31 @@ void print_history_record(store_history const *p_record, const char *p_title)
     NRF_LOG_RAW_INFO("V8           : %u\n", p_record->V8);
     NRF_LOG_RAW_INFO("Temp         : %u\n", p_record->temp);
     NRF_LOG_RAW_INFO("Bateria      : %u%%\n", p_record->battery);
+    NRF_LOG_RAW_INFO(
+               "\n\x1B[1;36m================\x1B[0m FIN "
+               "\x1B[1;36m================\x1B[0m\n");
+    NRF_LOG_FLUSH();
+}
+
+
+void print_adv_history_record(const store_adv_history *p_record, const char *p_title)
+{
+    NRF_LOG_RAW_INFO(
+               "\n\n\x1B[1;36m=======\x1B[0m %s \x1B[1;36m=======\x1B[0m\n\n",
+               p_title);
+    NRF_LOG_RAW_INFO(
+               "Fecha        : %02d/%02d/%04d\n",
+               p_record->day,
+               p_record->month,
+               p_record->year);
+    NRF_LOG_RAW_INFO(
+               "Hora         : %02d:%02d:%02d\n",
+               p_record->hour,
+               p_record->minute,
+               p_record->second);
+    NRF_LOG_RAW_INFO("Contador ADV : %lu\n", p_record->contador);
+    NRF_LOG_RAW_INFO("V1 (ADC1)    : %u\n", p_record->V1);
+    NRF_LOG_RAW_INFO("V2 (ADC2)    : %u\n", p_record->V2);
     NRF_LOG_RAW_INFO(
                "\n\x1B[1;36m================\x1B[0m FIN "
                "\x1B[1;36m================\x1B[0m\n");
@@ -803,12 +883,7 @@ static uint32_t history_failed_count   = 0;
 static uint16_t history_valid_keys[MAX_HISTORY_RECORDS];
 static uint16_t history_valid_count = 0;
 
-/**
- * @brief Lee un registro de historial por record key
- * @param record_key Key del registro a leer
- * @param p_history_data Puntero donde almacenar los datos leídos
- * @return ret_code_t Código de retorno
- */
+
 static ret_code_t read_history_record_by_key(
            uint16_t       record_key,
            store_history *p_history_data)
@@ -1382,12 +1457,7 @@ void load_default_config(config_repeater_t *p_config)
     NRF_LOG_RAW_INFO(LOG_INFO " Configuracion predeterminada cargada");
 }
 
-/**
- * @brief Guarda configuracion con fecha actual automaticamente
- *
- * Esta funcion actualiza la fecha de configuracion con el tiempo actual
- * del RTC antes de guardar la configuracion en flash.
- */
+
 ret_code_t save_config_to_flash(config_repeater_t *p_config)
 {
     if (p_config == NULL) {
@@ -1527,14 +1597,7 @@ ret_code_t load_config_from_flash(config_repeater_t *p_config)
     return ret;
 }
 
-/**
- * @brief Configura la dirección MAC del dispositivo BLE
- * 
- * Esta función establece la dirección MAC del dispositivo según el flag
- * enable_custom_mac_repetidor. Si está habilitado, usa la MAC configurada
- * en config_repeater.mac_repetidor, de lo contrario usa la MAC por defecto
- * del hardware.
- */
+
 void set_custom_mac_repeater(void)
 {
     ret_code_t err_code;

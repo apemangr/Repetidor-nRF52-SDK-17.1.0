@@ -147,9 +147,17 @@
   <configuration
     Name="Release"
     c_preprocessor_definitions="NDEBUG"
-    gcc_optimization_level="Optimize For Size" />
+    gcc_optimization_level="Optimize For Size" 
+    build_intermediate_directory="C:/_build/Output/$(Configuration)/Obj/$(ProjectName)"
+    build_output_directory="C:/_build/Output/$(Configuration)/Exe"
+    build_output_file_name="C:/_build/REPETIDOR_V1.0_RELEASE"
+    />
   <configuration
     Name="Debug"
     c_preprocessor_definitions="DEBUG; DEBUG_NRF"
-    gcc_optimization_level="None" />
+    gcc_optimization_level="None" 
+    build_intermediate_directory="C:/_build/Output/$(Configuration)/Obj/$(ProjectName)"
+    build_output_directory="C:/_build/Output/$(Configuration)/Exe"
+    build_output_file_name="C:/_build/REPETIDOR_V1.0_DEBUG"                                     
+    />
 </solution>

@@ -43,6 +43,11 @@
 #define HISTORY_BUFFER_SIZE                   500 // Cantidad de historiales
 #define HISTORY_RECORD_KEY_START              HISTORY_RECORD_KEY // Renombre para comodidad
 
+// ADV HISTORY (Extended Search Mode)
+#define ADV_HISTORY_FILE_ID                   0x000F // Dirección FILE_ID Historiales de ADV
+#define ADV_HISTORY_RECORD_KEY                0x2000 // Dirección inicial de los historiales ADV
+#define EXTENDED_SEARCH_DURATION_SECONDS      5      // Duración de búsqueda extendida antes de dormir
+
 // HELPERS
 #define MSB_16(a)                             (((a) & 0xFF00) >> 8) // Parte de arriba de un uint32_t
 #define LSB_16(a)                             ((a) & 0x00FF) // Parte de abajo de un uint32_t
@@ -54,9 +59,26 @@
 #define LOG_WARN                              "\n[\033[1;35m WARN \033[0m]"
 #define LOG_INFO                              "\n[\033[1;33m INFO \033[0m]"
 
+// Estructura para historiales de ADV
+typedef struct
+{
+    uint16_t year;
+    uint8_t  month;
+    uint8_t  day;
+    uint8_t  hour;
+    uint8_t  minute;
+    uint8_t  second;
+    uint32_t contador;
+    uint16_t V1;
+    uint16_t V2;
+} store_adv_history;
+
 extern bool m_device_active;
 extern bool m_connected_this_cycle; // Nueva variable para controlar el modo de
                                     // reconexión
 extern bool m_extended_mode_on;
+extern bool m_extended_search_active; // Indica si la búsqueda extendida está activa
+extern uint8_t m_extended_search_seconds_remaining; // Segundos restantes de búsqueda extendida
+extern bool m_emisor_adv_detected; // Indica si se detectó ADV del emisor
 
 #endif // VARIABLES_H

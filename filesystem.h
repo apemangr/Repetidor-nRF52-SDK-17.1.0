@@ -76,10 +76,9 @@ typedef enum
 
 static uint8_t mac_address_from_flash[6] = {0};
 
-// void       load_repeater_configuration(config_t *config_out, uint8_t d1,
-// uint8_t d2, uint8_t d3); ret_code_t load_adc_values(adc_values_t
-// *adc_values_cargados); ret_code_t save_adc_values(adc_values_t const
-// *valores_a_guardar);
+// ADC values functions
+ret_code_t load_adc_values(adc_values_t *adc_values_cargados);
+ret_code_t save_adc_values(adc_values_t const *valores_a_guardar);
 
 // History functions
 ret_code_t save_history_record_emisor(
@@ -90,6 +89,14 @@ ret_code_t read_history_record_by_id(
            store_history *p_history_data);
 void print_history_record(store_history const *p_record, const char *p_title);
 ret_code_t read_last_history_record(store_history *p_history_data);
+
+// ADV History functions (Extended Search Mode)
+ret_code_t save_adv_history_record(
+           const store_adv_history *p_adv_history,
+           uint32_t                 contador);
+void print_adv_history_record(
+           const store_adv_history *p_record,
+           const char              *p_title);
 
 void       delete_all_history(void);
 ret_code_t delete_history_record_by_id(uint16_t record_id);

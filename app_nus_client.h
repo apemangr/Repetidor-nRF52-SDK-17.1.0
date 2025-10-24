@@ -15,6 +15,8 @@ void     app_nus_client_ble_evt_handler(ble_evt_t const *p_ble_evt);
 void     app_nus_client_init(app_nus_client_on_data_received_t on_data_received);
 void     scan_stop(void);
 void     scan_start(void);
+void     scan_start_passive_mode(void);  // Escaneo pasivo (solo escucha ADV, sin conectar)
+void     scan_start_active_mode(void);   // Escaneo activo (con auto-conexión)
 void     target_periph_addr_init(void);  // Actualizar filtro BLE con nueva MAC
 
 #endif
