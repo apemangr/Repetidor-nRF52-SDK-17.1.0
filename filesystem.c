@@ -1415,12 +1415,12 @@ void load_default_config(config_repeater_t *p_config)
 
     // MACs predeterminadas
     // MAC del emisor
-    p_config->mac_emisor[5] = 0xFF;
+    p_config->mac_emisor[5] = 0x11;
     p_config->mac_emisor[4] = 0x00;
     p_config->mac_emisor[3] = 0x00;
     p_config->mac_emisor[2] = 0x00;
     p_config->mac_emisor[1] = 0xAB;
-    p_config->mac_emisor[0] = 0xC1;
+    p_config->mac_emisor[0] = 0xC5;
 
     // MAC del repetidor
     p_config->mac_repetidor[5] = 0x01;
@@ -1428,7 +1428,7 @@ void load_default_config(config_repeater_t *p_config)
     p_config->mac_repetidor[3] = 0x00;
     p_config->mac_repetidor[2] = 0x00;
     p_config->mac_repetidor[1] = 0xAB;
-    p_config->mac_repetidor[0] = 0xC2;
+    p_config->mac_repetidor[0] = 0xC4;
 
     // Por defecto, usar MAC custom (comportamiento previo)
     p_config->enable_custom_mac_repetidor = true;

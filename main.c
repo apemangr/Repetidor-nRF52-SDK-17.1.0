@@ -620,17 +620,17 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
         const ble_gap_evt_adv_report_t *p_adv_report = &p_gap_evt->params.adv_report;
         
         // Debug: Imprimir todos los ADV que se reciben durante búsqueda extendida
-        if (m_extended_search_active) {
-            NRF_LOG_RAW_INFO("\n[ADV] MAC: %02X:%02X:%02X:%02X:%02X:%02X",
-                           p_adv_report->peer_addr.addr[5],
-                           p_adv_report->peer_addr.addr[4],
-                           p_adv_report->peer_addr.addr[3],
-                           p_adv_report->peer_addr.addr[2],
-                           p_adv_report->peer_addr.addr[1],
-                           p_adv_report->peer_addr.addr[0]);
+        // if (m_extended_search_active) {
+        //     NRF_LOG_RAW_INFO("\n[ADV] MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+        //                    p_adv_report->peer_addr.addr[5],
+        //                    p_adv_report->peer_addr.addr[4],
+        //                    p_adv_report->peer_addr.addr[3],
+        //                    p_adv_report->peer_addr.addr[2],
+        //                    p_adv_report->peer_addr.addr[1],
+        //                    p_adv_report->peer_addr.addr[0]);
 
-         NRF_LOG_RAW_INFO(" RSSI:%d Len:%d", p_adv_report->rssi,p_adv_report->data.len);
-        }
+        //  NRF_LOG_RAW_INFO(" RSSI:%d Len:%d", p_adv_report->rssi,p_adv_report->data.len);
+        // }
         
         // Solo procesar si estamos en modo de búsqueda extendida
         if (!m_extended_search_active) {
@@ -638,13 +638,13 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
         }
         
         // Debug: Imprimir MAC objetivo
-        NRF_LOG_RAW_INFO(" [TARGET] %02X:%02X:%02X:%02X:%02X:%02X",
-                       config_repeater.mac_emisor[0],
-                       config_repeater.mac_emisor[1],
-                       config_repeater.mac_emisor[2],
-                       config_repeater.mac_emisor[3],
-                       config_repeater.mac_emisor[4],
-                       config_repeater.mac_emisor[5]);
+        // NRF_LOG_RAW_INFO(" [TARGET] %02X:%02X:%02X:%02X:%02X:%02X",
+        //                config_repeater.mac_emisor[0],
+        //                config_repeater.mac_emisor[1],
+        //                config_repeater.mac_emisor[2],
+        //                config_repeater.mac_emisor[3],
+        //                config_repeater.mac_emisor[4],
+        //                config_repeater.mac_emisor[5]);
         
         // Filtrar por MAC del emisor (comparar con inversión de bytes)
         // BLE GAP addr viene como: [0]=LSB ... [5]=MSB
