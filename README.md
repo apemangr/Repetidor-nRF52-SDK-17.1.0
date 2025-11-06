@@ -1,3 +1,4 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/apemangr/Repetidor-nRF52-SDK-17.1.0)
 # Firmaware para dispositivo BLE Repetidor
 
 ## Como usar
